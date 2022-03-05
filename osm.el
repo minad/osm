@@ -57,6 +57,10 @@
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
+(defcustom osm-buffer-name "*osm*"
+  "Default buffer name."
+  :type 'string)
+
 (defcustom osm-large-step 256
   "Movement step in pixel."
   :type 'integer)
@@ -444,8 +448,8 @@ The buffer is optionally assigned a UNIQUE name."
   (with-current-buffer
       (cond
        ((and (not name) (not unique) (derived-mode-p #'osm-mode)) (current-buffer))
-       (unique (generate-new-buffer (or name "*osm*")))
-       (t (get-buffer-create (or name "*osm*"))))
+       (unique (generate-new-buffer (or name osm-buffer-name)))
+       (t (get-buffer-create (or name osm-buffer-name))))
     (unless (derived-mode-p #'osm-mode)
       (osm-mode))
     (setq osm--zoom zoom)
