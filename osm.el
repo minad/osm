@@ -39,31 +39,31 @@
   :prefix "osm-")
 
 (defcustom osm-server-list
-  '((openstreetmap-org
+  '((default
      :name "OpenStreetMap"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url ("https://a.tile.openstreetmap.org/%s/%s/%s.png"
            "https://b.tile.openstreetmap.org/%s/%s/%s.png"
            "https://c.tile.openstreetmap.org/%s/%s/%s.png"))
-    (openstreetmap-de
+    (de
      :name "OSM Deutschland"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url ("https://a.tile.openstreetmap.de/%s/%s/%s.png"
            "https://b.tile.openstreetmap.de/%s/%s/%s.png"
            "https://c.tile.openstreetmap.de/%s/%s/%s.png"))
-    (openstreetmap-fr
+    (fr
      :name "OSM France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url ("https://a.tile.openstreetmap.fr/osmfr/%s/%s/%s.png"
            "https://b.tile.openstreetmap.fr/osmfr/%s/%s/%s.png"
            "https://c.tile.openstreetmap.fr/osmfr/%s/%s/%s.png"))
-    (openstreetmap-humanitarian
+    (humanitarian
      :name "OSM Humanitarian"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url ("https://a.tile.openstreetmap.fr/hot/%s/%s/%s.png"
            "https://b.tile.openstreetmap.fr/hot/%s/%s/%s.png"
            "https://c.tile.openstreetmap.fr/hot/%s/%s/%s.png"))
-    (opentopomap-org
+    (opentopomap
      :name "OpenTopoMap"
      :min-zoom 2 :max-zoom 17 :max-connections 2
      :url ("https://a.tile.opentopomap.org/%s/%s/%s.png"
@@ -108,10 +108,6 @@
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
-(defcustom osm-buffer-name "*osm*"
-  "Default buffer name."
-  :type 'string)
-
 (defcustom osm-large-step 256
   "Movement step in pixel."
   :type 'integer)
@@ -120,7 +116,7 @@
   "Movement step in pixel."
   :type 'integer)
 
-(defcustom osm-server 'openstreetmap-org
+(defcustom osm-server 'default
   "Tile server name."
   :type 'symbol)
 
@@ -155,6 +151,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "c" #'clone-buffer)
     (define-key map "g" #'osm-goto)
     (define-key map "s" #'osm-search)
+    (define-key map "S" #'osm-server)
     (define-key map "b" #'bookmark-set)
     (define-key map "B" #'bookmark-jump)
     (define-key map [remap scroll-down-command] #'osm-down)
@@ -266,10 +263,13 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--cache-directory ()
   "Return tile cache directory."
-  (expand-file-name
-   (file-name-concat osm-cache-directory
-                     (symbol-name osm-server)
-                     "/")))
+  (let ((dir (expand-file-name
+              (file-name-concat osm-cache-directory
+                                (symbol-name osm-server)
+                                "/"))))
+    (unless (file-exists-p dir)
+      (make-directory dir t))
+    dir))
 
 (defun osm--enqueue (x y)
   "Enqueue tile X/Y for download."
@@ -406,9 +406,11 @@ We need two distinct images which are not `eq' for the display properties.")
     (run-with-idle-timer
      30 nil
      (lambda ()
-       (dolist (file (directory-files-recursively
-                      osm-cache-directory
-                      "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" nil))
+       (dolist (file
+                (ignore-errors
+                  (directory-files-recursively
+                   osm-cache-directory
+                   "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" nil)))
          (when (> (float-time
                    (time-since
                     (file-attribute-modification-time
@@ -419,11 +421,9 @@ We need two distinct images which are not `eq' for the display properties.")
 (define-derived-mode osm-mode special-mode "Osm"
   "Open Street Map mode."
   :interactive nil
-  (let ((cache (osm--cache-directory)))
-    (unless (file-exists-p cache)
-      (make-directory cache t)))
   (osm--clean-cache)
-  (setq-local line-spacing nil
+  (setq-local osm-server osm-server
+              line-spacing nil
               cursor-type nil
               cursor-in-non-selected-windows nil
               left-fringe-width 1
@@ -562,8 +562,8 @@ The buffer is optionally assigned a UNIQUE name."
       (cond
        ((and (not name) (not unique) (derived-mode-p #'osm-mode))
         (current-buffer))
-       (unique (generate-new-buffer (or name osm-buffer-name)))
-       (t (get-buffer-create (or name osm-buffer-name))))
+       (unique (generate-new-buffer (or name (osm--buffer-name))))
+       (t (get-buffer-create (or name (osm--buffer-name)))))
     (unless (derived-mode-p #'osm-mode)
       (osm-mode))
     (setq osm--zoom zoom)
@@ -572,6 +572,10 @@ The buffer is optionally assigned a UNIQUE name."
         (osm--update)
       (pop-to-buffer (current-buffer)))))
 
+(defun osm--buffer-name ()
+  "Return buffer name."
+  (format "*osm: %s*" (osm--server-property :name)))
+
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
   "Jump to OSM bookmark BM."
@@ -579,8 +583,7 @@ The buffer is optionally assigned a UNIQUE name."
    (alist-get 'lat bm)
    (alist-get 'lon bm)
    (alist-get 'zoom bm)
-   (and (not (derived-mode-p #'osm-mode))
-        (alist-get 'name bm))))
+   (alist-get 'name bm)))
 
 (defun osm--bookmark-name ()
   "Return bookmark name for current map."
@@ -641,6 +644,34 @@ The buffer is optionally assigned a UNIQUE name."
                        (error "No selection"))))
     (osm-goto (car selected) (cadr selected)
               (apply #'osm--boundingbox-to-zoom (cddr selected)))))
+
+;;;###autoload
+(defun osm-server (server)
+  "Select SERVER."
+  (interactive
+   (list
+    (let ((servers
+           (mapcar
+            (lambda (x)
+              (cons (plist-get (cdr x) :name) (car x)))
+            osm-server-list)))
+      (or (cdr (assoc (completing-read
+                       "Server: " servers nil t nil nil
+                       (osm--server-property :name))
+                      servers))
+          (error "No server selected")))))
+  (with-current-buffer
+      (if (derived-mode-p #'osm-mode)
+          (current-buffer)
+        (osm-new))
+    (unless (eq osm-server server)
+      (let ((rename (string-match-p
+                     (format "\\`\\*osm: %s\\*\\(?:<[0-9]+>\\)?\\'"
+                             (regexp-quote (osm--server-property :name)))
+                     (buffer-name))))
+        (setq-local osm-server server)
+        (when rename (rename-buffer (osm--buffer-name) 'unique)))
+      (osm--update))))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-large #'osm-down-large #'osm-left-large #'osm-right-large

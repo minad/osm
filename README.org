@@ -21,6 +21,7 @@
 - Search for location by name
 - Org link support (Example: [[osm:44,10,6][Toscana, Italia 44° 10°]])
 - Bookmarks
+- Multiple preconfigured servers
 
 * Commands and Key Bindings
 
@@ -28,6 +29,7 @@ Commands:
 - =osm-new=: Open new map at home coordinates
 - =osm-search=: Search and jump to location
 - =osm-goto=: Go to coordinates
+- =osm-server=: Select server
 
 Key bindings:
 - ~+~ and ~-~: Zooming
@@ -35,6 +37,7 @@ Key bindings:
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~g~: =osm-goto=
 - ~s~: =osm-search=
+- ~S~: =osm-server=
 - ~b~: =bookmark-set=
 - ~B~: =bookmark-jump=
 - ~q~: =quit-window=
