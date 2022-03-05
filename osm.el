@@ -274,41 +274,40 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--enqueue (x y)
   "Enqueue tile X/Y for download."
   (let ((job `(,x ,y . ,osm--zoom)))
-    (unless (member job osm--queue)
+    (unless (or (member job osm--queue) (member job osm--active))
       (setq osm--queue (nconc osm--queue (list job))))))
 
 (defun osm--download ()
   "Download next tile in queue."
-  (pcase (and (< (length osm--active)
-                 (* (length (osm--server-property :url))
-                    (osm--server-property :max-connections)))
-              (pop osm--queue))
-    (`(,x ,y . ,zoom)
-     (let* ((buffer (current-buffer))
-            (dst (osm--tile-file x y zoom))
-            (tmp (concat dst ".tmp")))
-       (push
-        (make-process
-         :name (format "osm %s %s %s" x y zoom)
-         :connection-type 'pipe
-         :noquery t
-         :command
-         (list "curl" "-s" "-o" tmp (osm--tile-url x y zoom))
-         :filter #'ignore
-         :sentinel
-         (lambda (proc status)
-           (when (buffer-live-p buffer)
-             (with-current-buffer buffer
-               (when (and (string-match-p "finished" status)
-                          (eq osm--zoom zoom))
-                 (ignore-errors (rename-file tmp dst t))
-                 (osm--put x y))
-               (delete-file tmp)
-               (force-mode-line-update)
-               (setq osm--active (delq proc osm--active))
-               (osm--download)))))
-        osm--active)
-       (osm--download)))))
+  (when-let (job (and (< (length osm--active)
+                         (* (length (osm--server-property :url))
+                            (osm--server-property :max-connections)))
+                      (pop osm--queue)))
+    (push job osm--active)
+    (pcase-let* ((`(,x ,y . ,zoom) job)
+                 (buffer (current-buffer))
+                 (dst (osm--tile-file x y zoom))
+                 (tmp (concat dst ".tmp")))
+      (make-process
+       :name (format "osm %s %s %s" x y zoom)
+       :connection-type 'pipe
+       :noquery t
+       :command
+       (list "curl" "-s" "-o" tmp (osm--tile-url x y zoom))
+       :filter #'ignore
+       :sentinel
+       (lambda (_proc status)
+         (when (buffer-live-p buffer)
+           (with-current-buffer buffer
+             (when (and (string-match-p "finished" status)
+                        (eq osm--zoom zoom))
+               (ignore-errors (rename-file tmp dst t))
+               (osm--display-tile x y))
+             (delete-file tmp)
+             (force-mode-line-update)
+             (setq osm--active (delq job osm--active))
+             (osm--download)))))
+      (osm--download))))
 
 (defun osm-click (event)
   "Handle click EVENT."
@@ -439,28 +438,30 @@ We need two distinct images which are not `eq' for the display properties.")
               fringe-indicator-alist '((truncation . nil)))
   (add-hook 'window-size-change-functions #'osm--update nil 'local))
 
-(defun osm--put (x y &optional image)
-  "Put tile IMAGE at X/Y."
-  (let* ((i (- x (/ (- osm--x osm--wx) 256)))
-         (j (- y (/ (- osm--y osm--wy) 256)))
-         (mx (if (= 0 i) (mod (- osm--x osm--wx) 256) 0))
-         (my (if (= 0 j) (mod (- osm--y osm--wy) 256) 0))
-         (pos (+ (point-min) (* j (1+ osm--nx)) i)))
+(defun osm--display-tile (x y)
+  "Display tile at X/Y."
+  (let ((i (- x (/ (- osm--x osm--wx) 256)))
+        (j (- y (/ (- osm--y osm--wy) 256))))
     (when (and (>= i 0) (< i osm--nx) (>= j 0) (< j osm--ny))
-      (unless image
-        (let ((file (osm--tile-file x y osm--zoom)))
-          (setq image
-                `(image :type
-                        ,(if (member (file-name-extension file) '("jpg" "jpeg"))
-                             'jpeg 'png)
-                        :file ,file
-                        :width 256 :height 256))))
-      (with-silent-modifications
-        (put-text-property
-         pos (1+ pos) 'display
-         (if (or (/= 0 mx) (/= 0 my))
-             `((slice ,mx ,my ,(- 256 mx) ,(- 256 my)) ,image)
-           image))))))
+      (let* ((mx (if (= 0 i) (mod (- osm--x osm--wx) 256) 0))
+             (my (if (= 0 j) (mod (- osm--y osm--wy) 256) 0))
+             (pos (+ (point-min) (* j (1+ osm--nx)) i))
+             (file (osm--tile-file x y osm--zoom))
+             (image (cond
+                     ((file-exists-p file)
+                      `(image :type
+                              ,(if (member (file-name-extension file) '("jpg" "jpeg"))
+                                   'jpeg 'png)
+                              :file ,file
+                              :width 256 :height 256))
+                     ((= 0 (mod i 2)) osm--placeholder1)
+                     (t osm--placeholder2))))
+        (with-silent-modifications
+          (put-text-property
+           pos (1+ pos) 'display
+           (if (or (/= 0 mx) (/= 0 my))
+               `((slice ,mx ,my ,(- 256 mx) ,(- 256 my)) ,image)
+             image)))))))
 
 ;;;###autoload
 (defun osm-new (&optional unique)
@@ -520,14 +521,11 @@ We need two distinct images which are not `eq' for the display properties.")
       (dotimes (j osm--ny)
         (dotimes (i osm--nx)
           (let ((x (+ i (/ (- osm--x osm--wx) 256)))
-                (y (+ j (/ (- osm--y osm--wy) 256)))
-                (placeholder (if (= 0 (mod i 2)) osm--placeholder1 osm--placeholder2)))
-            (if (and (>= x 0) (>= y 0) (< x size) (< y size))
-                (if (file-exists-p (osm--tile-file x y osm--zoom))
-                    (osm--put x y)
-                  (osm--put x y placeholder)
-                  (osm--enqueue x y))
-              (osm--put x y placeholder)))))
+                (y (+ j (/ (- osm--y osm--wy) 256))))
+            (osm--display-tile x y)
+            (when (and (>= x 0) (>= y 0) (< x size) (< y size)
+                       (not (file-exists-p (osm--tile-file x y osm--zoom))))
+              (osm--enqueue x y)))))
       (setq osm--queue
             (seq-sort-by
              (pcase-lambda (`(,x ,y . ,_z))
@@ -669,7 +667,9 @@ The buffer is optionally assigned a UNIQUE name."
                      (format "\\`\\*osm: %s\\*\\(?:<[0-9]+>\\)?\\'"
                              (regexp-quote (osm--server-property :name)))
                      (buffer-name))))
-        (setq-local osm-server server)
+        (setq-local osm-server server
+                    osm--active nil
+                    osm--queue nil)
         (when rename (rename-buffer (osm--buffer-name) 'unique)))
       (osm--update))))
 
