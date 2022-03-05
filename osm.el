@@ -149,6 +149,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [M-left] #'osm-left-large)
     (define-key map [M-right] #'osm-right-large)
     (define-key map "c" #'clone-buffer)
+    (define-key map "h" #'osm-home)
     (define-key map "g" #'osm-goto)
     (define-key map "s" #'osm-search)
     (define-key map "S" #'osm-server)
@@ -464,15 +465,15 @@ We need two distinct images which are not `eq' for the display properties.")
              image)))))))
 
 ;;;###autoload
-(defun osm-new (&optional unique)
-  "New OSM buffer, optionally UNIQUE."
-  (interactive "P")
+(defun osm-home ()
+  "New OSM buffer."
+  (interactive)
   (let ((lat (bound-and-true-p calendar-latitude))
         (lon (bound-and-true-p calendar-longitude))
         (zoom 11))
     (unless (and lat lon)
       (setq lat 0 lon 0 zoom 2))
-    (osm-goto lat lon zoom nil unique)))
+    (osm-goto lat lon zoom)))
 
 (defun osm--queue-info ()
   "Return queue info string."
@@ -547,9 +548,8 @@ We need two distinct images which are not `eq' for the display properties.")
     (handler . ,#'osm-bookmark-jump)))
 
 ;;;###autoload
-(defun osm-goto (lat lon zoom &optional name unique)
-  "Goto LAT/LON/ZOOM in buffer NAME.
-The buffer is optionally assigned a UNIQUE name."
+(defun osm-goto (lat lon zoom &optional name)
+  "Goto LAT/LON/ZOOM in buffer NAME."
   (interactive
    (pcase-let ((`(,lat ,lon ,zoom) (mapcar #'string-to-number (split-string (read-string "Lat Lon (Zoom): ") nil t))))
      (setq zoom (or zoom 11))
@@ -557,11 +557,9 @@ The buffer is optionally assigned a UNIQUE name."
        (error "Invalid coordindate"))
      (list lat lon zoom)))
   (with-current-buffer
-      (cond
-       ((and (not name) (not unique) (derived-mode-p #'osm-mode))
-        (current-buffer))
-       (unique (generate-new-buffer (or name (osm--buffer-name))))
-       (t (get-buffer-create (or name (osm--buffer-name)))))
+      (if (and (not name) (derived-mode-p #'osm-mode))
+          (current-buffer)
+        (generate-new-buffer (or name (osm--buffer-name))))
     (unless (derived-mode-p #'osm-mode)
       (osm-mode))
     (setq osm--zoom zoom)
@@ -581,7 +579,8 @@ The buffer is optionally assigned a UNIQUE name."
    (alist-get 'lat bm)
    (alist-get 'lon bm)
    (alist-get 'zoom bm)
-   (alist-get 'name bm)))
+   (unless (derived-mode-p #'osm-mode)
+     (alist-get 'name bm))))
 
 (defun osm--bookmark-name ()
   "Return bookmark name for current map."
@@ -661,7 +660,7 @@ The buffer is optionally assigned a UNIQUE name."
   (with-current-buffer
       (if (derived-mode-p #'osm-mode)
           (current-buffer)
-        (osm-new))
+        (osm-home))
     (unless (eq osm-server server)
       (let ((rename (string-match-p
                      (format "\\`\\*osm: %s\\*\\(?:<[0-9]+>\\)?\\'"

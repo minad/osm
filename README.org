@@ -26,7 +26,7 @@
 * Commands and Key Bindings
 
 Commands:
-- =osm-new=: Open new map at home coordinates
+- =osm-home=: Open new map at home coordinates
 - =osm-search=: Search and jump to location
 - =osm-goto=: Go to coordinates
 - =osm-server=: Select server
@@ -36,6 +36,7 @@ Key bindings:
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~g~: =osm-goto=
+- ~h~: =osm-home=
 - ~s~: =osm-search=
 - ~S~: =osm-server=
 - ~b~: =bookmark-set=
