@@ -196,18 +196,16 @@ Should be at least 7 days according to the server usage policies."
   "Zoom N times into the map."
   (interactive "p")
   (setq n (or n 1))
-  (while (> n 0)
-    (when (< osm--zoom (osm--server-property :max-zoom))
-      (setq osm--zoom (1+ osm--zoom)
-            osm--x (* osm--x 2)
-            osm--y (* osm--y 2)))
-    (cl-decf n))
-  (while (< n 0)
-    (when (> osm--zoom (osm--server-property :min-zoom))
-      (setq osm--zoom (1- osm--zoom)
-            osm--x (/ osm--x 2)
-            osm--y (/ osm--y 2)))
-    (cl-incf n))
+  (cl-loop for i from n above 0
+           if (< osm--zoom (osm--server-property :max-zoom)) do
+           (setq osm--zoom (1+ osm--zoom)
+                 osm--x (* osm--x 2)
+                 osm--y (* osm--y 2)))
+  (cl-loop for i from n below 0
+           if (> osm--zoom (osm--server-property :min-zoom)) do
+           (setq osm--zoom (1- osm--zoom)
+                 osm--x (/ osm--x 2)
+                 osm--y (/ osm--y 2)))
   (osm--update))
 
 (defun osm-smaller (&optional n)
