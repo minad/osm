@@ -56,6 +56,12 @@
      :url ("https://a.tile.openstreetmap.fr/osmfr/"
            "https://b.tile.openstreetmap.fr/osmfr/"
            "https://c.tile.openstreetmap.fr/osmfr/"))
+    (openstreetmap-humanitarian
+     :name "OpenStreetMap Humanitarian"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://a.tile.openstreetmap.fr/hot/"
+           "https://b.tile.openstreetmap.fr/hot/"
+           "https://c.tile.openstreetmap.fr/hot/"))
     (opentopomap-org
      :name "OpenTopoMap"
      :min-zoom 2 :max-zoom 17 :max-connections 2
@@ -218,7 +224,7 @@ We need two distinct images which are not `eq' for the display properties.")
              (with-current-buffer buffer
                (when (and (string-match-p "finished" status)
                           (eq osm--zoom zoom))
-                 (rename-file tmp dst t)
+                 (ignore-errors (rename-file tmp dst t))
                  (osm--put x y))
                (delete-file tmp)
                (force-mode-line-update)
