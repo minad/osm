@@ -38,8 +38,8 @@
   "Open osm LINK."
   (setq link (split-string link ","))
   (osm-goto (string-to-number (nth 0 link))
-             (string-to-number (nth 1 link))
-             (string-to-number (nth 2 link))))
+            (string-to-number (nth 1 link))
+            (string-to-number (nth 2 link))))
 
 (defun ol-osm-store ()
   "Store osm link."

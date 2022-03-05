@@ -622,7 +622,7 @@ The buffer is optionally assigned a UNIQUE name."
                              results))
                        (error "No selection"))))
     (osm-goto (car selected) (cadr selected)
-               (apply #'osm--boundingbox-to-zoom (cddr selected)))))
+              (apply #'osm--boundingbox-to-zoom (cddr selected)))))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-large #'osm-down-large #'osm-left-large #'osm-right-large
