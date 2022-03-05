@@ -121,6 +121,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "+" #'osm-larger)
     (define-key map "-" #'osm-smaller)
     (define-key map [mouse-1] #'osm-click)
+    (define-key map [drag-mouse-1] #'osm-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
     (define-key map [left] #'osm-left)
@@ -299,6 +300,15 @@ We need two distinct images which are not `eq' for the display properties.")
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
       (osm-larger))))
+
+(defun osm-drag (event)
+  "Handle drag EVENT."
+  (interactive "e")
+  (pcase-let ((`(,sx . ,sy) (posn-x-y (event-start event)))
+              (`(,ex . ,ey) (posn-x-y (event-end event))))
+    (cl-incf osm--x (- sx ex))
+    (cl-incf osm--y (- sy ey))
+    (osm--update)))
 
 (defun osm-larger (&optional n)
   "Zoom N times into the map."
