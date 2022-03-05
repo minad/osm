@@ -40,34 +40,53 @@
 
 (defcustom osm-tile-server-list
   '((openstreetmap-org
+     :name "OpenStreetMap"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.org/"
-           "https://b.tile.openstreetmap.org/"
-           "https://c.tile.openstreetmap.org/"))
+     :url ("https://a.tile.openstreetmap.org/%s/%s/%s.png"
+           "https://b.tile.openstreetmap.org/%s/%s/%s.png"
+           "https://c.tile.openstreetmap.org/%s/%s/%s.png"))
     (openstreetmap-de
-     :name "OpenStreetMap Deutschland"
+     :name "OSM Deutschland"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.de/"
-           "https://b.tile.openstreetmap.de/"
-           "https://c.tile.openstreetmap.de/"))
+     :url ("https://a.tile.openstreetmap.de/%s/%s/%s.png"
+           "https://b.tile.openstreetmap.de/%s/%s/%s.png"
+           "https://c.tile.openstreetmap.de/%s/%s/%s.png"))
     (openstreetmap-fr
-     :name "OpenStreetMap France"
+     :name "OSM France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.fr/osmfr/"
-           "https://b.tile.openstreetmap.fr/osmfr/"
-           "https://c.tile.openstreetmap.fr/osmfr/"))
+     :url ("https://a.tile.openstreetmap.fr/osmfr/%s/%s/%s.png"
+           "https://b.tile.openstreetmap.fr/osmfr/%s/%s/%s.png"
+           "https://c.tile.openstreetmap.fr/osmfr/%s/%s/%s.png"))
     (openstreetmap-humanitarian
-     :name "OpenStreetMap Humanitarian"
+     :name "OSM Humanitarian"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.fr/hot/"
-           "https://b.tile.openstreetmap.fr/hot/"
-           "https://c.tile.openstreetmap.fr/hot/"))
+     :url ("https://a.tile.openstreetmap.fr/hot/%s/%s/%s.png"
+           "https://b.tile.openstreetmap.fr/hot/%s/%s/%s.png"
+           "https://c.tile.openstreetmap.fr/hot/%s/%s/%s.png"))
     (opentopomap-org
      :name "OpenTopoMap"
      :min-zoom 2 :max-zoom 17 :max-connections 2
-     :url ("https://a.tile.opentopomap.org/"
-           "https://b.tile.opentopomap.org/"
-           "https://c.tile.opentopomap.org/")))
+     :url ("https://a.tile.opentopomap.org/%s/%s/%s.png"
+           "https://b.tile.opentopomap.org/%s/%s/%s.png"
+           "https://c.tile.opentopomap.org/%s/%s/%s.png"))
+    (stamen-watercolor
+     :name "Stamen Watercolor"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://stamen-tiles-a.a.ssl.fastly.net/watercolor/%s/%s/%s.jpg"
+           "https://stamen-tiles-b.a.ssl.fastly.net/watercolor/%s/%s/%s.jpg"
+           "https://stamen-tiles-c.a.ssl.fastly.net/watercolor/%s/%s/%s.jpg"))
+    (stamen-terrain
+     :name "Stamen Terrain"
+     :min-zoom 2 :max-zoom 18 :max-connections 2
+     :url ("https://stamen-tiles-a.a.ssl.fastly.net/terrain/%s/%s/%s.png"
+           "https://stamen-tiles-b.a.ssl.fastly.net/terrain/%s/%s/%s.png"
+           "https://stamen-tiles-c.a.ssl.fastly.net/terrain/%s/%s/%s.png"))
+    (stamen-toner
+     :name "Stamen Toner"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://stamen-tiles-a.a.ssl.fastly.net/toner/%s/%s/%s.png"
+           "https://stamen-tiles-b.a.ssl.fastly.net/toner/%s/%s/%s.png"
+           "https://stamen-tiles-c.a.ssl.fastly.net/toner/%s/%s/%s.png")))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
@@ -176,16 +195,15 @@ We need two distinct images which are not `eq' for the display properties.")
   "Return tile url for coordinate X, Y and ZOOM."
   (let ((url (osm--server-property :url)))
     (prog1
-        (format "%s%d/%d/%d.png"
-                (nth osm--url-index url)
-                zoom x y)
+        (format (nth osm--url-index url) zoom x y)
       (setq osm--url-index
             (mod (1+ osm--url-index)
                  (length url))))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
-  (format "%s%d-%d-%d.png" (osm--tile-cache) zoom x y))
+  (format "%s%d-%d-%d.%s" (osm--tile-cache) zoom x y
+          (file-name-extension (car (osm--server-property :url)))))
 
 (defun osm--tile-cache ()
   "Return tile cache directory."
@@ -379,8 +397,13 @@ We need two distinct images which are not `eq' for the display properties.")
          (pos (+ (point-min) (* j (1+ osm--width)) i)))
     (when (and (>= i 0) (< i osm--width)
                (>= j 0) (< j osm--height))
-      (setq image (or image `(image :type png :file ,(osm--tile-file x y osm--zoom)
-                                    :width 256 :height 256)))
+      (unless image
+        (let ((file (osm--tile-file x y osm--zoom)))
+          (setq image `(image :type
+                              ,(if (member (file-name-extension file) '("jpg" "jpeg"))
+                                   'jpeg 'png)
+                              :file ,file
+                              :width 256 :height 256))))
       (with-silent-modifications
         (put-text-property
          pos (1+ pos) 'display
