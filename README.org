@@ -1,0 +1,59 @@
+#+title: osm.el - OpenStreetMap viewer for Emacs
+#+author: Daniel Mendler
+#+language: en
+#+export_file_name: osm.texi
+#+texinfo_dir_category: Emacs
+#+texinfo_dir_title: OpenStreetMap: (osm).
+#+texinfo_dir_desc: OpenStreetMap viewer for Emacs
+
+#+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://github.com/minad/corfu/blob/screenshots/emacs.svg?raw=true"/></a>
+
+[[https://github.com/minad/osm/blob/screenshots/osm.png?raw=true]]
+(Map tiles © https://opentopomap.org,  https://openstreetmap.org)
+
+* Features
+
+- Parallel fetching of tiles via curl
+- Scrolling in large and small steps
+- Zooming
+- Map scale indicator
+- Jump to coordinate
+- Search for location by name
+- Org link support (Example: [[osm:44,10,6][Toscana, Italia 44° 10°]])
+- Bookmarks
+
+* Commands and Key Bindings
+
+Commands:
+- =osm-new=: Open new map at home coordinates
+- =osm-search=: Search and jump to location
+- =osm-goto=: Go to coordinates
+
+Key bindings:
+- ~+~ and ~-~: Zooming
+- ~<arrow>~: Small step scrolling
+- ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
+- ~g~: =osm-goto=
+- ~s~: =osm-search=
+- ~b~: =bookmark-set=
+- ~B~: =bookmark-jump=
+- ~q~: =quit-window=
+- ~c~: =clone-buffer=
+
+* Wishlist
+
+It would be nice to have overlays on top of the map, location markers, routes,
+GPS tracks, etc. Emacs does not have the ability to place different images on
+top of each other, except via SVG. Therefore this requires us to use SVG tiles
+instead of the current PNG tiles. The PNG tiles can be used as backgrounds of
+the corresponding SVG tiles. Alternatively don't use SVG tiles but render
+everything as one large SVG or off load the entire map rendering to an external
+Image Magick process. Maybe that's still efficient enough?
+
+* Related projects
+
+There have been other attempts at map viewers in Emacs before.
+
+- https://github.com/ruediger/osm-mode
+- https://github.com/svenssonjoel/Emacs-OSM
+- https://github.com/jd/google-maps.el
