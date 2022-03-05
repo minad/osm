@@ -38,7 +38,7 @@
   :group 'network
   :prefix "osm-")
 
-(defcustom osm-tile-server-list
+(defcustom osm-server-list
   '((openstreetmap-org
      :name "OpenStreetMap"
      :min-zoom 2 :max-zoom 19 :max-connections 2
@@ -102,15 +102,15 @@
   "Movement step in pixel."
   :type 'integer)
 
-(defcustom osm-tile-server 'openstreetmap-org
+(defcustom osm-server 'openstreetmap-org
   "Tile server name."
   :type 'symbol)
 
-(defcustom osm-tile-cache (file-name-concat user-emacs-directory "var/osm/")
+(defcustom osm-cache-directory (file-name-concat user-emacs-directory "var/osm/")
   "Tile cache directory."
   :type 'string)
 
-(defcustom osm-tile-max-age (* 60 60 24 14)
+(defcustom osm-max-age (* 60 60 24 14)
   "Maximum tile age.
 Should be at least 7 days according to the server usage policies."
   :type '(choice (const nil) integer))
@@ -189,7 +189,7 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--server-property (prop)
   "Return server property PROP."
-  (plist-get (alist-get osm-tile-server osm-tile-server-list) prop))
+  (plist-get (alist-get osm-server osm-server-list) prop))
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
@@ -202,14 +202,14 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
-  (format "%s%d-%d-%d.%s" (osm--tile-cache) zoom x y
+  (format "%s%d-%d-%d.%s" (osm--cache-directory) zoom x y
           (file-name-extension (car (osm--server-property :url)))))
 
-(defun osm--tile-cache ()
+(defun osm--cache-directory ()
   "Return tile cache directory."
   (expand-file-name
-   (file-name-concat osm-tile-cache
-                     (symbol-name osm-tile-server)
+   (file-name-concat osm-cache-directory
+                     (symbol-name osm-server)
                      "/")))
 
 (defun osm--enqueue (x y)
@@ -354,24 +354,26 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--clean-cache ()
   "Clean tile cache."
-  (when (and (integerp osm-tile-max-age)
-             (> (- (float-time) osm--clean-cache) osm-tile-max-age))
+  (when (and (integerp osm-max-age)
+             (> (- (float-time) osm--clean-cache) osm-max-age))
     (setq osm--clean-cache (float-time))
     (run-with-idle-timer
      30 nil
      (lambda ()
-       (dolist (file (directory-files-recursively osm-tile-cache "\\.png\\(?:\\.tmp\\)?\\'" nil))
+       (dolist (file (directory-files-recursively
+                      osm-cache-directory
+                      "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" nil))
          (when (> (float-time
                    (time-since
                     (file-attribute-modification-time
                      (file-attributes file))))
-                  osm-tile-max-age)
+                  osm-max-age)
            (delete-file file)))))))
 
 (define-derived-mode osm-mode special-mode "Osm"
   "Open Street Map mode."
   :interactive nil
-  (let ((cache (osm--tile-cache)))
+  (let ((cache (osm--cache-directory)))
     (unless (file-exists-p cache)
       (make-directory cache t)))
   (osm--clean-cache)
@@ -433,7 +435,7 @@ We need two distinct images which are not `eq' for the display properties.")
   (unless (derived-mode-p #'osm-mode)
     (error "Not an osm-mode buffer"))
   (with-silent-modifications
-    (let* ((default-directory (osm--tile-cache))
+    (let* ((default-directory (osm--cache-directory))
            (size (expt 2 osm--zoom))
            (meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) size))
            (meter '(1 5 10 50 100 500 1000 5000 10000 50000 100000 500000 1000000 5000000 10000000))
