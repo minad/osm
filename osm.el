@@ -83,8 +83,7 @@ Should be at least 7 days according to the server usage policies."
   :type '(choice (const nil) integer))
 
 (defconst osm--placeholder1
-  `(image :type xbm :width 256 :height 256 :background nil
-          :data ,(make-bool-vector (* 256 256) nil))
+  `(image :type xbm :width 256 :height 256 :data ,(make-bool-vector (* 256 256) nil))
   "First placeholder image for tiles.")
 
 (defconst osm--placeholder2 `(image ,@(cdr osm--placeholder1))
@@ -423,8 +422,6 @@ We need two distinct images which are not `eq' for the display properties.")
         '(:eval (osm--queue-info))))
       (setq osm--height (1+ (ceiling (window-pixel-height) 256))
             osm--width (1+ (ceiling (window-pixel-width) 256)))
-      (plist-put (cdr osm--placeholder1) :background (face-attribute 'default :background))
-      (plist-put (cdr osm--placeholder2) :background (face-attribute 'default :background))
       (erase-buffer)
       (dotimes (_j osm--height)
         (insert (concat (make-string osm--width ?\s) "\n")))
