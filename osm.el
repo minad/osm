@@ -73,6 +73,11 @@
   "Tile cache directory."
   :type 'string)
 
+(defcustom osm-tile-max-age (* 60 60 24 14)
+  "Maximum tile age.
+Should be at least 7 days according to the server usage policies."
+  :type '(choice (const nil) integer))
+
 (defconst osm--placeholder1
   `(image :type xbm :width 256 :height 256 :background nil
           :data ,(make-bool-vector (* 256 256) nil)))
@@ -80,6 +85,7 @@
 
 (defvar osm--search-history nil)
 
+(defvar osm--clean-cache 0)
 (defvar-local osm--url-index 0)
 (defvar-local osm--queue nil)
 (defvar-local osm--active nil)
@@ -289,22 +295,29 @@
     map)
   "Keymap used by `osm-mode'.")
 
+(defun osm--clean-cache ()
+  "Clean tile cache."
+  (when (and (integerp osm-tile-max-age)
+             (> (- (float-time) osm--clean-cache) osm-tile-max-age))
+    (setq osm--clean-cache (float-time))
+    (run-with-idle-timer
+     30 nil
+     (lambda ()
+       (dolist (file (directory-files-recursively osm-tile-cache "\\.png\\'" nil))
+         (when (> (float-time
+                   (time-since
+                    (file-attribute-modification-time
+                     (file-attributes file))))
+                  osm-tile-max-age)
+           (delete-file file)))))))
+
 (define-derived-mode osm-mode special-mode "Osm"
   "Open Street Map mode."
   :interactive nil
   (let ((cache (osm--tile-cache)))
     (unless (file-exists-p cache)
-      (make-directory cache t))
-    (run-with-idle-timer
-     30 nil
-     (lambda ()
-       (dolist (file (directory-files cache 'full "\\.png\\'" 'nosort))
-         (when (> (float-time
-                   (time-since
-                    (file-attribute-modification-time
-                     (file-attributes file))))
-                  (* 60 60 24 7))
-           (delete-file file))))))
+      (make-directory cache t)))
+  (osm--clean-cache)
   (setq-local line-spacing nil
               cursor-type nil
               left-fringe-width 1
