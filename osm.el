@@ -381,11 +381,14 @@ We need two distinct images which are not `eq' for the display properties.")
   (osm--clean-cache)
   (setq-local line-spacing nil
               cursor-type nil
+              cursor-in-non-selected-windows nil
               left-fringe-width 1
               right-fringe-width 1
               left-margin-width 0
               right-margin-width 0
               truncate-lines t
+              show-trailing-whitespace nil
+              display-line-numbers nil
               buffer-read-only t
               revert-buffer-function #'osm--update
               bookmark-make-record-function #'osm--make-bookmark
