@@ -194,26 +194,28 @@ We need two distinct images which are not `eq' for the display properties.")
                     (osm--server-property :max-connections)))
               (pop osm--queue))
     (`(,x ,y . ,zoom)
-     (let ((buffer (current-buffer)))
+     (let* ((buffer (current-buffer))
+            (dst (osm--tile-file x y zoom))
+            (tmp (concat dst ".tmp")))
        (push
         (make-process
          :name (format "osm %s %s %s" x y zoom)
          :connection-type 'pipe
          :noquery t
          :command
-         (list "curl" "-s" "-o"
-               (osm--tile-file x y zoom)
-               (osm--tile-url x y zoom))
+         (list "curl" "-s" "-o" tmp (osm--tile-url x y zoom))
          :filter #'ignore
          :sentinel
          (lambda (proc status)
            (when (buffer-live-p buffer)
              (with-current-buffer buffer
-               (setq osm--active (delq proc osm--active))
                (when (and (string-match-p "finished" status)
                           (eq osm--zoom zoom))
+                 (rename-file tmp dst t)
                  (osm--put x y))
+               (delete-file tmp)
                (force-mode-line-update)
+               (setq osm--active (delq proc osm--active))
                (osm--download)))))
         osm--active)
        (osm--download)))))
@@ -327,7 +329,7 @@ We need two distinct images which are not `eq' for the display properties.")
     (run-with-idle-timer
      30 nil
      (lambda ()
-       (dolist (file (directory-files-recursively osm-tile-cache "\\.png\\'" nil))
+       (dolist (file (directory-files-recursively osm-tile-cache "\\.png\\(?:\\.tmp\\)?\\'" nil))
          (when (> (float-time
                    (time-since
                     (file-attribute-modification-time
