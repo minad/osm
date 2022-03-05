@@ -120,6 +120,7 @@ Should be at least 7 days according to the server usage policies."
   (let ((map (make-sparse-keymap)))
     (define-key map "+" #'osm-larger)
     (define-key map "-" #'osm-smaller)
+    (define-key map [mouse-1] #'osm-click)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
     (define-key map [left] #'osm-left)
@@ -171,11 +172,17 @@ We need two distinct images which are not `eq' for the display properties.")
 (defvar-local osm--active nil
   "Active download jobs.")
 
-(defvar-local osm--width 0
-  "Window width in units of the tile size.")
+(defvar-local osm--wx 0
+  "Half window width in pixel.")
 
-(defvar-local osm--height 0
-  "Window height in units of the tile size.")
+(defvar-local osm--wy 0
+  "Half window height in pixel.")
+
+(defvar-local osm--nx 0
+  "Number of tiles in x diretion.")
+
+(defvar-local osm--ny 0
+  "Number of tiles in y direction.")
 
 (defvar-local osm--zoom nil
   "Zoom level of the map.")
@@ -186,7 +193,7 @@ We need two distinct images which are not `eq' for the display properties.")
 (defvar-local osm--y nil
   "X coordinate on the map in pixel.")
 
-(defun osm--bb-to-zoom (lat1 lat2 lon1 lon2)
+(defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
   (let ((w (/ (frame-pixel-width) 256))
         (h (/ (frame-pixel-height) 256)))
@@ -283,6 +290,15 @@ We need two distinct images which are not `eq' for the display properties.")
                (osm--download)))))
         osm--active)
        (osm--download)))))
+
+(defun osm-click (event)
+  "Handle click EVENT."
+  (interactive "e")
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
+    (when (< osm--zoom (osm--server-property :max-zoom))
+      (cl-incf osm--x (- x osm--wx))
+      (cl-incf osm--y (- y osm--wy))
+      (osm-larger))))
 
 (defun osm-larger (&optional n)
   "Zoom N times into the map."
@@ -397,13 +413,12 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--put (x y &optional image)
   "Put tile IMAGE at X/Y."
-  (let* ((i (+ x (- (/ osm--x 256)) (/ (1- osm--width) 2)))
-         (j (+ y (- (/ osm--y 256)) (/ (1- osm--height) 2)))
-         (mx (if (= 0 i) (mod osm--x 256) 0))
-         (my (if (= 0 j) (mod osm--y 256) 0))
-         (pos (+ (point-min) (* j (1+ osm--width)) i)))
-    (when (and (>= i 0) (< i osm--width)
-               (>= j 0) (< j osm--height))
+  (let* ((i (- x (/ (- osm--x osm--wx) 256)))
+         (j (- y (/ (- osm--y osm--wy) 256)))
+         (mx (if (= 0 i) (mod (- osm--x osm--wx) 256) 0))
+         (my (if (= 0 j) (mod (- osm--y osm--wy) 256) 0))
+         (pos (+ (point-min) (* j (1+ osm--nx)) i)))
+    (when (and (>= i 0) (< i osm--nx) (>= j 0) (< j osm--ny))
       (unless image
         (let ((file (osm--tile-file x y osm--zoom)))
           (setq image
@@ -466,16 +481,18 @@ We need two distinct images which are not `eq' for the display properties.")
                 (if (>= meter 1000) (/ meter 1000) meter)
                 (if (>= meter 1000) "km" "m"))
         '(:eval (osm--queue-info))))
-      (setq osm--height (1+ (ceiling (window-pixel-height) 256))
-            osm--width (1+ (ceiling (window-pixel-width) 256)))
+      (setq osm--wx (/ (window-pixel-width) 2)
+            osm--wy (/ (window-pixel-height) 2)
+            osm--nx (1+ (ceiling (window-pixel-width) 256))
+            osm--ny (1+ (ceiling (window-pixel-height) 256)))
       (erase-buffer)
-      (dotimes (_j osm--height)
-        (insert (concat (make-string osm--width ?\s) "\n")))
+      (dotimes (_j osm--ny)
+        (insert (concat (make-string osm--nx ?\s) "\n")))
       (goto-char (point-min))
-      (dotimes (j osm--height)
-        (dotimes (i osm--width)
-          (let ((x (+ i (/ osm--x 256) (- (/ (1- osm--width) 2))))
-                (y (+ j (/ osm--y 256) (- (/ (1- osm--height) 2))))
+      (dotimes (j osm--ny)
+        (dotimes (i osm--nx)
+          (let ((x (+ i (/ (- osm--x osm--wx) 256)))
+                (y (+ j (/ (- osm--y osm--wy) 256)))
                 (placeholder (if (= 0 (mod i 2)) osm--placeholder1 osm--placeholder2)))
             (if (and (>= x 0) (>= y 0) (< x size) (< y size))
                 (if (file-exists-p (osm--tile-file x y osm--zoom))
@@ -595,7 +612,7 @@ The buffer is optionally assigned a UNIQUE name."
                              results))
                        (error "No selection"))))
     (osm-goto (car selected) (cadr selected)
-               (apply #'osm--bb-to-zoom (cddr selected)))))
+               (apply #'osm--boundingbox-to-zoom (cddr selected)))))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-large #'osm-down-large #'osm-left-large #'osm-right-large

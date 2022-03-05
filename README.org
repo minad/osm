@@ -15,7 +15,7 @@
 
 - Parallel fetching of tiles via curl
 - Scrolling in large and small steps
-- Zooming
+- Zooming with keys or with mouse click
 - Map scale indicator
 - Jump to coordinate
 - Search for location by name
