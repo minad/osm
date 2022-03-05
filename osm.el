@@ -69,6 +69,24 @@
      :url ("https://a.tile.opentopomap.org/%s/%s/%s.png"
            "https://b.tile.opentopomap.org/%s/%s/%s.png"
            "https://c.tile.opentopomap.org/%s/%s/%s.png"))
+    (opvnkarte
+     :name "ÖPNVKarte"
+     :min-zoom 2 :max-zoom 18 :max-connections 2
+     :url ("http://a.tile.memomaps.de/tilegen/%s/%s/%s.png"
+           "http://b.tile.memomaps.de/tilegen/%s/%s/%s.png"
+           "http://c.tile.memomaps.de/tilegen/%s/%s/%s.png"))
+    (cyclosm
+     :name "CyclOSM"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://a.tile.openstreetmap.fr/cyclosm/%s/%s/%s.png"
+           "https://b.tile.openstreetmap.fr/cyclosm/%s/%s/%s.png"
+           "https://c.tile.openstreetmap.fr/cyclosm/%s/%s/%s.png"))
+    (openriverboatmap
+     :name "OpenRiverBoatMap"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://a.tile.openstreetmap.fr/openriverboatmap/%s/%s/%s.png"
+           "https://b.tile.openstreetmap.fr/openriverboatmap/%s/%s/%s.png"
+           "https://c.tile.openstreetmap.fr/openriverboatmap/%s/%s/%s.png"))
     (stamen-watercolor
      :name "Stamen Watercolor"
      :min-zoom 2 :max-zoom 19 :max-connections 2
