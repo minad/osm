@@ -39,21 +39,29 @@
   :prefix "osm-")
 
 (defcustom osm-tile-server-list
-  '((openstreetmap-de
-     :url ("https://a.tile.openstreetmap.de/"
-           "https://b.tile.openstreetmap.de/"
-           "https://c.tile.openstreetmap.de/")
-     :min-zoom 2 :max-zoom 19 :max-connections 2)
-    (openstreetmap-org
+  '((openstreetmap-org
+     :min-zoom 2 :max-zoom 19 :max-connections 2
      :url ("https://a.tile.openstreetmap.org/"
            "https://b.tile.openstreetmap.org/"
-           "https://c.tile.openstreetmap.org/")
-     :min-zoom 2 :max-zoom 19 :max-connections 2)
+           "https://c.tile.openstreetmap.org/"))
+    (openstreetmap-de
+     :name "OpenStreetMap Deutschland"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://a.tile.openstreetmap.de/"
+           "https://b.tile.openstreetmap.de/"
+           "https://c.tile.openstreetmap.de/"))
+    (openstreetmap-fr
+     :name "OpenStreetMap France"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url ("https://a.tile.openstreetmap.fr/osmfr/"
+           "https://b.tile.openstreetmap.fr/osmfr/"
+           "https://c.tile.openstreetmap.fr/osmfr/"))
     (opentopomap-org
+     :name "OpenTopoMap"
+     :min-zoom 2 :max-zoom 17 :max-connections 2
      :url ("https://a.tile.opentopomap.org/"
            "https://b.tile.opentopomap.org/"
-           "https://c.tile.opentopomap.org/")
-     :min-zoom 2 :max-zoom 17 :max-connections 2))
+           "https://c.tile.opentopomap.org/")))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
@@ -407,7 +415,8 @@ We need two distinct images which are not `eq' for the display properties.")
       (setq-local
        header-line-format
        (list
-        (format " OpenStreetMap %s %s    Z%-2d    %s%s%s %s %s    "
+        (format " %s %s %s    Z%-2d    %s%s%s %s %s    "
+                (osm--server-property :name)
                 (format #("%7.2f°" 0 5 (face bold)) (osm--lat))
                 (format #("%7.2f°" 0 5 (face bold)) (osm--lon))
                 osm--zoom
