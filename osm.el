@@ -84,20 +84,42 @@ Should be at least 7 days according to the server usage policies."
 
 (defconst osm--placeholder1
   `(image :type xbm :width 256 :height 256 :background nil
-          :data ,(make-bool-vector (* 256 256) nil)))
-(defconst osm--placeholder2 (copy-sequence osm--placeholder1))
+          :data ,(make-bool-vector (* 256 256) nil))
+  "First placeholder image for tiles.")
 
-(defvar osm--search-history nil)
+(defconst osm--placeholder2 `(image ,@(cdr osm--placeholder1))
+  "Second placeholder image for tiles.
+We need two distinct images which are not `eq' for the display properties.")
 
-(defvar osm--clean-cache 0)
-(defvar-local osm--url-index 0)
-(defvar-local osm--queue nil)
-(defvar-local osm--active nil)
-(defvar-local osm--width 0)
-(defvar-local osm--height 0)
-(defvar-local osm--zoom nil)
-(defvar-local osm--x nil)
-(defvar-local osm--y nil)
+(defvar osm--search-history nil
+  "Minibuffer search history used by `osm-search'.")
+
+(defvar osm--clean-cache 0
+  "Last time the tile cache was cleaned.")
+
+(defvar-local osm--url-index 0
+  "Current url index to query the servers in a round-robin fashion.")
+
+(defvar-local osm--queue nil
+  "Download queue of tiles.")
+
+(defvar-local osm--active nil
+  "Active download jobs.")
+
+(defvar-local osm--width 0
+  "Window width in units of the tile size.")
+
+(defvar-local osm--height 0
+  "Window height in units of the tile size.")
+
+(defvar-local osm--zoom nil
+  "Zoom level of the map.")
+
+(defvar-local osm--x nil
+  "Y coordinate on the map in pixel.")
+
+(defvar-local osm--y nil
+  "X coordinate on the map in pixel.")
 
 (defun osm--bb-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
