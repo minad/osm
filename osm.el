@@ -106,7 +106,8 @@
   "Tile server name."
   :type 'symbol)
 
-(defcustom osm-cache-directory (file-name-concat user-emacs-directory "var/osm/")
+(defcustom osm-cache-directory
+  (file-name-concat user-emacs-directory "var/osm/")
   "Tile cache directory."
   :type 'string)
 
@@ -115,8 +116,40 @@
 Should be at least 7 days according to the server usage policies."
   :type '(choice (const nil) integer))
 
+(defvar osm-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "+" #'osm-larger)
+    (define-key map "-" #'osm-smaller)
+    (define-key map [up] #'osm-up)
+    (define-key map [down] #'osm-down)
+    (define-key map [left] #'osm-left)
+    (define-key map [right] #'osm-right)
+    (define-key map [C-up] #'osm-up-large)
+    (define-key map [C-down] #'osm-down-large)
+    (define-key map [C-left] #'osm-left-large)
+    (define-key map [C-right] #'osm-right-large)
+    (define-key map [M-up] #'osm-up-large)
+    (define-key map [M-down] #'osm-down-large)
+    (define-key map [M-left] #'osm-left-large)
+    (define-key map [M-right] #'osm-right-large)
+    (define-key map "c" #'clone-buffer)
+    (define-key map "g" #'osm-goto)
+    (define-key map "s" #'osm-search)
+    (define-key map "b" #'bookmark-set)
+    (define-key map "B" #'bookmark-jump)
+    (define-key map [remap scroll-down-command] #'osm-down)
+    (define-key map [remap scroll-up-command] #'osm-up)
+    (define-key map "\d" nil)
+    (define-key map (kbd "S-SPC") nil)
+    (define-key map " " nil)
+    (define-key map "<" nil)
+    (define-key map ">" nil)
+    map)
+  "Keymap used by `osm-mode'.")
+
 (defconst osm--placeholder1
-  `(image :type xbm :width 256 :height 256 :data ,(make-bool-vector (* 256 256) nil))
+  `(image :type xbm :width 256 :height 256
+          :data ,(make-bool-vector (* 256 256) nil))
   "First placeholder image for tiles.")
 
 (defconst osm--placeholder2 `(image ,@(cdr osm--placeholder1))
@@ -321,37 +354,6 @@ We need two distinct images which are not `eq' for the display properties.")
   (interactive "p")
   (osm-right-large (- (or n 1))))
 
-(defvar osm-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "+" #'osm-larger)
-    (define-key map "-" #'osm-smaller)
-    (define-key map [up] #'osm-up)
-    (define-key map [down] #'osm-down)
-    (define-key map [left] #'osm-left)
-    (define-key map [right] #'osm-right)
-    (define-key map [C-up] #'osm-up-large)
-    (define-key map [C-down] #'osm-down-large)
-    (define-key map [C-left] #'osm-left-large)
-    (define-key map [C-right] #'osm-right-large)
-    (define-key map [M-up] #'osm-up-large)
-    (define-key map [M-down] #'osm-down-large)
-    (define-key map [M-left] #'osm-left-large)
-    (define-key map [M-right] #'osm-right-large)
-    (define-key map "c" #'clone-buffer)
-    (define-key map "g" #'osm-goto)
-    (define-key map "s" #'osm-search)
-    (define-key map "b" #'bookmark-set)
-    (define-key map "B" #'bookmark-jump)
-    (define-key map [remap scroll-down-command] #'osm-down)
-    (define-key map [remap scroll-up-command] #'osm-up)
-    (define-key map "\d" nil)
-    (define-key map (kbd "S-SPC") nil)
-    (define-key map " " nil)
-    (define-key map "<" nil)
-    (define-key map ">" nil)
-    map)
-  "Keymap used by `osm-mode'.")
-
 (defun osm--clean-cache ()
   "Clean tile cache."
   (when (and (integerp osm-max-age)
@@ -401,11 +403,12 @@ We need two distinct images which are not `eq' for the display properties.")
                (>= j 0) (< j osm--height))
       (unless image
         (let ((file (osm--tile-file x y osm--zoom)))
-          (setq image `(image :type
-                              ,(if (member (file-name-extension file) '("jpg" "jpeg"))
-                                   'jpeg 'png)
-                              :file ,file
-                              :width 256 :height 256))))
+          (setq image
+                `(image :type
+                        ,(if (member (file-name-extension file) '("jpg" "jpeg"))
+                             'jpeg 'png)
+                        :file ,file
+                        :width 256 :height 256))))
       (with-silent-modifications
         (put-text-property
          pos (1+ pos) 'display
@@ -497,6 +500,7 @@ We need two distinct images which are not `eq' for the display properties.")
     (name . ,(buffer-name))
     (handler . ,#'osm-bookmark-jump)))
 
+;;;###autoload
 (defun osm-goto (lat lon zoom &optional name unique)
   "Goto LAT/LON/ZOOM in buffer NAME.
 The buffer is optionally assigned a UNIQUE name."
@@ -508,7 +512,8 @@ The buffer is optionally assigned a UNIQUE name."
      (list lat lon zoom)))
   (with-current-buffer
       (cond
-       ((and (not name) (not unique) (derived-mode-p #'osm-mode)) (current-buffer))
+       ((and (not name) (not unique) (derived-mode-p #'osm-mode))
+        (current-buffer))
        (unique (generate-new-buffer (or name osm-buffer-name)))
        (t (get-buffer-create (or name osm-buffer-name))))
     (unless (derived-mode-p #'osm-mode)
@@ -560,7 +565,8 @@ The buffer is optionally assigned a UNIQUE name."
   (interactive)
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
   (let* ((search (completing-read
-                  "Location: " osm--search-history nil nil nil 'osm--search-history))
+                  "Location: " osm--search-history
+                  nil nil nil 'osm--search-history))
          (json (json-parse-string
                 (shell-command-to-string
                  (concat "curl -s "

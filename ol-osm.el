@@ -26,7 +26,7 @@
 (require 'ol)
 
 ;; Only load osm on demand
-(autoload 'osm-goto "osm")
+(declare-function osm-goto "osm")
 (declare-function osm--link-data "osm")
 
 (org-link-set-parameters
