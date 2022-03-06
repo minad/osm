@@ -34,8 +34,8 @@
 (eval-when-compile (require 'cl-lib))
 
 (defgroup osm nil
-  "OpenStreetMap."
-  :group 'network
+  "OpenStreetMap viewer."
+  :group 'web
   :prefix "osm-")
 
 (defcustom osm-server-list
@@ -87,11 +87,11 @@
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-large-step 256
-  "Movement step in pixel."
+  "Scroll step in pixel."
   :type 'integer)
 
 (defcustom osm-small-step 16
-  "Movement step in pixel."
+  "Scroll step in pixel."
   :type 'integer)
 
 (defcustom osm-server 'default
@@ -103,8 +103,8 @@
   "Tile cache directory."
   :type 'string)
 
-(defcustom osm-max-age (* 60 60 24 14)
-  "Maximum tile age.
+(defcustom osm-max-age 14
+  "Maximum tile age in days.
 Should be at least 7 days according to the server usage policies."
   :type '(choice (const nil) integer))
 
@@ -386,7 +386,7 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--clean-cache ()
   "Clean tile cache."
   (when (and (integerp osm-max-age)
-             (> (- (float-time) osm--clean-cache) osm-max-age))
+             (> (- (float-time) osm--clean-cache) (* 60 60 24)))
     (setq osm--clean-cache (float-time))
     (run-with-idle-timer
      30 nil
@@ -400,11 +400,11 @@ We need two distinct images which are not `eq' for the display properties.")
                    (time-since
                     (file-attribute-modification-time
                      (file-attributes file))))
-                  osm-max-age)
+                  (* 60 60 24 osm-max-age))
            (delete-file file)))))))
 
 (define-derived-mode osm-mode special-mode "Osm"
-  "Open Street Map mode."
+  "OpenStreetMap viewer mode."
   :interactive nil
   (osm--clean-cache)
   (setq-local osm-server osm-server
