@@ -30,7 +30,6 @@
 
 ;;; Code:
 
-(require 'seq)
 (eval-when-compile (require 'cl-lib))
 
 (defvar bookmark-current-bookmark)
@@ -554,12 +553,11 @@ We need two distinct images which are not `eq' for the display properties.")
             (osm--display-tile x y tile)
             (unless tile (osm--enqueue x y)))))
       (setq osm--queue
-            (seq-sort-by
-             (pcase-lambda (`(,x ,y . ,_z))
-               (setq x (- x (/ osm--x 256))
-                     y (- y (/ osm--y 256)))
-               (+ (* x x) (* y y)))
-             #'< osm--queue))
+            (sort osm--queue
+                  (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
+                    (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
+                          x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
+                    (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
       (osm--download))))
 
 (defun osm--make-bookmark ()
