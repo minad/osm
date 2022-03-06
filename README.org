@@ -23,6 +23,20 @@
 - Bookmarks
 - Multiple preconfigured servers
 
+* Configuration
+
+#+begin_src emacs-lisp
+  (use-package osm
+    :bind (("C-c m h" . osm-home)
+           ("C-c m s" . osm-search)
+           ("C-c m S" . osm-server)
+           ("C-c m g" . osm-goto))
+    :init
+    ;; Load Org link support
+    (with-eval-after-load 'org
+      (require 'osm-ol)))
+#+end_src
+
 * Bookmarks and Org links
 
 To store a bookmark press the key ~b~, to store Org links press the key ~l~. You can
