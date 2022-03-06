@@ -419,9 +419,13 @@ We need two distinct images which are not `eq' for the display properties.")
               show-trailing-whitespace nil
               display-line-numbers nil
               buffer-read-only t
+              fringe-indicator-alist '((truncation . nil))
               revert-buffer-function #'osm--revert
-              bookmark-make-record-function #'osm--make-bookmark
-              fringe-indicator-alist '((truncation . nil)))
+              mwheel-scroll-up-function #'osm-down
+              mwheel-scroll-down-function #'osm-up
+              mwheel-scroll-left-function #'osm-left
+              mwheel-scroll-right-function #'osm-right
+              bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--revert nil 'local))
 
 (defun osm--display-tile (x y)
