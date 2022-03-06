@@ -660,26 +660,29 @@ We need two distinct images which are not `eq' for the display properties.")
         (car bm)
       (format "*%s*" (car bm))))))
 
-(defun osm--description ()
+(defun osm--location-name ()
   "Return descriptive string for current map."
   (message "Fetching location name...")
-  (alist-get
-   'display_name
-   (json-parse-string
-    (shell-command-to-string
-     (concat
-      "curl -s "
-      (shell-quote-argument
-       (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
-               (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
-    :array-type 'list
-    :object-type 'alist)))
+  (let ((name
+         (alist-get
+          'display_name
+          (json-parse-string
+           (shell-command-to-string
+            (concat
+             "curl -s "
+             (shell-quote-argument
+              (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
+                      (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
+           :array-type 'list
+           :object-type 'alist))))
+    (message "%s" (or name "No name found"))
+    name))
 
 ;;;###autoload
 (defun osm-rename ()
   "Rename buffer, use name of current location."
   (interactive)
-  (when-let (desc (osm--description))
+  (when-let (desc (osm--location-name))
     (rename-buffer
      (format "*osm: %s, %.2f° %.2f° %s*"
              desc (osm--lat) (osm--lon)
