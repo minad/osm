@@ -553,13 +553,13 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--make-bookmark ()
   "Make OSM bookmark."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
-  `(,(osm--buffer-name-with-coordinates)
+  `(,(osm--bookmark-name)
     (coordinate ,(osm--lat) ,(osm--lon) ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
-(defun osm--buffer-name-with-coordinates ()
-  "Return buffer description."
+(defun osm--bookmark-name ()
+  "Return default bookmark name."
   (if (osm--generated-name-p)
       (format "osm: %.2f° %.2f° %s"
               (osm--lat) (osm--lon)
@@ -567,6 +567,15 @@ We need two distinct images which are not `eq' for the display properties.")
     (replace-regexp-in-string
      "\\`\\*\\|\\*\\(?:<[0-9]+>\\)?\\'"
      "" (buffer-name))))
+
+(defun osm--link-data ()
+  "Return link data."
+  (list (osm--lat) (osm--lon) osm--zoom
+        (and (not (eq osm-server (default-value 'osm-server))) osm-server)
+        (let ((name (string-remove-prefix "osm: " (osm--bookmark-name))))
+          (if (eq osm-server (default-value 'osm-server))
+              (string-remove-suffix (concat " " (osm--server-property :name)) name)
+            name))))
 
 (defun osm--default-buffer-name ()
   "Return default buffer name."
@@ -631,12 +640,6 @@ We need two distinct images which are not `eq' for the display properties.")
         (car bm)
       (format "*%s*" (car bm))))))
 
-(defun osm--link-data ()
-  "Return link data."
-  (list (osm--lat) (osm--lon) osm--zoom
-        (and (not (eq osm-server (default-value 'osm-server))) osm-server)
-        (osm--buffer-name-with-coordinates)))
-
 (defun osm--description ()
   "Return descriptive string for current map."
   (message "Fetching location name...")
@@ -658,7 +661,7 @@ We need two distinct images which are not `eq' for the display properties.")
   (interactive)
   (when-let (desc (osm--description))
     (rename-buffer
-     (format "*osm: %s %.2f° %.2f° %s*"
+     (format "*osm: %s, %.2f° %.2f° %s*"
              desc (osm--lat) (osm--lon)
              (osm--server-property :name))
      'unique)))

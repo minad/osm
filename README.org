@@ -13,7 +13,7 @@
 
 * Features
 
-- Parallel fetching of tiles via curl
+- Parallel fetching of tiles with curl
 - Scrolling in large and small steps
 - Zooming with keys or with mouse click
 - Map scale indicator
@@ -31,7 +31,7 @@ Top-level commands:
 - =osm-goto=: Go to coordinates
 - =osm-server=: Select server
 
-Key bindings:
+Key bindings in =osm-mode= buffer:
 - ~+~ and ~-~: Zooming
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
