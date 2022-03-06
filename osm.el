@@ -42,69 +42,47 @@
   '((default
      :name "OpenStreetMap"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.org/%z/%x/%y.png"
-           "https://b.tile.openstreetmap.org/%z/%x/%y.png"
-           "https://c.tile.openstreetmap.org/%z/%x/%y.png"))
+     :url "https://[abc].tile.openstreetmap.org/%z/%x/%y.png")
     (de
      :name "OSM Deutschland"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.de/%z/%x/%y.png"
-           "https://b.tile.openstreetmap.de/%z/%x/%y.png"
-           "https://c.tile.openstreetmap.de/%z/%x/%y.png"))
+     :url "https://[abc].tile.openstreetmap.de/%z/%x/%y.png")
     (fr
      :name "OSM France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
-           "https://b.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
-           "https://c.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"))
+     :url "https://[abc].tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
     (humanitarian
      :name "OSM Humanitarian"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.fr/hot/%z/%x/%y.png"
-           "https://b.tile.openstreetmap.fr/hot/%z/%x/%y.png"
-           "https://c.tile.openstreetmap.fr/hot/%z/%x/%y.png"))
+     :url "https://[abc].tile.openstreetmap.fr/hot/%z/%x/%y.png")
     (opentopomap
      :name "OpenTopoMap"
      :min-zoom 2 :max-zoom 17 :max-connections 2
-     :url ("https://a.tile.opentopomap.org/%z/%x/%y.png"
-           "https://b.tile.opentopomap.org/%z/%x/%y.png"
-           "https://c.tile.opentopomap.org/%z/%x/%y.png"))
+     :url "https://[abc].tile.opentopomap.org/%z/%x/%y.png")
     (opvnkarte
      :name "ÖPNVKarte"
      :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url ("http://a.tile.memomaps.de/tilegen/%z/%x/%y.png"
-           "http://b.tile.memomaps.de/tilegen/%z/%x/%y.png"
-           "http://c.tile.memomaps.de/tilegen/%z/%x/%y.png"))
+     :url "http://[abc].tile.memomaps.de/tilegen/%z/%x/%y.png")
     (cyclosm
      :name "CyclOSM"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
-           "https://b.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
-           "https://c.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"))
+     :url "https://[abc].tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://a.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
-           "https://b.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
-           "https://c.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"))
+     :url "https://[abc].tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
     (stamen-watercolor
      :name "Stamen Watercolor"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://stamen-tiles-a.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
-           "https://stamen-tiles-b.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
-           "https://stamen-tiles-c.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"))
+     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
     (stamen-terrain
      :name "Stamen Terrain"
      :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url ("https://stamen-tiles-a.a.ssl.fastly.net/terrain/%z/%x/%y.png"
-           "https://stamen-tiles-b.a.ssl.fastly.net/terrain/%z/%x/%y.png"
-           "https://stamen-tiles-c.a.ssl.fastly.net/terrain/%z/%x/%y.png"))
+     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/terrain/%z/%x/%y.png")
     (stamen-toner
      :name "Stamen Toner"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url ("https://stamen-tiles-a.a.ssl.fastly.net/toner/%z/%x/%y.png"
-           "https://stamen-tiles-b.a.ssl.fastly.net/toner/%z/%x/%y.png"
-           "https://stamen-tiles-c.a.ssl.fastly.net/toner/%z/%x/%y.png")))
+     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner/%z/%x/%y.png"))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
@@ -250,17 +228,22 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
-  (let ((url (osm--server-property :url)))
+  (let ((url (osm--server-property :url))
+        (count 1))
+    (save-match-data
+      (when (string-match "\\`\\(.*\\)\\[\\(.*\\)\\]\\(.*\\)\\'" url)
+        (setq count (- (match-end 2) (match-beginning 2))
+              url (concat (match-string 1 url)
+                          (char-to-string (aref (match-string 2 url) osm--url-index))
+                          (match-string 3 url)))))
     (prog1
-        (format-spec (nth osm--url-index url) `((?z . ,zoom) (?x . ,x) (?y . ,y)))
-      (setq osm--url-index
-            (mod (1+ osm--url-index)
-                 (length url))))))
+        (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)))
+      (setq osm--url-index (mod (1+ osm--url-index) count)))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
   (format "%s%d-%d-%d.%s" (osm--cache-directory) zoom x y
-          (file-name-extension (car (osm--server-property :url)))))
+          (file-name-extension (osm--server-property :url))))
 
 (defun osm--cache-directory ()
   "Return tile cache directory."
@@ -281,7 +264,10 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--download ()
   "Download next tile in queue."
   (when-let (job (and (< (length osm--active)
-                         (* (length (osm--server-property :url))
+                         (* (save-match-data
+                              (if (string-match "\\[\\(.*\\)\\]"
+                                                (osm--server-property :url))
+                                  (- (match-end 1) (match-beginning 1)) 1))
                             (osm--server-property :max-connections)))
                       (pop osm--queue)))
     (push job osm--active)
