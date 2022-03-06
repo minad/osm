@@ -553,7 +553,6 @@ We need two distinct images which are not `eq' for the display properties.")
   `(,(osm--buffer-description)
     (coordinate ,(osm--lat) ,(osm--lon) ,osm--zoom)
     (server . ,osm-server)
-    (buffer . ,(buffer-name))
     (handler . ,#'osm-bookmark-jump)))
 
 (defun osm--default-buffer-name ()
@@ -566,18 +565,18 @@ We need two distinct images which are not `eq' for the display properties.")
    (format "\\`%s\\(?:<[0-9]+>\\)?\\'" (regexp-quote (osm--default-buffer-name)))
    (buffer-name)))
 
-(cl-defun osm--setup (&key at server buffer)
-  "Setup BUFFER with SERVER at coordinates AT."
+(cl-defun osm--setup (&key at server name)
+  "Setup buffer NAME with SERVER at coordinates AT."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
       (if (derived-mode-p #'osm-mode)
           (current-buffer)
         (generate-new-buffer
-         (or buffer
+         (or name
              (let ((osm-server (or server osm-server)))
                (osm--default-buffer-name)))))
-    (let ((auto-rename (osm--default-buffer-name-p)))
+    (let ((auto-rename (or name (osm--default-buffer-name-p))))
       (unless (derived-mode-p #'osm-mode)
         (osm-mode))
       (when (and server (not (eq osm-server server)))
@@ -585,9 +584,9 @@ We need two distinct images which are not `eq' for the display properties.")
               osm--active nil
               osm--queue nil))
       (when auto-rename
-        (setq buffer (or buffer (osm--default-buffer-name)))
-        (unless (equal buffer (buffer-name))
-          (rename-buffer buffer 'unique)))
+        (setq name (or name (osm--default-buffer-name)))
+        (unless (equal name (buffer-name))
+          (rename-buffer name 'unique)))
       (when (or (not (and osm--x osm--y)) at)
         (osm--set-coordinates (or at (osm--home-coordinates))))
       (osm--update)
@@ -609,10 +608,14 @@ We need two distinct images which are not `eq' for the display properties.")
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
   "Jump to OSM bookmark BM."
-  (set-buffer (osm--setup
-               :at (alist-get 'coordinate bm)
-               :server (alist-get 'server bm)
-               :buffer (alist-get 'buffer bm))))
+  (set-buffer
+   (osm--setup
+    :at (alist-get 'coordinate bm)
+    :server (alist-get 'server bm)
+    :name
+    (if (string-match-p "\\`\\*.*\\*\\'" (car bm))
+        (car bm)
+      (format "*%s*" (car bm))))))
 
 (defun osm--link-data ()
   "Return link data."
