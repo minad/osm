@@ -276,9 +276,10 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--enqueue (x y)
   "Enqueue tile X/Y for download."
-  (let ((job `(,x ,y . ,osm--zoom)))
-    (unless (or (member job osm--queue) (member job osm--active))
-      (setq osm--queue (nconc osm--queue (list job))))))
+  (when (let ((n (expt 2 osm--zoom))) (and (>= x 0) (>= y 0) (< x n) (< y n)))
+    (let ((job `(,x ,y . ,osm--zoom)))
+      (unless (or (member job osm--queue) (member job osm--active))
+        (setq osm--queue (nconc osm--queue (list job)))))))
 
 (defun osm--download ()
   "Download next tile in queue."
@@ -311,7 +312,7 @@ We need two distinct images which are not `eq' for the display properties.")
              (when (and (string-match-p "finished" status)
                         (eq osm--zoom zoom))
                (ignore-errors (rename-file tmp dst t))
-               (osm--display-tile x y))
+               (osm--display-tile x y (osm--get-tile x y)))
              (delete-file tmp)
              (force-mode-line-update)
              (setq osm--active (delq job osm--active))
@@ -451,30 +452,29 @@ We need two distinct images which are not `eq' for the display properties.")
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--revert nil 'local))
 
-(defun osm--display-tile (x y)
-  "Display tile at X/Y."
+(defun osm--get-tile (x y)
+  "Get tile at X/Y."
+  (let ((file (osm--tile-file x y osm--zoom)))
+    (when (file-exists-p file)
+      `(image :type ,(if (member (file-name-extension file) '("jpg" "jpeg")) 'jpeg 'png)
+              :width 256 :height 256 :file ,file))))
+
+(defun osm--display-tile (x y tile)
+  "Display TILE at X/Y."
   (let ((i (- x (/ (- osm--x osm--wx) 256)))
         (j (- y (/ (- osm--y osm--wy) 256))))
     (when (and (>= i 0) (< i osm--nx) (>= j 0) (< j osm--ny))
       (let* ((mx (if (= 0 i) (mod (- osm--x osm--wx) 256) 0))
              (my (if (= 0 j) (mod (- osm--y osm--wy) 256) 0))
-             (pos (+ (point-min) (* j (1+ osm--nx)) i))
-             (file (osm--tile-file x y osm--zoom))
-             (image (cond
-                     ((file-exists-p file)
-                      `(image :type
-                              ,(if (member (file-name-extension file) '("jpg" "jpeg"))
-                                   'jpeg 'png)
-                              :file ,file
-                              :width 256 :height 256))
-                     ((= 0 (mod i 2)) osm--placeholder1)
-                     (t osm--placeholder2))))
+             (pos (+ (point-min) (* j (1+ osm--nx)) i)))
+        (unless tile
+          (setq tile (if (= 0 (mod i 2)) osm--placeholder1 osm--placeholder2)))
         (with-silent-modifications
           (put-text-property
            pos (1+ pos) 'display
            (if (or (/= 0 mx) (/= 0 my))
-               `((slice ,mx ,my ,(- 256 mx) ,(- 256 my)) ,image)
-             image)))))))
+               `((slice ,mx ,my ,(- 256 mx) ,(- 256 my)) ,tile)
+             tile)))))))
 
 ;;;###autoload
 (defun osm-home ()
@@ -498,8 +498,7 @@ We need two distinct images which are not `eq' for the display properties.")
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
   (with-silent-modifications
-    (let* ((size (expt 2 osm--zoom))
-           (meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) size))
+    (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
            (meter '(1 5 10 50 100 500 1000 5000 10000 50000 100000 500000 1000000 5000000 10000000))
            (windows (or (get-buffer-window-list) (list (frame-root-window))))
            (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
@@ -535,12 +534,11 @@ We need two distinct images which are not `eq' for the display properties.")
       (goto-char (point-min))
       (dotimes (j osm--ny)
         (dotimes (i osm--nx)
-          (let ((x (+ i (/ (- osm--x osm--wx) 256)))
-                (y (+ j (/ (- osm--y osm--wy) 256))))
-            (osm--display-tile x y)
-            (when (and (>= x 0) (>= y 0) (< x size) (< y size)
-                       (not (file-exists-p (osm--tile-file x y osm--zoom))))
-              (osm--enqueue x y)))))
+          (let* ((x (+ i (/ (- osm--x osm--wx) 256)))
+                 (y (+ j (/ (- osm--y osm--wy) 256)))
+                 (tile (osm--get-tile x y)))
+            (osm--display-tile x y tile)
+            (unless tile (osm--enqueue x y)))))
       (setq osm--queue
             (seq-sort-by
              (pcase-lambda (`(,x ,y . ,_z))
