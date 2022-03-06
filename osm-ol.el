@@ -26,7 +26,7 @@
 (require 'ol)
 
 ;; Only load osm on demand
-(autoload 'osm--setup "osm")
+(autoload 'osm--goto "osm")
 (declare-function osm--org-link-data "osm")
 
 (org-link-set-parameters
@@ -41,7 +41,7 @@
              "\\`\\(?:\\([^:]+\\):\\)?\\([^,]+\\),\\([^,]+\\),\\([^,]+\\)\\'"
              link)
       (error "Invalid osm link"))
-    (osm--setup
+    (osm--goto
      (list (string-to-number (match-string 2 link))
            (string-to-number (match-string 3 link))
            (string-to-number (match-string 4 link)))

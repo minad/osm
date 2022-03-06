@@ -509,7 +509,7 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm-home ()
   "Go to home coordinates."
   (interactive)
-  (osm--setup (osm--home-coordinates) nil))
+  (osm--goto (osm--home-coordinates) nil))
 
 (defun osm--queue-info ()
   "Return queue info string."
@@ -611,8 +611,8 @@ We need two distinct images which are not `eq' for the display properties.")
           (osm--lat) (osm--lon) osm--zoom
           (osm--server-property :name)))
 
-(defun osm--setup (at server)
-  "Setup buffer with SERVER at coordinates AT."
+(defun osm--goto (at server)
+  "Go to AT, change SERVER."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
@@ -657,7 +657,7 @@ We need two distinct images which are not `eq' for the display properties.")
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--setup (list lat lon zoom) nil))
+  (osm--goto (list lat lon zoom) nil))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
@@ -675,7 +675,7 @@ We need two distinct images which are not `eq' for the display properties.")
             nil t nil 'bookmark-history)
            bookmark-alist)
           (error "No bookmark selected")))))
-  (set-buffer (osm--setup (bookmark-prop-get bm 'coordinate)
+  (set-buffer (osm--goto (bookmark-prop-get bm 'coordinate)
                           (bookmark-prop-get bm 'server))))
 
 ;;;###autoload
@@ -761,7 +761,7 @@ MSG is a message prefix string."
                              (or (osm--server-property :description) "")))))
      (list (or (cdr (assoc selected servers))
                (error "No server selected")))))
-  (osm--setup nil server))
+  (osm--goto nil server))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
