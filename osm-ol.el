@@ -42,10 +42,10 @@
              link)
       (error "Invalid osm link"))
     (osm--setup
-     :at (list (string-to-number (match-string 2 link))
-               (string-to-number (match-string 3 link))
-               (string-to-number (match-string 4 link)))
-     :server (and (match-end 1) (intern (match-string 1 link))))))
+     (list (string-to-number (match-string 2 link))
+           (string-to-number (match-string 3 link))
+           (string-to-number (match-string 4 link)))
+     (and (match-end 1) (intern (match-string 1 link))))))
 
 (defun osm-ol-store ()
   "Store osm link."

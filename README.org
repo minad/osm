@@ -37,10 +37,6 @@ Examples:
 - [[osm:stamen-watercolor:40.72956780913898,-73.97918701171875,12][New York, United States, 40.73° -73.98° Stamen Watercolor]]
 - [[osm:opentopomap:27.961656050984658,86.89224243164062,13][Mount Everest, 27.96° 86.89° OpenTopoMap]]
 
-In order to retrieve a meaningful name for the current location press ~n~ in the
-~org-mode~ buffer first. Then the buffer is renamed. The links and bookmarks will
-reuse the buffer name for their description.
-
 * Commands and Key Bindings
 
 Top-level commands:
@@ -57,7 +53,6 @@ Key bindings in =osm-mode= buffer:
 - ~h~: =osm-home=
 - ~s~: =osm-search=
 - ~S~: =osm-server=
-- ~n~: =osm-rename=
 - ~b~: =bookmark-set=
 - ~B~: =bookmark-jump=
 - ~q~: =quit-window=

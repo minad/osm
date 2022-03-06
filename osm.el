@@ -45,12 +45,12 @@
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.org/%z/%x/%y.png")
     (de
-     :name "Mapnik (de)"
+     :name "Mapnik:de"
      :description "Localized Mapnik map provided by OpenStreetMap Deutschland"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.de/%z/%x/%y.png")
     (fr
-     :name "Mapnik (fr)"
+     :name "Mapnik:fr"
      :description "Localized Mapnik map by OpenStreetMap France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
@@ -144,7 +144,6 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "S" #'osm-server)
     (define-key map "b" #'bookmark-set)
     (define-key map "B" #'bookmark-jump)
-    (define-key map "n" #'osm-rename)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
     (define-key map "\d" nil)
@@ -489,7 +488,7 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm-home ()
   "Go to home coordinates."
   (interactive)
-  (osm--setup :at (osm--home-coordinates)))
+  (osm--setup (osm--home-coordinates) nil))
 
 (defun osm--queue-info ()
   "Return queue info string."
@@ -506,6 +505,7 @@ We need two distinct images which are not `eq' for the display properties.")
   "Update map display."
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
+  (rename-buffer (osm--buffer-name) 'unique)
   (with-silent-modifications
     (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
            (meter '(1 5 10 50 100 500 1000 5000 10000 50000 100000 500000 1000000 5000000 10000000))
@@ -523,8 +523,7 @@ We need two distinct images which are not `eq' for the display properties.")
       (setq-local
        header-line-format
        (list
-        (format " %s %s %s    Z%-2d    %s%s%s %s %s    "
-                (osm--server-property :name)
+        (format "%s %s    Z%-2d    %s%s%s %s %s    "
                 (format #("%7.2f°" 0 5 (face bold)) (osm--lat))
                 (format #("%7.2f°" 0 5 (face bold)) (osm--lon))
                 osm--zoom
@@ -536,7 +535,11 @@ We need two distinct images which are not `eq' for the display properties.")
                             'display '(space :width (3)))
                 (if (>= meter 1000) (/ meter 1000) meter)
                 (if (>= meter 1000) "km" "m"))
-        '(:eval (osm--queue-info))))
+        '(:eval (osm--queue-info))
+        (let ((server (osm--server-property :name)))
+          (concat
+           (propertize " " 'display `(space :align-to (- right ,(length server) 2)))
+           server))))
       (erase-buffer)
       (dotimes (_j osm--ny)
         (insert (make-string osm--nx ?\s) "\n"))
@@ -568,13 +571,9 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--bookmark-name ()
   "Return default bookmark name."
-  (if (osm--generated-name-p)
-      (format "osm: %.2f° %.2f° %s"
-              (osm--lat) (osm--lon)
-              (osm--server-property :name))
-    (replace-regexp-in-string
-     "\\`\\*\\|\\*\\(?:<[0-9]+>\\)?\\'"
-     "" (buffer-name))))
+  (replace-regexp-in-string
+   "\\`\\*\\|\\*\\(?:<[0-9]+>\\)?\\'"
+   "" (buffer-name)))
 
 (defun osm--link-data ()
   "Return link data."
@@ -585,62 +584,46 @@ We need two distinct images which are not `eq' for the display properties.")
               (string-remove-suffix (concat " " (osm--server-property :name)) name)
             name))))
 
-(defun osm--default-buffer-name ()
-  "Return default buffer name."
-  (format "*osm: %s*" (osm--server-property :name)))
+(defun osm--buffer-name ()
+  "Return buffer name."
+  (format "*osm: %.2f° %.2f° Z%s %s*"
+          (osm--lat) (osm--lon) osm--zoom
+          (osm--server-property :name)))
 
-(defun osm--generated-name-p ()
-  "Return non-nil if the buffer has a generated name."
-  (string-match-p
-   (format "\\`\\*osm:\\(?: [0-9.-]+° [0-9.-]+°\\)? %s\\*\\(?:<[0-9]+>\\)?\\'"
-           (regexp-quote (osm--server-property :name)))
-   (buffer-name)))
-
-(cl-defun osm--setup (&key at server name)
-  "Setup buffer NAME with SERVER at coordinates AT."
+(defun osm--setup (at server)
+  "Setup buffer with SERVER at coordinates AT."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
-      (if (eq major-mode #'osm-mode)
-          (current-buffer)
-        (pcase-let* ((def-name (or name
-                                   (let ((osm-server (or server osm-server)))
-                                     (osm--default-buffer-name))))
-                     (`(,def-lat ,def-lon ,def-zoom) (or at (osm--home-coordinates)))
-                     (def-x (osm--lon-to-x def-lon def-zoom))
-                     (def-y (osm--lat-to-y def-lat def-zoom))
-                     (def-server (or server osm-server))
-                     (def-name-regexp (format "\\`%s\\(?:<[0-9]+>\\)?\\'"
-                                              (regexp-quote def-name))))
-          (or (cl-loop
-               ;; Search for existing buffer
-               for buf in (buffer-list) thereis
-               (and (eq (buffer-local-value 'major-mode buf) #'osm-mode)
-                    (eq (buffer-local-value 'osm-server buf) def-server)
-                    (eq (buffer-local-value 'osm--zoom buf) def-zoom)
-                    (eq (buffer-local-value 'osm--x buf) def-x)
-                    (eq (buffer-local-value 'osm--y buf) def-y)
-                    (string-match-p def-name-regexp (buffer-name buf))
-                    buf))
-              (generate-new-buffer def-name))))
-    (let ((auto-rename (or name (osm--generated-name-p))))
-      (unless (eq major-mode #'osm-mode)
-        (osm-mode))
-      (when (and server (not (eq osm-server server)))
-        (setq osm-server server
-              osm--active nil
-              osm--queue nil))
-      (when auto-rename
-        (setq name (or name (osm--default-buffer-name)))
-        (unless (equal name (buffer-name))
-          (rename-buffer name 'unique)))
-      (when (or (not (and osm--x osm--y)) at)
-        (setq at (or at (osm--home-coordinates))
-              osm--zoom (nth 2 at)
-              osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
-              osm--y (osm--lat-to-y (nth 0 at) osm--zoom)))
-      (prog1 (pop-to-buffer (current-buffer))
-        (osm--update)))))
+      (or
+       (and (eq major-mode #'osm-mode) (current-buffer))
+       (pcase-let* ((`(,def-lat ,def-lon ,def-zoom) (or at (osm--home-coordinates)))
+                    (def-x (osm--lon-to-x def-lon def-zoom))
+                    (def-y (osm--lat-to-y def-lat def-zoom))
+                    (def-server (or server osm-server)))
+         ;; Search for existing buffer
+         (cl-loop
+          for buf in (buffer-list) thereis
+          (and (eq (buffer-local-value 'major-mode buf) #'osm-mode)
+               (eq (buffer-local-value 'osm-server buf) def-server)
+               (eq (buffer-local-value 'osm--zoom buf) def-zoom)
+               (eq (buffer-local-value 'osm--x buf) def-x)
+               (eq (buffer-local-value 'osm--y buf) def-y)
+               buf)))
+       (generate-new-buffer "*osm*"))
+    (unless (eq major-mode #'osm-mode)
+      (osm-mode))
+    (when (and server (not (eq osm-server server)))
+      (setq osm-server server
+            osm--active nil
+            osm--queue nil))
+    (when (or (not (and osm--x osm--y)) at)
+      (setq at (or at (osm--home-coordinates))
+            osm--zoom (nth 2 at)
+            osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
+            osm--y (osm--lat-to-y (nth 0 at) osm--zoom)))
+    (prog1 (pop-to-buffer (current-buffer))
+      (osm--update))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -653,19 +636,13 @@ We need two distinct images which are not `eq' for the display properties.")
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--setup :at (list lat lon zoom)))
+  (osm--setup (list lat lon zoom) nil))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
   "Jump to OSM bookmark BM."
   (set-buffer
-   (osm--setup
-    :at (alist-get 'coordinate bm)
-    :server (alist-get 'server bm)
-    :name
-    (if (string-match-p "\\`\\*.*\\*\\'" (car bm))
-        (car bm)
-      (format "*%s*" (car bm))))))
+   (osm--setup (alist-get 'coordinate bm) (alist-get 'server bm))))
 
 (defun osm--location-name ()
   "Return descriptive string for current map."
@@ -684,17 +661,6 @@ We need two distinct images which are not `eq' for the display properties.")
            :object-type 'alist))))
     (message "%s" (or name "No name found"))
     name))
-
-;;;###autoload
-(defun osm-rename ()
-  "Rename buffer, use name of current location."
-  (interactive)
-  (when-let (desc (osm--location-name))
-    (rename-buffer
-     (format "*osm: %s, %.2f° %.2f° %s*"
-             desc (osm--lat) (osm--lon)
-             (osm--server-property :name))
-     'unique)))
 
 ;;;###autoload
 (defun osm-search ()
@@ -752,7 +718,7 @@ We need two distinct images which are not `eq' for the display properties.")
                              (or (osm--server-property :description) "")))))
      (list (or (cdr (assoc selected servers))
                (error "No server selected")))))
-  (osm--setup :server server))
+  (osm--setup nil server))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-large #'osm-down-large #'osm-left-large #'osm-right-large
