@@ -33,6 +33,9 @@
 (require 'seq)
 (eval-when-compile (require 'cl-lib))
 
+(defvar bookmark-current-bookmark)
+(defvar bookmark-make-record-function)
+
 (defgroup osm nil
   "OpenStreetMap viewer."
   :group 'web
@@ -434,7 +437,6 @@ We need two distinct images which are not `eq' for the display properties.")
                   (* 60 60 24 osm-max-age))
            (delete-file file)))))))
 
-(defvar bookmark-make-record-function)
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
@@ -560,7 +562,6 @@ We need two distinct images which are not `eq' for the display properties.")
              #'< osm--queue))
       (osm--download))))
 
-(defvar bookmark-current-bookmark)
 (defun osm--make-bookmark ()
   "Make OSM bookmark."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
