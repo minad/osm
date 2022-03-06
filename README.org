@@ -66,12 +66,8 @@ Key bindings in =osm-mode= buffer:
 * Wishlist
 
 It would be nice to have overlays on top of the map, location markers, routes,
-GPS tracks, etc. Emacs does not have the ability to place different images on
-top of each other, except via SVG. Therefore this requires us to use SVG tiles
-instead of the current PNG tiles. The PNG tiles can be used as backgrounds of
-the corresponding SVG tiles. Alternatively don't use SVG tiles but render
-everything as one large SVG or off load the entire map rendering to an external
-Image Magick process. Maybe that's still efficient enough?
+GPS tracks, etc. In the [[https://github.com/minad/osm/tree/svg][svg branch]] I experiment with SVG tiles, composed of the
+bitmap background and markers on top.
 
 * Related projects
 
