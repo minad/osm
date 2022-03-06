@@ -311,7 +311,7 @@ We need two distinct images which are not `eq' for the display properties.")
        :connection-type 'pipe
        :noquery t
        :command
-       (list "curl" "-s" "-o" tmp (osm--tile-url x y zoom))
+       (list "curl" "-f" "-s" "-o" tmp (osm--tile-url x y zoom))
        :filter #'ignore
        :sentinel
        (lambda (_proc status)
@@ -675,7 +675,7 @@ We need two distinct images which are not `eq' for the display properties.")
           (json-parse-string
            (shell-command-to-string
             (concat
-             "curl -s "
+             "curl -f -s "
              (shell-quote-argument
               (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
                       (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
@@ -705,7 +705,7 @@ We need two distinct images which are not `eq' for the display properties.")
                   nil nil nil 'osm--search-history))
          (json (json-parse-string
                 (shell-command-to-string
-                 (concat "curl -s "
+                 (concat "curl -f -s "
                          (shell-quote-argument
                           (concat "https://nominatim.openstreetmap.org/search?format=json&q="
                                   (url-encode-url search)))))
