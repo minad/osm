@@ -550,19 +550,30 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--make-bookmark ()
   "Make OSM bookmark."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
-  `(,(osm--buffer-description)
+  `(,(osm--buffer-name-with-coordinates)
     (coordinate ,(osm--lat) ,(osm--lon) ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
+
+(defun osm--buffer-name-with-coordinates ()
+  "Return buffer description."
+  (if (osm--generated-name-p)
+      (format "osm: %.2f° %.2f° %s"
+              (osm--lat) (osm--lon)
+              (osm--server-property :name))
+    (replace-regexp-in-string
+     "\\`\\*\\|\\*\\(?:<[0-9]+>\\)?\\'"
+     "" (buffer-name))))
 
 (defun osm--default-buffer-name ()
   "Return default buffer name."
   (format "*osm: %s*" (osm--server-property :name)))
 
-(defun osm--default-buffer-name-p ()
-  "Return non-nil if the buffer has a default name."
+(defun osm--generated-name-p ()
+  "Return non-nil if the buffer has a generated name."
   (string-match-p
-   (format "\\`%s\\(?:<[0-9]+>\\)?\\'" (regexp-quote (osm--default-buffer-name)))
+   (format "\\`\\*osm:\\(?: [0-9.-]+° [0-9.-]+°\\)? %s\\*\\(?:<[0-9]+>\\)?\\'"
+           (regexp-quote (osm--server-property :name)))
    (buffer-name)))
 
 (cl-defun osm--setup (&key at server name)
@@ -576,7 +587,7 @@ We need two distinct images which are not `eq' for the display properties.")
          (or name
              (let ((osm-server (or server osm-server)))
                (osm--default-buffer-name)))))
-    (let ((auto-rename (or name (osm--default-buffer-name-p))))
+    (let ((auto-rename (or name (osm--generated-name-p))))
       (unless (derived-mode-p #'osm-mode)
         (osm-mode))
       (when (and server (not (eq osm-server server)))
@@ -601,7 +612,7 @@ We need two distinct images which are not `eq' for the display properties.")
                         (split-string (read-string "Lat Lon (Zoom): ") nil t))))
      (setq zoom (or zoom 11))
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
-       (error "Invalid coordindate"))
+       (error "Invalid coordinate"))
      (list lat lon zoom)))
   (osm--setup :at (list lat lon zoom)))
 
@@ -621,16 +632,7 @@ We need two distinct images which are not `eq' for the display properties.")
   "Return link data."
   (list (osm--lat) (osm--lon) osm--zoom
         (and (not (eq osm-server (default-value 'osm-server))) osm-server)
-        (osm--buffer-description)))
-
-(defun osm--buffer-description ()
-  "Return buffer description."
-  (if (osm--default-buffer-name-p)
-      (format "osm: %s %.2f° %.2f°"
-              (osm--server-property :name) (osm--lat) (osm--lon))
-    (replace-regexp-in-string
-     "\\`\\*\\|\\*\\(?:<[0-9]+>\\)?\\'"
-     "" (buffer-name))))
+        (osm--buffer-name-with-coordinates)))
 
 (defun osm--description ()
   "Return descriptive string for current map."
@@ -653,8 +655,8 @@ We need two distinct images which are not `eq' for the display properties.")
   (interactive)
   (when-let (desc (osm--description))
     (rename-buffer
-     (format "*osm: %s %.2f° %.2f° %s*" desc
-             (osm--lat) (osm--lon)
+     (format "*osm: %s %.2f° %.2f° %s*"
+             desc (osm--lat) (osm--lon)
              (osm--server-property :name))
      'unique)))
 
