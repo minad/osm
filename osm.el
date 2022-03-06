@@ -420,10 +420,10 @@ We need two distinct images which are not `eq' for the display properties.")
               show-trailing-whitespace nil
               display-line-numbers nil
               buffer-read-only t
-              revert-buffer-function #'osm--update
+              revert-buffer-function #'osm--revert
               bookmark-make-record-function #'osm--make-bookmark
               fringe-indicator-alist '((truncation . nil)))
-  (add-hook 'window-size-change-functions #'osm--update nil 'local))
+  (add-hook 'window-size-change-functions #'osm--revert nil 'local))
 
 (defun osm--display-tile (x y)
   "Display tile at X/Y."
@@ -467,7 +467,12 @@ We need two distinct images which are not `eq' for the display properties.")
     (when (> n 0)
       (format "(%s/%s)" (length osm--active) n))))
 
-(defun osm--update (&rest _)
+(defun osm--revert (&rest _)
+  "Revert buffer."
+  (when (derived-mode-p #'osm-mode)
+    (osm--update)))
+
+(defun osm--update ()
   "Update map display."
   (unless (derived-mode-p #'osm-mode)
     (error "Not an osm-mode buffer"))
