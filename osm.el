@@ -110,7 +110,7 @@
   :type 'symbol)
 
 (defcustom osm-cache-directory
-  (file-name-concat user-emacs-directory "var/osm/")
+  (expand-file-name "var/osm/" user-emacs-directory)
   "Tile cache directory."
   :type 'string)
 
@@ -435,6 +435,7 @@ We need two distinct images which are not `eq' for the display properties.")
                   (* 60 60 24 osm-max-age))
            (delete-file file)))))))
 
+(defvar bookmark-make-record-function)
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
@@ -538,7 +539,7 @@ We need two distinct images which are not `eq' for the display properties.")
         '(:eval (osm--queue-info))))
       (erase-buffer)
       (dotimes (_j osm--ny)
-        (insert (concat (make-string osm--nx ?\s) "\n")))
+        (insert (make-string osm--nx ?\s) "\n"))
       (goto-char (point-min))
       (dotimes (j osm--ny)
         (dotimes (i osm--nx)

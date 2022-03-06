@@ -1,4 +1,4 @@
-;;; ol-osm.el --- Org links for `osm-mode' -*- lexical-binding: t -*-
+;;; osm-ol.el --- Org links for `osm-mode' -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Daniel Mendler
 
@@ -31,10 +31,10 @@
 
 (org-link-set-parameters
  "osm"
- :follow #'ol-osm-open
- :store #'ol-osm-store)
+ :follow #'osm-ol-open
+ :store #'osm-ol-store)
 
-(defun ol-osm-open (link _)
+(defun osm-ol-open (link _)
   "Open osm LINK."
   (save-match-data
     (unless (string-match
@@ -47,7 +47,7 @@
                (string-to-number (match-string 4 link)))
      :server (and (match-end 1) (intern (match-string 1 link))))))
 
-(defun ol-osm-store ()
+(defun osm-ol-store ()
   "Store osm link."
   (when (derived-mode-p 'osm-mode)
     (pcase-let ((`(,lat ,lon ,zoom ,server ,desc) (osm--link-data)))
@@ -59,5 +59,5 @@
               (if server (format "%s:" server) "")
               lat lon zoom)))))
 
-(provide 'ol-osm)
-;;; ol-osm.el ends here
+(provide 'osm-ol)
+;;; osm-ol.el ends here
