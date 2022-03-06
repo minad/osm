@@ -26,7 +26,7 @@
 (require 'ol)
 
 ;; Only load osm on demand
-(declare-function osm-goto "osm")
+(autoload 'osm--setup "osm")
 (declare-function osm--link-data "osm")
 
 (org-link-set-parameters
@@ -36,19 +36,27 @@
 
 (defun ol-osm-open (link _)
   "Open osm LINK."
-  (setq link (split-string link ","))
-  (osm-goto (string-to-number (nth 0 link))
-            (string-to-number (nth 1 link))
-            (string-to-number (nth 2 link))))
+  (save-match-data
+    (unless (string-match
+             "\\`\\(?:\\([^:]+\\):\\)?\\([^,]+\\),\\([^,]+\\),\\([^,]+\\)\\'"
+             link)
+      (error "Invalid osm link"))
+    (osm--setup
+     :at (list (string-to-number (match-string 2 link))
+               (string-to-number (match-string 3 link))
+               (string-to-number (match-string 4 link)))
+     :server (and (match-end 1) (intern (match-string 1 link))))))
 
 (defun ol-osm-store ()
   "Store osm link."
   (when (derived-mode-p 'osm-mode)
-    (pcase-let ((`(,lat ,lon ,zoom ,desc) (osm--link-data)))
+    (pcase-let ((`(,lat ,lon ,zoom ,server ,desc) (osm--link-data)))
       (org-link-store-props
        :type "osm"
        :description (and desc (format "%s %.2f° %.2f°" desc lat lon))
-       :link (format "osm:%s,%s,%s" lat lon zoom)))))
+       :link (format "osm:%s%s,%s,%s"
+                     (if server (format "%s:" server) "")
+                     lat lon zoom)))))
 
 (provide 'ol-osm)
 ;;; ol-osm.el ends here
