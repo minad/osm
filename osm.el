@@ -121,22 +121,22 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "+" #'osm-larger)
-    (define-key map "-" #'osm-smaller)
-    (define-key map [mouse-1] #'osm-click)
+    (define-key map "+" #'osm-zoom-in)
+    (define-key map "-" #'osm-zoom-out)
+    (define-key map [mouse-1] #'osm-zoom-click)
     (define-key map [drag-mouse-1] #'osm-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
     (define-key map [left] #'osm-left)
     (define-key map [right] #'osm-right)
-    (define-key map [C-up] #'osm-up-large)
-    (define-key map [C-down] #'osm-down-large)
-    (define-key map [C-left] #'osm-left-large)
-    (define-key map [C-right] #'osm-right-large)
-    (define-key map [M-up] #'osm-up-large)
-    (define-key map [M-down] #'osm-down-large)
-    (define-key map [M-left] #'osm-left-large)
-    (define-key map [M-right] #'osm-right-large)
+    (define-key map [C-up] #'osm-up-up)
+    (define-key map [C-down] #'osm-down-down)
+    (define-key map [C-left] #'osm-left-left)
+    (define-key map [C-right] #'osm-right-right)
+    (define-key map [M-up] #'osm-up-up)
+    (define-key map [M-down] #'osm-down-down)
+    (define-key map [M-left] #'osm-left-left)
+    (define-key map [M-right] #'osm-right-right)
     (define-key map "c" #'clone-buffer)
     (define-key map "h" #'osm-home)
     (define-key map "g" #'osm-goto)
@@ -326,14 +326,14 @@ We need two distinct images which are not `eq' for the display properties.")
              (osm--download)))))
       (osm--download))))
 
-(defun osm-click (event)
+(defun osm-zoom-click (event)
   "Handle click EVENT."
   (interactive "e")
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (osm-larger))))
+      (osm-zoom-in))))
 
 (defun osm-drag (event)
   "Handle drag EVENT."
@@ -344,7 +344,7 @@ We need two distinct images which are not `eq' for the display properties.")
     (cl-incf osm--y (- sy ey))
     (osm--update)))
 
-(defun osm-larger (&optional n)
+(defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
   (interactive "p")
   (setq n (or n 1))
@@ -360,10 +360,10 @@ We need two distinct images which are not `eq' for the display properties.")
                  osm--y (/ osm--y 2)))
   (osm--update))
 
-(defun osm-smaller (&optional n)
+(defun osm-zoom-out (&optional n)
   "Zoom N times out of the map."
   (interactive "p")
-  (osm-larger (- (or n 1))))
+  (osm-zoom-in (- (or n 1))))
 
 (defun osm--move (dx dy step)
   "Move by DX/DY with STEP size."
@@ -394,25 +394,25 @@ We need two distinct images which are not `eq' for the display properties.")
   (interactive "p")
   (osm-right (- (or n 1))))
 
-(defun osm-right-large (&optional n)
+(defun osm-right-right (&optional n)
   "Move N large stepz to the right."
   (interactive "p")
   (osm--move (or n 1) 0 osm-large-step))
 
-(defun osm-down-large (&optional n)
+(defun osm-down-down (&optional n)
   "Move N large stepz down."
   (interactive "p")
   (osm--move 0 (or n 1) osm-large-step))
 
-(defun osm-up-large (&optional n)
+(defun osm-up-up (&optional n)
   "Move N large stepz up."
   (interactive "p")
-  (osm-down-large (- (or n 1))))
+  (osm-down-down (- (or n 1))))
 
-(defun osm-left-large (&optional n)
+(defun osm-left-left (&optional n)
   "Move N large stepz to the left."
   (interactive "p")
-  (osm-right-large (- (or n 1))))
+  (osm-right-right (- (or n 1))))
 
 (defun osm--clean-cache ()
   "Clean tile cache."
@@ -721,8 +721,8 @@ We need two distinct images which are not `eq' for the display properties.")
   (osm--setup nil server))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
-                   #'osm-up-large #'osm-down-large #'osm-left-large #'osm-right-large
-                   #'osm-smaller #'osm-larger))
+                   #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
+                   #'osm-zoom-out #'osm-zoom-in))
   (put sym 'command-modes '(osm-mode)))
 
 (provide 'osm)

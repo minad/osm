@@ -47,6 +47,7 @@ Top-level commands:
 
 Key bindings in =osm-mode= buffer:
 - ~+~ and ~-~: Zooming
+- ~<mouse-1>~: Zoom to point
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~g~: =osm-goto=
