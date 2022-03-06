@@ -27,7 +27,7 @@
 
 ;; Only load osm on demand
 (autoload 'osm--setup "osm")
-(declare-function osm--link-data "osm")
+(declare-function osm--org-link-data "osm")
 
 (org-link-set-parameters
  "osm"
@@ -50,7 +50,7 @@
 (defun osm-ol-store ()
   "Store osm link."
   (when (derived-mode-p 'osm-mode)
-    (pcase-let ((`(,lat ,lon ,zoom ,server ,desc) (osm--link-data)))
+    (pcase-let ((`(,lat ,lon ,zoom ,server ,desc) (osm--org-link-data)))
       (org-link-store-props
        :type "osm"
        :description desc

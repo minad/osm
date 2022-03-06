@@ -23,11 +23,12 @@
 - Bookmarks
 - Multiple preconfigured servers
 
-* Org links
+* Bookmarks and Org links
 
-Bind =org-store-link= to some key binding, e.g., ~C-c o l~. After pressing this key
-binding inside an =osm-mode= buffer the link is stored. Then you can insert into
-an Org buffer with ~C-c C-l~.
+To store a bookmark press the key ~b~, to store Org links press the key ~l~. You can
+also use a custom binding, e.g., ~C-c l~. Then the link can be inserted into an Org
+buffer with ~C-c C-l~. Bookmarks and Org links can be created at point with the
+mouse, see ~osm-bookmark-click~ and ~osm-org-link-click~.
 
 Examples:
 
@@ -46,18 +47,22 @@ Top-level commands:
 - =osm-server=: Select server
 
 Key bindings in =osm-mode= buffer:
-- ~+~ and ~-~: Zooming
-- ~<mouse-1>~: Zoom to point
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
-- ~g~: =osm-goto=
-- ~h~: =osm-home=
-- ~s~: =osm-search=
-- ~S~: =osm-server=
-- ~b~: =bookmark-set=
-- ~B~: =bookmark-jump=
-- ~q~: =quit-window=
-- ~c~: =clone-buffer=
+- ~+~: =osm-zoom-out= - Zoom out
+- ~-~: =osm-zoom-in= - Zoom in
+- ~<mouse-1>~: =osm-zoom-click= - Zoom to point
+- ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
+- ~<mouse-3>~: =osm-bookmark-click= - Store point as bookmark
+- ~g~: =osm-goto= - Go to location
+- ~h~: =osm-home= - Go to home location
+- ~s~: =osm-search= - Search for location
+- ~S~: =osm-server= - Select server
+- ~l~: =org-store-link= - Store org link
+- ~b~: =osm-bookmark= - Set bookmark
+- ~B~: =osm-bookmark-jump= - Jump to bookmark
+- ~q~: =quit-window= - Close buffer and window
+- ~c~: =clone-buffer= - Clone buffer
 
 * Wishlist
 
