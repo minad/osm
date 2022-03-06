@@ -219,14 +219,22 @@ We need two distinct images which are not `eq' for the display properties.")
   (setq lat (* lat (/ float-pi 180.0)))
   (- 0.5 (/ (log (+ (tan lat) (/ 1 (cos lat)))) float-pi 2)))
 
+(defun osm--x-to-lon (x zoom)
+  "Return longitude in degrees for X/ZOOM."
+  (- (/ (* x 360.0) 256.0 (expt 2.0 zoom)) 180.0))
+
+(defun osm--y-to-lat (y zoom)
+  "Return latitude in degrees for Y/ZOOM."
+  (setq y (* float-pi (- 1 (* 2 (/ y 256.0 (expt 2.0 zoom))))))
+  (/ (* 180 (atan (/ (- (exp y) (exp (- y))) 2))) float-pi))
+
 (defun osm--lon ()
   "Return longitude in degrees."
-  (- (/ (* osm--x 360.0) 256.0 (expt 2.0 osm--zoom)) 180.0))
+  (osm--x-to-lon osm--x osm--zoom))
 
 (defun osm--lat ()
   "Return latitude in degrees."
-  (let ((y (* float-pi (- 1 (* 2 (/ osm--y 256.0 (expt 2.0 osm--zoom)))))))
-    (/ (* 180 (atan (/ (- (exp y) (exp (- y))) 2))) float-pi)))
+  (osm--y-to-lat osm--y osm--zoom))
 
 (defun osm--lon-to-x (lon zoom)
   "Convert LON/ZOOM to x coordinate in pixel."
