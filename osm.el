@@ -207,15 +207,15 @@ We need two distinct images which are not `eq' for the display properties.")
     (max (osm--server-property :min-zoom)
          (min
           (osm--server-property :max-zoom)
-          (min (logb (/ w (abs (- (osm--lon-to-x lon1) (osm--lon-to-x lon2)))))
-               (logb (/ h (abs (- (osm--lat-to-y lat1) (osm--lat-to-y lat2))))))))))
+          (min (logb (/ w (abs (- (osm--lon-to-normalized-x lon1) (osm--lon-to-normalized-x lon2)))))
+               (logb (/ h (abs (- (osm--lat-to-normalized-y lat1) (osm--lat-to-normalized-y lat2))))))))))
 
-(defun osm--lon-to-x (lon)
-  "Convert LON to x coordinate (unscaled)."
+(defun osm--lon-to-normalized-x (lon)
+  "Convert LON to normalized x coordinate."
   (/ (+ lon 180.0) 360.0))
 
-(defun osm--lat-to-y (lat)
-  "Convert LAT to y coordiate (unscaled)."
+(defun osm--lat-to-normalized-y (lat)
+  "Convert LAT to normalized y coordinate."
   (setq lat (* lat (/ float-pi 180.0)))
   (- 0.5 (/ (log (+ (tan lat) (/ 1 (cos lat)))) float-pi 2)))
 
@@ -228,12 +228,13 @@ We need two distinct images which are not `eq' for the display properties.")
   (let ((y (* float-pi (- 1 (* 2 (/ osm--y 256.0 (expt 2.0 osm--zoom)))))))
     (/ (* 180 (atan (/ (- (exp y) (exp (- y))) 2))) float-pi)))
 
-(defun osm--set-coordinates (coord)
-  "Set coordinate triple COORD."
-  (let ((n (* 256 (expt 2.0 (nth 2 coord)))))
-    (setq osm--zoom (nth 2 coord)
-          osm--x (floor (* n (osm--lon-to-x (nth 1 coord))))
-          osm--y (floor (* n (osm--lat-to-y (nth 0 coord)))))))
+(defun osm--lon-to-x (lon zoom)
+  "Convert LON/ZOOM to x coordinate in pixel."
+  (floor (* 256 (expt 2.0 zoom) (osm--lon-to-normalized-x lon))))
+
+(defun osm--lat-to-y (lat zoom)
+  "Convert LAT/ZOOM to y coordinate in pixel."
+  (floor (* 256 (expt 2.0 zoom) (osm--lat-to-normalized-y lat))))
 
 (defun osm--home-coordinates ()
   "Return home coordinate triple."
@@ -489,12 +490,12 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--revert (&rest _)
   "Revert buffer."
-  (when (derived-mode-p #'osm-mode)
+  (when (eq major-mode #'osm-mode)
     (osm--update)))
 
 (defun osm--update ()
   "Update map display."
-  (unless (derived-mode-p #'osm-mode)
+  (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
   (with-silent-modifications
     (let* ((size (expt 2 osm--zoom))
@@ -593,14 +594,30 @@ We need two distinct images which are not `eq' for the display properties.")
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
-      (if (derived-mode-p #'osm-mode)
+      (if (eq major-mode #'osm-mode)
           (current-buffer)
-        (generate-new-buffer
-         (or name
-             (let ((osm-server (or server osm-server)))
-               (osm--default-buffer-name)))))
+        (pcase-let* ((def-name (or name
+                                   (let ((osm-server (or server osm-server)))
+                                     (osm--default-buffer-name))))
+                     (`(,def-lat ,def-lon ,def-zoom) (or at (osm--home-coordinates)))
+                     (def-x (osm--lon-to-x def-lon def-zoom))
+                     (def-y (osm--lat-to-y def-lat def-zoom))
+                     (def-server (or server osm-server))
+                     (def-name-regexp (format "\\`%s\\(?:<[0-9]+>\\)?\\'"
+                                              (regexp-quote def-name))))
+          (or (cl-loop
+               ;; Search for existing buffer
+               for buf in (buffer-list) thereis
+               (and (eq (buffer-local-value 'major-mode buf) #'osm-mode)
+                    (eq (buffer-local-value 'osm-server buf) def-server)
+                    (eq (buffer-local-value 'osm--zoom buf) def-zoom)
+                    (eq (buffer-local-value 'osm--x buf) def-x)
+                    (eq (buffer-local-value 'osm--y buf) def-y)
+                    (string-match-p def-name-regexp (buffer-name buf))
+                    buf))
+              (generate-new-buffer def-name))))
     (let ((auto-rename (or name (osm--generated-name-p))))
-      (unless (derived-mode-p #'osm-mode)
+      (unless (eq major-mode #'osm-mode)
         (osm-mode))
       (when (and server (not (eq osm-server server)))
         (setq osm-server server
@@ -611,7 +628,10 @@ We need two distinct images which are not `eq' for the display properties.")
         (unless (equal name (buffer-name))
           (rename-buffer name 'unique)))
       (when (or (not (and osm--x osm--y)) at)
-        (osm--set-coordinates (or at (osm--home-coordinates))))
+        (setq at (or at (osm--home-coordinates))
+              osm--zoom (nth 2 at)
+              osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
+              osm--y (osm--lat-to-y (nth 0 at) osm--zoom)))
       (prog1 (pop-to-buffer (current-buffer))
         (osm--update)))))
 
