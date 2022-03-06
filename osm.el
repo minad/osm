@@ -243,7 +243,9 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
   (format "%s%d-%d-%d.%s" (osm--cache-directory) zoom x y
-          (file-name-extension (osm--server-property :url))))
+          (file-name-extension
+           (url-file-nondirectory
+            (osm--server-property :url)))))
 
 (defun osm--cache-directory ()
   "Return tile cache directory."
