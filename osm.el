@@ -144,6 +144,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "S" #'osm-server)
     (define-key map "b" #'bookmark-set)
     (define-key map "B" #'bookmark-jump)
+    (define-key map "n" #'osm-rename)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
     (define-key map "\d" nil)
@@ -545,19 +546,25 @@ We need two distinct images which are not `eq' for the display properties.")
              #'< osm--queue))
       (osm--download))))
 
-(declare-function bookmark-make-record-default "boomark")
+(defvar bookmark-current-bookmark)
 (defun osm--make-bookmark ()
   "Make OSM bookmark."
-  `(,(osm--bookmark-name)
-    ,@(bookmark-make-record-default t)
+  (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
+  `(,(osm--buffer-description)
     (coordinate ,(osm--lat) ,(osm--lon) ,osm--zoom)
     (server . ,osm-server)
     (buffer . ,(buffer-name))
     (handler . ,#'osm-bookmark-jump)))
 
-(defun osm--buffer-name ()
+(defun osm--default-buffer-name ()
   "Return default buffer name."
   (format "*osm: %s*" (osm--server-property :name)))
+
+(defun osm--default-buffer-name-p ()
+  "Return non-nil if the buffer has a default name."
+  (string-match-p
+   (format "\\`%s\\(?:<[0-9]+>\\)?\\'" (regexp-quote (osm--default-buffer-name)))
+   (buffer-name)))
 
 (cl-defun osm--setup (&key at server buffer)
   "Setup BUFFER with SERVER at coordinates AT."
@@ -569,11 +576,8 @@ We need two distinct images which are not `eq' for the display properties.")
         (generate-new-buffer
          (or buffer
              (let ((osm-server (or server osm-server)))
-               (osm--buffer-name)))))
-    (let ((auto-rename
-           (string-match-p
-            (format "\\`%s\\(?:<[0-9]+>\\)?\\'" (regexp-quote (osm--buffer-name)))
-            (buffer-name))))
+               (osm--default-buffer-name)))))
+    (let ((auto-rename (osm--default-buffer-name-p)))
       (unless (derived-mode-p #'osm-mode)
         (osm-mode))
       (when (and server (not (eq osm-server server)))
@@ -581,7 +585,7 @@ We need two distinct images which are not `eq' for the display properties.")
               osm--active nil
               osm--queue nil))
       (when auto-rename
-        (setq buffer (or buffer (osm--buffer-name)))
+        (setq buffer (or buffer (osm--default-buffer-name)))
         (unless (equal buffer (buffer-name))
           (rename-buffer buffer 'unique)))
       (when (or (not (and osm--x osm--y)) at)
@@ -605,26 +609,29 @@ We need two distinct images which are not `eq' for the display properties.")
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
   "Jump to OSM bookmark BM."
-  (osm--setup
-   :at (alist-get 'coordinate bm)
-   :server (alist-get 'server bm)
-   :buffer (alist-get 'buffer bm)))
-
-(defun osm--bookmark-name ()
-  "Return bookmark name for current map."
-  (format "OSM: %s%.2f° %.2f°"
-          (concat (osm--description) " ")
-          (osm--lat)
-          (osm--lon)))
+  (set-buffer (osm--setup
+               :at (alist-get 'coordinate bm)
+               :server (alist-get 'server bm)
+               :buffer (alist-get 'buffer bm))))
 
 (defun osm--link-data ()
   "Return link data."
   (list (osm--lat) (osm--lon) osm--zoom
         (and (not (eq osm-server (default-value 'osm-server))) osm-server)
-        (osm--description)))
+        (osm--buffer-description)))
+
+(defun osm--buffer-description ()
+  "Return buffer description."
+  (if (osm--default-buffer-name-p)
+      (format "osm: %s %.2f° %.2f°"
+              (osm--server-property :name) (osm--lat) (osm--lon))
+    (replace-regexp-in-string
+     "\\`\\*\\|\\*\\(?:<[0-9]+>\\)?\\'"
+     "" (buffer-name))))
 
 (defun osm--description ()
   "Return descriptive string for current map."
+  (message "Fetching location name...")
   (alist-get
    'display_name
    (json-parse-string
@@ -636,6 +643,17 @@ We need two distinct images which are not `eq' for the display properties.")
                (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
     :array-type 'list
     :object-type 'alist)))
+
+;;;###autoload
+(defun osm-rename ()
+  "Rename buffer, use name of current location."
+  (interactive)
+  (when-let (desc (osm--description))
+    (rename-buffer
+     (format "*osm: %s %.2f° %.2f° %s*" desc
+             (osm--lat) (osm--lon)
+             (osm--server-property :name))
+     'unique)))
 
 ;;;###autoload
 (defun osm-search ()

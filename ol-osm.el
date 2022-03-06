@@ -53,10 +53,11 @@
     (pcase-let ((`(,lat ,lon ,zoom ,server ,desc) (osm--link-data)))
       (org-link-store-props
        :type "osm"
-       :description (and desc (format "%s %.2f° %.2f°" desc lat lon))
-       :link (format "osm:%s%s,%s,%s"
-                     (if server (format "%s:" server) "")
-                     lat lon zoom)))))
+       :description desc
+       :link (format
+              "osm:%s%s,%s,%s"
+              (if server (format "%s:" server) "")
+              lat lon zoom)))))
 
 (provide 'ol-osm)
 ;;; ol-osm.el ends here

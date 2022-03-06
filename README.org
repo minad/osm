@@ -25,7 +25,7 @@
 
 * Commands and Key Bindings
 
-Commands:
+Top-level commands:
 - =osm-home=: Open new map at home coordinates
 - =osm-search=: Search and jump to location
 - =osm-goto=: Go to coordinates
@@ -39,6 +39,7 @@ Key bindings:
 - ~h~: =osm-home=
 - ~s~: =osm-search=
 - ~S~: =osm-server=
+- ~n~: =osm-rename=
 - ~b~: =bookmark-set=
 - ~B~: =bookmark-jump=
 - ~q~: =quit-window=
