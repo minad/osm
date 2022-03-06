@@ -242,20 +242,14 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
-  (format "%s%d-%d-%d.%s" (osm--cache-directory) zoom x y
-          (file-name-extension
-           (url-file-nondirectory
-            (osm--server-property :url)))))
-
-(defun osm--cache-directory ()
-  "Return tile cache directory."
-  (let ((dir (expand-file-name
-              (file-name-concat osm-cache-directory
-                                (symbol-name osm-server)
-                                "/"))))
-    (unless (file-exists-p dir)
-      (make-directory dir t))
-    dir))
+  (expand-file-name
+   (format "%s%s/%d-%d-%d.%s"
+           osm-cache-directory
+           (symbol-name osm-server)
+           zoom x y
+           (file-name-extension
+            (url-file-nondirectory
+             (osm--server-property :url))))))
 
 (defun osm--enqueue (x y)
   "Enqueue tile X/Y for download."
@@ -276,7 +270,10 @@ We need two distinct images which are not `eq' for the display properties.")
     (pcase-let* ((`(,x ,y . ,zoom) job)
                  (buffer (current-buffer))
                  (dst (osm--tile-file x y zoom))
-                 (tmp (concat dst ".tmp")))
+                 (tmp (concat dst ".tmp"))
+                 (dir (file-name-directory tmp)))
+      (unless (file-exists-p dir)
+        (make-directory dir t))
       (make-process
        :name (format "osm %s %s %s" x y zoom)
        :connection-type 'pipe
@@ -479,8 +476,7 @@ We need two distinct images which are not `eq' for the display properties.")
   (unless (derived-mode-p #'osm-mode)
     (error "Not an osm-mode buffer"))
   (with-silent-modifications
-    (let* ((default-directory (osm--cache-directory))
-           (size (expt 2 osm--zoom))
+    (let* ((size (expt 2 osm--zoom))
            (meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) size))
            (meter '(1 5 10 50 100 500 1000 5000 10000 50000 100000 500000 1000000 5000000 10000000))
            (idx 0))
