@@ -40,47 +40,58 @@
 
 (defcustom osm-server-list
   '((default
-     :name "OpenStreetMap"
+     :name "Mapnik"
+     :description "Standard Mapnik map provided by OpenStreetMap"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.org/%z/%x/%y.png")
     (de
-     :name "OSM Deutschland"
+     :name "Mapnik (de)"
+     :description "Localized Mapnik map provided by OpenStreetMap Deutschland"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.de/%z/%x/%y.png")
     (fr
-     :name "OSM France"
+     :name "Mapnik (fr)"
+     :description "Localized Mapnik map by OpenStreetMap France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
     (humanitarian
-     :name "OSM Humanitarian"
+     :name "Humanitarian"
+     :description "Humanitarian map provided by OpenStreetMap France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.fr/hot/%z/%x/%y.png")
-    (opentopomap
-     :name "OpenTopoMap"
-     :min-zoom 2 :max-zoom 17 :max-connections 2
-     :url "https://[abc].tile.opentopomap.org/%z/%x/%y.png")
-    (opvnkarte
-     :name "ÖPNVKarte"
-     :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url "http://[abc].tile.memomaps.de/tilegen/%z/%x/%y.png")
     (cyclosm
      :name "CyclOSM"
+     :description "Bicycle-oriented map provided by OpenStreetMap France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
     (openriverboatmap
      :name "OpenRiverBoatMap"
+     :description "Waterways map provided by OpenStreetMap France"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
+    (opentopomap
+     :name "OpenTopoMap"
+     :description "Topographical map provided by OpenTopoMap"
+     :min-zoom 2 :max-zoom 17 :max-connections 2
+     :url "https://[abc].tile.opentopomap.org/%z/%x/%y.png")
+    (opvn
+     :name "ÖPNV"
+     :description "Base layer with public transport information"
+     :min-zoom 2 :max-zoom 18 :max-connections 2
+     :url "http://[abc].tile.memomaps.de/tilegen/%z/%x/%y.png")
     (stamen-watercolor
      :name "Stamen Watercolor"
+     :description "Artistic map in watercolor style provided by Stamen"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://stamen-tiles-[abc].a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
     (stamen-terrain
      :name "Stamen Terrain"
+     :description "Map with hill shading provided by Stamen"
      :min-zoom 2 :max-zoom 18 :max-connections 2
      :url "https://stamen-tiles-[abc].a.ssl.fastly.net/terrain/%z/%x/%y.png")
     (stamen-toner
      :name "Stamen Toner"
+     :description "Artistic map in toner style provided by Stamen"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner/%z/%x/%y.png"))
   "List of tile servers."
@@ -639,17 +650,23 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm-server (server)
   "Select SERVER."
   (interactive
-   (list
-    (let ((servers
+   (let* ((fmt #("%-20s %s" 6 8 (face font-lock-comment-face)))
+          (servers
            (mapcar
             (lambda (x)
-              (cons (plist-get (cdr x) :name) (car x)))
-            osm-server-list)))
-      (or (cdr (assoc (completing-read
-                       "Server: " servers nil t nil nil
-                       (osm--server-property :name))
-                      servers))
-          (error "No server selected")))))
+              (cons
+               (format fmt
+                       (plist-get (cdr x) :name)
+                       (or (plist-get (cdr x) :description) ""))
+               (car x)))
+            osm-server-list))
+          (selected (completing-read
+                     "Server: " servers nil t nil nil
+                     (format fmt
+                             (osm--server-property :name)
+                             (or (osm--server-property :description) "")))))
+     (list (or (cdr (assoc selected servers))
+               (error "No server selected")))))
   (with-current-buffer
       (if (derived-mode-p #'osm-mode)
           (current-buffer)
