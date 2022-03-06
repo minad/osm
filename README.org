@@ -19,9 +19,25 @@
 - Map scale indicator
 - Jump to coordinate
 - Search for location by name
-- Org link support (Example: [[osm:44,10,6][Toscana, Italia 44° 10°]])
+- Org link support
 - Bookmarks
 - Multiple preconfigured servers
+
+* Org links
+
+Bind =org-store-link= to some key binding, e.g., ~C-c o l~. After pressing this key
+binding inside an =osm-mode= buffer the link is stored. Then you can insert into
+an Org buffer with ~C-c C-l~.
+
+Examples:
+
+- [[osm:opentopomap:44.00862011541535,9.99755859375,6][Italia, 44.01° 10.00° OpenTopoMap]]
+- [[osm:51.48950698022105,-0.144195556640625,11][London, England, 51.49° -0.14°]]
+- [[osm:cyclosm:55.686875255964424,12.569732666015625,12][København, Danmark, 55.69° 12.57° CyclOSM]]
+
+In order to retrieve a meaningful name for the current location press ~n~ in the
+~org-mode~ buffer first. Then the buffer is renamed. The links and bookmarks will
+reuse the buffer name for their description.
 
 * Commands and Key Bindings
 
