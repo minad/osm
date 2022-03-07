@@ -124,6 +124,10 @@
 Should be at least 7 days according to the server usage policies."
   :type '(choice (const nil) integer))
 
+(defcustom osm-max-tiles 256
+  "Size of tile memory cache."
+  :type '(choice (const nil) integer))
+
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "+" #'osm-zoom-in)
@@ -172,6 +176,12 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar osm--clean-cache 0
   "Last time the tile cache was cleaned.")
+
+(defvar osm--tiles nil
+  "Global tile memory cache.")
+
+(defvar osm--cookie 0
+  "Tile cache cookie.")
 
 (defvar-local osm--url-index 0
   "Current url index to query the servers in a round-robin fashion.")
@@ -481,10 +491,21 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (let ((file (osm--tile-file x y osm--zoom)))
-    (when (file-exists-p file)
-      `(image :type ,(if (member (file-name-extension file) '("jpg" "jpeg")) 'jpeg 'png)
-              :width 256 :height 256 :file ,file))))
+  (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
+         (tile (and osm--tiles (gethash key osm--tiles))))
+    (if tile
+        (progn (setcar tile osm--cookie) (cdr tile))
+      (let ((file (osm--tile-file x y osm--zoom)))
+        (when (file-exists-p file)
+          (when (and osm-max-tiles (not osm--tiles))
+            (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
+          (setq tile
+                `(,osm--cookie
+                  image :type ,(if (member (file-name-extension file) '("jpg" "jpeg")) 'jpeg 'png)
+                  :width 256 :height 256 :file ,file))
+          (when osm--tiles
+            (puthash key tile osm--tiles))
+          (cdr tile))))))
 
 (defun osm--display-tile (x y tile)
   "Display TILE at X/Y."
@@ -575,6 +596,13 @@ Should be at least 7 days according to the server usage policies."
                  (tile (osm--get-tile x y)))
             (osm--display-tile x y tile)
             (unless tile (osm--enqueue x y))))))
+    (cl-incf osm--cookie)
+    (when (and osm--tiles (> (hash-table-count osm--tiles) osm-max-tiles))
+      (let (items)
+        (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tiles)
+        (setq items (sort items #'car-less-than-car))
+        (dotimes (_ (- (hash-table-count osm--tiles) osm-max-tiles))
+          (remhash (cdr (pop items)) osm--tiles))))
     (setq osm--queue
           (sort osm--queue
                 (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
