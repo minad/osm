@@ -158,8 +158,8 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "s" #'osm-search)
     (define-key map "t" #'osm-server)
     (define-key map "l" 'org-store-link)
-    (define-key map "b" #'osm-bookmark-set)
-    (define-key map "B" #'osm-bookmark-jump)
+    (define-key map "B" #'osm-bookmark-set)
+    (define-key map "b" #'osm-bookmark-jump)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
     (define-key map "<" nil)
@@ -871,8 +871,7 @@ MSG is a message prefix string."
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-bookmark-jump
-                   #'osm-bookmark-delete))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-org-link-click
                     #'osm-bookmark-set-click #'osm-bookmark-delete-click))

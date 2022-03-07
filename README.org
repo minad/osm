@@ -30,7 +30,8 @@
     :bind (("C-c m h" . osm-home)
            ("C-c m s" . osm-search)
            ("C-c m t" . osm-server)
-           ("C-c m g" . osm-goto))
+           ("C-c m g" . osm-goto)
+           ("C-c m b" . osm-bookmark-jump))
     :init
     ;; Load Org link support
     (with-eval-after-load 'org
@@ -59,6 +60,7 @@ Top-level commands:
 - =osm-search=: Search and jump to location
 - =osm-goto=: Go to coordinates
 - =osm-server=: Select server
+- =osm-bookmark-jump=: Jump to bookmark
 
 Key bindings in =osm-mode= buffer:
 - ~<arrow>~: Small step scrolling
