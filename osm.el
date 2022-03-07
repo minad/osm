@@ -683,7 +683,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
          (server (osm--server-property :name))
          (meter 1) (idx 0)
          (factor '(2 2.5 2)))
-    (while (and (< idx 20) (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 100))
+    (while (and (< idx 20) (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 150))
       (setq meter (round (* meter (nth (mod idx 3) factor))))
       (cl-incf idx))
     (setq-local
