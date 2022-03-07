@@ -46,7 +46,7 @@
      :url "https://[abc].tile.openstreetmap.org/%z/%x/%y.png")
     (de
      :name "Mapnik(de)"
-     :description "Localized Mapnik map provided by OpenStreetMap Deutschland"
+     :description "Localized Mapnik map provided by OpenStreetMap Germany"
      :min-zoom 2 :max-zoom 19 :max-connections 2
      :url "https://[abc].tile.openstreetmap.de/%z/%x/%y.png")
     (fr
