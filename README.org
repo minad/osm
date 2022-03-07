@@ -20,7 +20,7 @@
 - Jump to coordinate
 - Search for location by name
 - Org link support
-- Bookmarks
+- Bookmarked positions with pins
 - Multiple preconfigured servers
 
 * Configuration
@@ -47,7 +47,7 @@ mouse, see ~osm-bookmark-set-click~ and ~osm-org-link-click~.
 
 Examples:
 
-- [[osm:opentopomap:44.00862011541535,9.99755859375,6][Italia, 44.01° 10.00° OpenTopoMap]]
+- [[osm:opentopomap:41.869560826994544,12.45849609375,6][Italia, 41.87° 12.46° OpenTopoMap]]
 - [[osm:51.48950698022105,-0.144195556640625,11][London, England, 51.49° -0.14°]]
 - [[osm:cyclosm:55.686875255964424,12.569732666015625,12][København, Danmark, 55.69° 12.57° CyclOSM]]
 - [[osm:stamen-watercolor:40.72956780913898,-73.97918701171875,12][New York, United States, 40.73° -73.98° Stamen Watercolor]]

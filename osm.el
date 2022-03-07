@@ -540,7 +540,7 @@ Should be at least 7 days according to the server usage policies."
                        if pin collect (cons "#ff8800" pin))))
     (if-let (pin (and osm--transient-pin
                       (osm--pin-position x y osm--x osm--y)))
-        (nconc pins (list (cons "#aa0000" pin)))
+        (nconc pins (list (cons "#ff0088" pin)))
       pins)))
 
 (defun osm--make-tile (x y)
