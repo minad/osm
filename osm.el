@@ -543,6 +543,7 @@ Should be at least 7 days according to the server usage policies."
         (nconc pins (list (cons "#ff0088" pin)))
       pins)))
 
+(autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y)
   "Make tile at X/Y from FILE."
   (let ((file (osm--tile-file x y osm--zoom)))
@@ -553,15 +554,26 @@ Should be at least 7 days according to the server usage policies."
               (list :type 'svg :base-uri file
                     :data (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
-<image xlink:href='" (file-name-nondirectory file) "' height='256' width='256'/>"
-(mapconcat
- (pcase-lambda (`(,color ,x . ,y))
-   (format "<g fill='%s' stroke='#000000' transform='translate(%s %s)'>
+<image xlink:href='"
+                                  (if (> emacs-major-version 27)
+                                      (file-name-nondirectory file)
+                                    ;; NOTE: On Emacs 27, :base-uri and embedding by file
+                                    ;; path is not supported. Use the less efficient base64 encoding.
+                                    (svg--image-data
+                                     file
+                                     (if (member (file-name-extension file) '("jpg" "jpeg"))
+                                         "image/jpeg" "image/png")
+                                     nil))
+                                  "' height='256' width='256'/>"
+                                  (mapconcat
+                                   (pcase-lambda (`(,color ,x . ,y))
+                                     (format "
+<g fill='%s' stroke='#000000' transform='translate(%s %s)'>
 <polygon points='0 0 7 -35 -7 -35'/>
 <circle cx='0' cy='-35' r='12'/>
 </g>" color x y))
- pins "")
-"</svg>"))
+                                   pins "")
+                                  "</svg>"))
             (list :type
                   (if (member (file-name-extension file) '("jpg" "jpeg"))
                       'jpeg 'png)
