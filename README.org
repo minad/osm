@@ -63,8 +63,8 @@ Top-level commands:
 Key bindings in =osm-mode= buffer:
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
-- ~+~: =osm-zoom-out= - Zoom out
-- ~-~: =osm-zoom-in= - Zoom in
+- ~+~, ~SPC~: =osm-zoom-in= - Zoom in
+- ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
 - ~<mouse-1>~: =osm-zoom-click= - Zoom to point
 - ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
 - ~<mouse-3>~: =osm-bookmark-click= - Store point as bookmark
