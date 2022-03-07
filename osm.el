@@ -852,7 +852,12 @@ MSG is a message prefix string."
 (defun osm-server (server)
   "Select tile SERVER."
   (interactive
-   (let* ((fmt #("%-20s %s" 6 8 (face font-lock-comment-face)))
+   (let* ((max-name (cl-loop for (_ . x) in osm-server-list
+                             maximize (length (plist-get x :name))))
+          (fmt (concat
+                (propertize (format "%%-%ds " max-name)
+                            'face 'font-lock-comment-face)
+                " %s"))
           (servers
            (mapcar
             (lambda (x)
