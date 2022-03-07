@@ -170,8 +170,15 @@ Should be at least 7 days according to the server usage policies."
   "Keymap used by `osm-mode'.")
 
 (defconst osm--placeholder
-  (list :type 'xbm :width 256 :height 256
-        :data (make-bool-vector (* 256 256) nil))
+  '(:type svg :width 256 :height 256
+    :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
+  <defs>
+    <pattern id='grid' width='16' height='16'  patternUnits='userSpaceOnUse'>
+      <path d='m 0 0 l 0 16 16 0' fill='none' stroke='#888888'/>
+    </pattern>
+  </defs>
+  <rect width='256' height='256' fill='url(#grid)'/>
+</svg>")
   "Placeholder image for tiles.")
 
 (defvar osm--search-history nil
