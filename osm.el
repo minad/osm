@@ -487,7 +487,7 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-left-function #'osm-left
               mwheel-scroll-right-function #'osm-right
               bookmark-make-record-function #'osm--make-bookmark)
-  (add-hook 'window-size-change-functions #'osm--revert nil 'local))
+  (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
@@ -539,6 +539,12 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--revert (&rest _)
   "Revert buffer."
+  (when (eq major-mode #'osm-mode)
+    (when osm--tiles (clrhash osm--tiles))
+    (osm--update)))
+
+(defun osm--resize (&rest _)
+  "Resize buffer."
   (when (eq major-mode #'osm-mode)
     (osm--update)))
 
