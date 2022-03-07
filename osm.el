@@ -139,7 +139,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
     (define-key map [S-mouse-3] #'osm-bookmark-delete-click)
-    (define-key map [drag-mouse-1] #'osm-drag)
+    (define-key map [down-mouse-1] #'osm-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
     (define-key map [left] #'osm-left)
@@ -351,10 +351,18 @@ Should be at least 7 days according to the server usage policies."
   "Handle drag EVENT."
   (interactive "@e")
   (pcase-let ((`(,sx . ,sy) (posn-x-y (event-start event)))
-              (`(,ex . ,ey) (posn-x-y (event-end event))))
-    (cl-incf osm--x (- sx ex))
-    (cl-incf osm--y (- sy ey))
-    (osm--update)))
+              (map (make-sparse-keymap)))
+    (cl-incf sx osm--x)
+    (cl-incf sy osm--y)
+    (define-key map [mouse-movement]
+      (lambda (event)
+        (interactive "@e")
+        (pcase-let ((`(,ex . ,ey) (posn-x-y (event-start event))))
+          (setq osm--x (- sx ex)
+                osm--y (- sy ey))
+          (osm--update))))
+    (setq track-mouse 'dragging)
+    (set-transient-map map t (lambda () (setq track-mouse nil)))))
 
 (defun osm-zoom-click (event)
   "Zoom to the location of the click EVENT."
