@@ -746,11 +746,19 @@ c53 0 96 43 96 96S309 256 256 256z'/>
 (defun osm--process-queue ()
   "Process the download queue."
   (setq osm--queue
-        (sort osm--queue
-              (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
-                (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
-                      x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
-                  (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
+        (sort
+         (cl-loop for job in osm--queue
+                  for (x y . zoom) = job
+                  for i = (- x (/ (- osm--x osm--wx) 256))
+                  for j = (- y (/ (- osm--y osm--wy) 256))
+                  if (and (= zoom osm--zoom)
+                          (>= i 0) (< i osm--nx)
+                          (>= j 0) (< j osm--ny))
+                  collect job)
+         (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
+           (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
+                 x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
+           (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
   (osm--download))
 
 (defun osm--purge-tiles ()
