@@ -770,8 +770,10 @@ MSG is a message prefix string."
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark #'osm-bookmark-jump))
   (put sym 'command-modes '(osm-mode)))
+(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-bookmark-click #'osm-org-link-click))
+  (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
 ;;; osm.el ends here
