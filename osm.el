@@ -388,7 +388,11 @@ Should be at least 7 days according to the server usage policies."
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (osm-zoom-in))))
+      (setq osm--zoom (1+ osm--zoom)
+            osm--x (* osm--x 2)
+            osm--y (* osm--y 2))
+      (osm--set-transient-pin)
+      (osm--update))))
 
 (defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
@@ -424,7 +428,9 @@ Should be at least 7 days according to the server usage policies."
   (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
                (osm--x (+ osm--x (- x osm--wx)))
                (osm--y (+ osm--y (- y osm--wy))))
-    (call-interactively 'org-store-link)))
+    (call-interactively 'org-store-link)
+    (osm--set-transient-pin "#7a9"))
+  (osm--update))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -563,7 +569,7 @@ Should be at least 7 days according to the server usage policies."
   "Compute pin positions."
   (setq osm--pins (make-hash-table :test #'equal))
   (when osm--transient-pin
-    (osm--put-pin osm--x osm--y "#ff0088"))
+    (apply #'osm--put-pin osm--transient-pin))
   (bookmark-maybe-load-default-file)
   (dolist (bm bookmark-alist)
     (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
@@ -619,7 +625,10 @@ c53 0 96 43 96 96S309 256 256 256z'/>
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (if (and osm--transient-pin (osm--inside-tile-p x y osm--x osm--y))
+  (if (and osm--transient-pin
+           (osm--inside-tile-p x y
+                               (car osm--transient-pin)
+                               (cadr osm--transient-pin)))
       (osm--make-tile x y)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
@@ -830,20 +839,25 @@ c53 0 96 43 96 96S309 256 256 256z'/>
             osm--active nil
             osm--queue nil))
     (when (or (not (and osm--x osm--y)) at)
-      (let ((buffer (current-buffer))
-            (sym (make-symbol "osm--remove-transient-pin")))
-        (fset sym (lambda ()
-                    (with-current-buffer buffer
-                      (setq osm--transient-pin nil)
-                      (remove-hook 'pre-command-hook sym))))
-        (add-hook 'pre-command-hook sym))
       (setq at (or at osm-home)
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
-            osm--y (osm--lat-to-y (nth 0 at) osm--zoom)
-            osm--transient-pin t))
+            osm--y (osm--lat-to-y (nth 0 at) osm--zoom))
+      (osm--set-transient-pin))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
+
+(defun osm--set-transient-pin (&optional color)
+  "Set transient pin to COLOR."
+  (unless osm--transient-pin
+    (let ((buffer (current-buffer))
+          (sym (make-symbol "osm--remove-transient-pin")))
+      (fset sym (lambda ()
+                  (with-current-buffer buffer
+                    (setq osm--transient-pin nil)
+                    (remove-hook 'pre-command-hook sym))))
+      (add-hook 'pre-command-hook sym)
+      (setq osm--transient-pin (list osm--x osm--y (or color "#ff0088"))))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
