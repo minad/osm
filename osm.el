@@ -157,14 +157,10 @@ Should be at least 7 days according to the server usage policies."
     map)
   "Keymap used by `osm-mode'.")
 
-(defconst osm--placeholder1
-  `(image :type xbm :width 256 :height 256
-          :data ,(make-bool-vector (* 256 256) nil))
-  "First placeholder image for tiles.")
-
-(defconst osm--placeholder2 `(image ,@(cdr osm--placeholder1))
-  "Second placeholder image for tiles.
-We need two distinct images which are not `eq' for the display properties.")
+(defconst osm--placeholder
+  (list :type 'xbm :width 256 :height 256
+        :data (make-bool-vector (* 256 256) nil))
+  "Placeholder image for tiles.")
 
 (defvar osm--search-history nil
   "Minibuffer search history used by `osm-search'.")
@@ -494,7 +490,7 @@ We need two distinct images which are not `eq' for the display properties.")
              (my (if (= 0 j) (mod (- osm--y osm--wy) 256) 0))
              (pos (+ (point-min) (* j (1+ osm--nx)) i)))
         (unless tile
-          (setq tile (if (= 0 (mod i 2)) osm--placeholder1 osm--placeholder2)))
+          (setq tile (cons 'image osm--placeholder)))
         (with-silent-modifications
           (put-text-property
            pos (1+ pos) 'display
