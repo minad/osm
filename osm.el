@@ -102,6 +102,15 @@
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
+(defcustom osm-home
+  (let ((lat (bound-and-true-p calendar-latitude))
+        (lon (bound-and-true-p calendar-longitude)))
+    (if (and lat lon)
+        (list lat lon 12)
+      (list 0 0 3)))
+  "Home coordinates, latitude, longitude and zoom level."
+  :type '(list number number number))
+
 (defcustom osm-large-step 256
   "Scroll step in pixel."
   :type 'integer)
@@ -272,15 +281,6 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--lat-to-y (lat zoom)
   "Convert LAT/ZOOM to y coordinate in pixel."
   (floor (* 256 (expt 2.0 zoom) (osm--lat-to-normalized-y lat))))
-
-(defun osm--home-coordinates ()
-  "Return home coordinate triple."
-  (let ((lat (bound-and-true-p calendar-latitude))
-        (lon (bound-and-true-p calendar-longitude))
-        (zoom 11))
-    (unless (and lat lon)
-      (setq lat 0 lon 0 zoom 2))
-    (list lat lon zoom)))
 
 (defun osm--server-property (prop)
   "Return server property PROP."
@@ -655,7 +655,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
 (defun osm-home ()
   "Go to home coordinates."
   (interactive)
-  (osm--goto (osm--home-coordinates) nil))
+  (osm--goto osm-home nil))
 
 (defun osm--queue-info ()
   "Return queue info string."
@@ -785,7 +785,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (with-current-buffer
       (or
        (and (eq major-mode #'osm-mode) (current-buffer))
-       (pcase-let* ((`(,def-lat ,def-lon ,def-zoom) (or at (osm--home-coordinates)))
+       (pcase-let* ((`(,def-lat ,def-lon ,def-zoom) (or at osm-home))
                     (def-x (osm--lon-to-x def-lon def-zoom))
                     (def-y (osm--lat-to-y def-lat def-zoom))
                     (def-server (or server osm-server)))
@@ -813,7 +813,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
                       (setq osm--transient-pin nil)
                       (remove-hook 'pre-command-hook sym))))
         (add-hook 'pre-command-hook sym))
-      (setq at (or at (osm--home-coordinates))
+      (setq at (or at osm-home)
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
             osm--y (osm--lat-to-y (nth 0 at) osm--zoom)
