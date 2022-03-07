@@ -531,20 +531,13 @@ Should be at least 7 days according to the server usage policies."
                    (>= q (- y 100)) (< q (+ y 256 100)))
            collect (cons (- p x) (- q y))))
 
-(defun osm--get-tile (x y)
-  "Get tile at X/Y."
-  (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
-         (tile (and osm--tiles (gethash key osm--tiles))))
-    (if tile
-        (progn (setcar tile osm--cookie) (cdr tile))
-      (let ((file (osm--tile-file x y osm--zoom)))
-        (when (file-exists-p file)
-          (when (and osm-max-tiles (not osm--tiles))
-            (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
-          (setq tile
-                (if-let (positions (osm--bookmarks-at x y))
-                    (list :type 'svg :base-uri file
-                          :data (concat "<svg width='256' height='256' version='1.1'
+(defun osm--make-tile (x y file)
+  "Make tile at X/Y from FILE."
+  `(image
+    :width 256 :height 256
+    ,@(if-let (positions (osm--bookmarks-at x y))
+      (list :type 'svg :base-uri file
+            :data (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='" (file-name-nondirectory file) "' height='256' width='256'/>"
 (mapconcat
@@ -556,11 +549,22 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
            (car pos) (cdr pos)))
  positions "")
 "</svg>"))
-                  (list :type
-                        (if (member (file-name-extension file) '("jpg" "jpeg"))
-                            'jpeg 'png)
-                        :file file)))
-          (setq tile `(,osm--cookie image :width 256 :height 256 ,@tile))
+    (list :type
+          (if (member (file-name-extension file) '("jpg" "jpeg"))
+              'jpeg 'png)
+          :file file))))
+
+(defun osm--get-tile (x y)
+  "Get tile at X/Y."
+  (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
+         (tile (and osm--tiles (gethash key osm--tiles))))
+    (if tile
+        (progn (setcar tile osm--cookie) (cdr tile))
+      (let ((file (osm--tile-file x y osm--zoom)))
+        (when (file-exists-p file)
+          (when (and osm-max-tiles (not osm--tiles))
+            (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
+          (setq tile (cons osm--cookie (osm--make-tile x y file)))
           (when osm--tiles
             (puthash key tile osm--tiles))
           (cdr tile))))))
