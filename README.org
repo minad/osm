@@ -7,6 +7,10 @@
 #+texinfo_dir_desc: OpenStreetMap viewer for Emacs
 
 #+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://github.com/minad/corfu/blob/screenshots/emacs.svg?raw=true"/></a>
+#+html: <a href="http://elpa.gnu.org/packages/osm.html"><img alt="GNU ELPA" src="https://elpa.gnu.org/packages/osm.svg"/></a>
+#+html: <a href="http://elpa.gnu.org/devel/osm.html"><img alt="GNU-devel ELPA" src="https://elpa.gnu.org/devel/osm.svg"/></a>
+#+html: <a href="https://melpa.org/#/osm"><img alt="MELPA" src="https://melpa.org/packages/osm-badge.svg"/></a>
+#+html: <a href="https://stable.melpa.org/#/osm"><img alt="MELPA Stable" src="https://stable.melpa.org/packages/osm-badge.svg"/></a>
 
 [[https://github.com/minad/osm/blob/screenshots/osm.png?raw=true]]
 (Map tiles © https://opentopomap.org,  https://openstreetmap.org)
@@ -90,3 +94,8 @@ There have been other attempts at map viewers in Emacs before.
 - https://github.com/ruediger/osm-mode
 - https://github.com/svenssonjoel/Emacs-OSM
 - https://github.com/jd/google-maps.el
+
+* Contributions
+
+Since this package is part of [[http://elpa.gnu.org/packages/osm.html][GNU ELPA]] contributions require a copyright
+assignment to the FSF.

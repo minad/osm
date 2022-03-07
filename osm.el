@@ -1,11 +1,11 @@
 ;;; osm.el --- OpenStreetMap viewer -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Daniel Mendler
+;; Copyright (C) 2022  Free Software Foundation, Inc.
 
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
+;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; License: GPL-3.0-or-later
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/osm
 

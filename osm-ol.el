@@ -1,6 +1,6 @@
 ;;; osm-ol.el --- Org links for `osm-mode' -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Daniel Mendler
+;; Copyright (C) 2022  Free Software Foundation, Inc.
 
 ;; This file is not part of GNU Emacs.
 
