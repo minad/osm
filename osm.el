@@ -224,7 +224,7 @@ Should be at least 7 days according to the server usage policies."
   "X coordinate on the map in pixel.")
 
 (defvar-local osm--pins nil
-  "Pin positions.")
+  "Pin hash table.")
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
@@ -545,11 +545,11 @@ Should be at least 7 days according to the server usage policies."
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
 (defun osm--put-pin (x y color)
-  "Put pin at X/Y with COLOR in pins alist."
+  "Put pin at X/Y with COLOR in pins hash table."
   (let ((x0 (/ x 256))
         (y0 (/ y 256)))
     (push `(,color ,(- x (* x0 256)) . ,(- y (* y0 256)))
-          (alist-get y0 (alist-get x0 osm--pins)))
+          (gethash (cons x0 y0) osm--pins))
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
@@ -558,11 +558,11 @@ Should be at least 7 days according to the server usage policies."
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
           (push `(,color ,(- x (* x1 256)) . ,(- y (* y1 256)))
-                (alist-get y1 (alist-get x1 osm--pins)))))))))
+                (gethash (cons x1 y1) osm--pins))))))))
 
 (defun osm--compute-pins ()
   "Compute pin positions."
-  (setq osm--pins nil)
+  (setq osm--pins (make-hash-table :test #'equal))
   (when osm--transient-pin
     (osm--put-pin osm--x osm--y "#ff0088"))
   (bookmark-maybe-load-default-file)
@@ -586,7 +586,7 @@ Should be at least 7 days according to the server usage policies."
     (when (file-exists-p file)
       `(image
         :width 256 :height 256
-        ,@(if-let (pins (alist-get y (alist-get x osm--pins)))
+        ,@(if-let (pins (gethash (cons x y) osm--pins))
               (list :type 'svg :base-uri file
                     :data (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
