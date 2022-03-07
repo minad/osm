@@ -514,53 +514,58 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm--queue-info ()
   "Return queue info string."
   (let ((n (length osm--queue)))
-    (when (> n 0)
-      (format "(%s/%s)" (length osm--active) n))))
+    (if (> n 0)
+        (format "%10s " (format "(%s/%s)" (length osm--active) n))
+      "          ")))
 
 (defun osm--revert (&rest _)
   "Revert buffer."
   (when (eq major-mode #'osm-mode)
     (osm--update)))
 
+(defun osm--header ()
+  "Update header line."
+  (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
+         (meter '(1 5 10 50 100 500 1000 5000 10000 50000 100000 500000 1000000 5000000 10000000))
+         (server (osm--server-property :name))
+         (idx 0))
+    (while (and (< idx (1- (length meter))) (< (/ (nth (1+ idx) meter) meter-per-pixel) 100))
+      (cl-incf idx))
+    (setq meter (nth idx meter))
+    (setq-local
+     header-line-format
+     (list
+      (format "%s %s    Z%-2d    %s %5s %s %s%s%s %s"
+              (format #("%7.2f°" 0 5 (face bold)) (osm--lat))
+              (format #("%7.2f°" 0 5 (face bold)) (osm--lon))
+              osm--zoom
+              (propertize " " 'display '(space :align-to (- center 10)))
+              (if (>= meter 1000) (/ meter 1000) meter)
+              (if (>= meter 1000) "km" "m")
+              (propertize " " 'face '(:inverse-video t)
+                          'display '(space :width (3)))
+              (propertize " " 'face '(:strike-through t)
+                          'display `(space :width (,(floor (/ meter meter-per-pixel)))))
+              (propertize " " 'face '(:inverse-video t)
+                          'display '(space :width (3)))
+              (propertize " " 'display `(space :align-to (- right ,(+ (length server) 12)))))
+      '(:eval (osm--queue-info))
+      server))))
+
 (defun osm--update ()
   "Update map display."
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
   (rename-buffer (osm--buffer-name) 'unique)
-  (with-silent-modifications
-    (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
-           (meter '(1 5 10 50 100 500 1000 5000 10000 50000 100000 500000 1000000 5000000 10000000))
-           (windows (or (get-buffer-window-list) (list (frame-root-window))))
-           (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
-           (win-height (cl-loop for w in windows maximize (window-pixel-height w)))
-           (idx 0))
-      (setq osm--wx (/ win-width 2)
-            osm--wy (/ win-height 2)
-            osm--nx (1+ (ceiling win-width 256))
-            osm--ny (1+ (ceiling win-height 256)))
-      (while (and (< idx (1- (length meter))) (< (/ (nth (1+ idx) meter) meter-per-pixel) 100))
-        (cl-incf idx))
-      (setq meter (nth idx meter))
-      (setq-local
-       header-line-format
-       (list
-        (format "%s %s    Z%-2d    %s%s%s %s %s    "
-                (format #("%7.2f°" 0 5 (face bold)) (osm--lat))
-                (format #("%7.2f°" 0 5 (face bold)) (osm--lon))
-                osm--zoom
-                (propertize " " 'face '(:inverse-video t)
-                            'display '(space :width (3)))
-                (propertize " " 'face '(:strike-through t)
-                            'display `(space :width (,(floor (/ meter meter-per-pixel)))))
-                (propertize " " 'face '(:inverse-video t)
-                            'display '(space :width (3)))
-                (if (>= meter 1000) (/ meter 1000) meter)
-                (if (>= meter 1000) "km" "m"))
-        '(:eval (osm--queue-info))
-        (let ((server (osm--server-property :name)))
-          (concat
-           (propertize " " 'display `(space :align-to (- right ,(length server) 2)))
-           server))))
+  (osm--header)
+  (let* ((windows (or (get-buffer-window-list) (list (frame-root-window))))
+         (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
+         (win-height (cl-loop for w in windows maximize (window-pixel-height w))))
+    (setq osm--wx (/ win-width 2)
+          osm--wy (/ win-height 2)
+          osm--nx (1+ (ceiling win-width 256))
+          osm--ny (1+ (ceiling win-height 256)))
+    (with-silent-modifications
       (erase-buffer)
       (dotimes (_j osm--ny)
         (insert (make-string osm--nx ?\s) "\n"))
@@ -571,14 +576,14 @@ We need two distinct images which are not `eq' for the display properties.")
                  (y (+ j (/ (- osm--y osm--wy) 256)))
                  (tile (osm--get-tile x y)))
             (osm--display-tile x y tile)
-            (unless tile (osm--enqueue x y)))))
-      (setq osm--queue
-            (sort osm--queue
-                  (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
-                    (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
-                          x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
-                    (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
-      (osm--download))))
+            (unless tile (osm--enqueue x y))))))
+    (setq osm--queue
+          (sort osm--queue
+                (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
+                  (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
+                        x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
+                  (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
+    (osm--download)))
 
 (defun osm--make-bookmark ()
   "Make osm bookmark record."
@@ -676,7 +681,7 @@ We need two distinct images which are not `eq' for the display properties.")
            bookmark-alist)
           (error "No bookmark selected")))))
   (set-buffer (osm--goto (bookmark-prop-get bm 'coordinate)
-                          (bookmark-prop-get bm 'server))))
+                         (bookmark-prop-get bm 'server))))
 
 ;;;###autoload
 (defun osm-bookmark ()
