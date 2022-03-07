@@ -193,7 +193,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--search-history nil
   "Minibuffer search history used by `osm-search'.")
 
-(defvar osm--clean-cache 0
+(defvar osm--purge-directory 0
   "Last time the tile cache was cleaned.")
 
 (defvar osm--tiles nil
@@ -496,11 +496,11 @@ Should be at least 7 days according to the server usage policies."
   (interactive "p")
   (osm-right-right (- (or n 1))))
 
-(defun osm--clean-cache ()
-  "Clean tile cache."
+(defun osm--purge-directory ()
+  "Clean tile directory."
   (when (and (integerp osm-max-age)
-             (> (- (float-time) osm--clean-cache) (* 60 60 24)))
-    (setq osm--clean-cache (float-time))
+             (> (- (float-time) osm--purge-directory) (* 60 60 24)))
+    (setq osm--purge-directory (float-time))
     (run-with-idle-timer
      30 nil
      (lambda ()
@@ -522,7 +522,6 @@ Should be at least 7 days according to the server usage policies."
   (dolist (type '(svg jpeg png))
     (unless (image-type-available-p type)
       (warn "osm: Support for %s images is missing" type)))
-  (osm--clean-cache)
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
@@ -560,7 +559,7 @@ Should be at least 7 days according to the server usage policies."
           (push `(,color ,(- x (* x1 256)) . ,(- y (* y1 256)))
                 (gethash (cons x1 y1) osm--pins))))))))
 
-(defun osm--compute-pins ()
+(defun osm--update-pins ()
   "Compute pin positions."
   (setq osm--pins (make-hash-table :test #'equal))
   (when osm--transient-pin
@@ -677,7 +676,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (when (eq major-mode #'osm-mode)
     (osm--update)))
 
-(defun osm--header ()
+(defun osm--update-header ()
   "Update header line."
   (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
          (server (osm--server-property :name))
@@ -711,41 +710,58 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
   (rename-buffer (osm--buffer-name) 'unique)
-  (osm--header)
+  (osm--update-sizes)
+  (osm--update-header)
+  (osm--update-pins)
+  (osm--update-buffer)
+  (osm--process-queue)
+  (osm--purge-tiles)
+  (osm--purge-directory))
+
+(defun osm--update-sizes ()
+  "Update window sizes."
   (let* ((windows (or (get-buffer-window-list) (list (frame-root-window))))
          (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
          (win-height (cl-loop for w in windows maximize (window-pixel-height w))))
     (setq osm--wx (/ win-width 2)
           osm--wy (/ win-height 2)
           osm--nx (1+ (ceiling win-width 256))
-          osm--ny (1+ (ceiling win-height 256)))
-    (osm--compute-pins)
-    (with-silent-modifications
-      (erase-buffer)
-      (dotimes (_j osm--ny)
-        (insert (make-string osm--nx ?\s) "\n"))
-      (goto-char (point-min))
-      (dotimes (j osm--ny)
-        (dotimes (i osm--nx)
-          (let* ((x (+ i (/ (- osm--x osm--wx) 256)))
-                 (y (+ j (/ (- osm--y osm--wy) 256)))
-                 (tile (osm--get-tile x y)))
-            (osm--display-tile x y tile)
-            (unless tile (osm--enqueue x y))))))
-    (cl-incf osm--cookie)
-    (when (and osm--tiles (> (hash-table-count osm--tiles) osm-max-tiles))
-      (let (items)
-        (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tiles)
-        (setq items (sort items #'car-less-than-car))
-        (dotimes (_ (- (hash-table-count osm--tiles) osm-max-tiles))
-          (remhash (cdr (pop items)) osm--tiles))))
-    (setq osm--queue
-          (sort osm--queue
-                (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
-                  (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
-                        x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
+          osm--ny (1+ (ceiling win-height 256)))))
+
+(defun osm--update-buffer ()
+  "Update buffer display."
+  (with-silent-modifications
+    (erase-buffer)
+    (dotimes (_j osm--ny)
+      (insert (make-string osm--nx ?\s) "\n"))
+    (goto-char (point-min))
+    (dotimes (j osm--ny)
+      (dotimes (i osm--nx)
+        (let* ((x (+ i (/ (- osm--x osm--wx) 256)))
+               (y (+ j (/ (- osm--y osm--wy) 256)))
+               (tile (osm--get-tile x y)))
+          (osm--display-tile x y tile)
+          (unless tile (osm--enqueue x y)))))))
+
+(defun osm--process-queue ()
+  "Process the download queue."
+  (setq osm--queue
+        (sort osm--queue
+              (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
+                (setq x1 (- x1 (/ osm--x 256)) y1 (- y1 (/ osm--y 256))
+                      x2 (- x2 (/ osm--x 256)) y2 (- y2 (/ osm--y 256)))
                   (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
-    (osm--download)))
+  (osm--download))
+
+(defun osm--purge-tiles ()
+  "Purge old tiles from the tile cache."
+  (cl-incf osm--cookie)
+  (when (and osm--tiles (> (hash-table-count osm--tiles) osm-max-tiles))
+    (let (items)
+      (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tiles)
+      (setq items (sort items #'car-less-than-car))
+      (dotimes (_ (- (hash-table-count osm--tiles) osm-max-tiles))
+        (remhash (cdr (pop items)) osm--tiles)))))
 
 (defun osm--make-bookmark ()
   "Make osm bookmark record."
