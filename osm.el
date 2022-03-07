@@ -223,8 +223,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--y nil
   "X coordinate on the map in pixel.")
 
-(defvar-local osm--bookmark-positions
-  "Bookmark positions.")
+(defvar-local osm--pins nil
+  "Pin positions.")
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
@@ -406,10 +406,14 @@ Should be at least 7 days according to the server usage policies."
                (y (+ osm--y (- y osm--wy)))
                (min most-positive-fixnum)
                (found nil))
-    (cl-loop for (p q . name) in osm--bookmark-positions
-             for d = (+ (* (- p x) (- p x)) (* (- q y) (- q y)))
-             if (and (< d 2500) (< d min)) do
-             (setq min d found name))
+    (dolist (bm bookmark-alist)
+      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+        (let* ((coord (bookmark-prop-get bm 'coordinates))
+               (p (osm--lon-to-x (cadr coord) osm--zoom))
+               (q (osm--lat-to-y (car coord) osm--zoom))
+               (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
+          (when (and (< d 400) (< d min))
+            (setq min d found (car bm))))))
     (unless found
       (error "No bookmark at point"))
     (osm-bookmark-delete found)))
@@ -540,36 +544,47 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--bookmark-positions ()
-  "Compute bookmark positions."
-  (bookmark-maybe-load-default-file)
-  (setq osm--bookmark-positions
-        (cl-loop
-         for bm in bookmark-alist
-         if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-         collect
-         (let* ((coord (bookmark-prop-get bm 'coordinates))
-                (px (osm--lon-to-x (cadr coord) osm--zoom))
-                (py (osm--lat-to-y (car coord) osm--zoom)))
-           `(,px ,py . ,(car bm))))))
+(defun osm--put-pin (pins x y color)
+  "Put pin at X/Y with COLOR in PINS alist."
+  (let ((x0 (/ x 256))
+        (y0 (/ y 256)))
+    (push `(,color ,(- x (* x0 256)) . ,(- y (* y0 256)))
+          (alist-get y0 (alist-get x0 pins)))
+    (cl-loop
+     for i from -1 to 1 do
+     (cl-loop
+      for j from -1 to 1 do
+      (let ((x1 (/ (+ x (* 64 i)) 256))
+            (y1 (/ (+ y (* 64 j)) 256)))
+        (unless (and (= x0 x1) (= y0 y1))
+          (push `(,color ,(- x (* x1 256)) . ,(- y (* y1 256)))
+                (alist-get y1 (alist-get x1 pins)))))))
+    pins))
 
-(defun osm--pin-position (x y p q)
-  "Return position of pin P/Q in tile X/Y."
+(defun osm--pin-positions ()
+  "Compute pin positions."
+  (let ((x1 (- osm--x osm--wx 64))
+        (x2 (+ osm--x osm--wx 64))
+        (y1 (- osm--y osm--wy 64))
+        (y2 (+ osm--y osm--wy 64))
+        pins)
+    (when osm--transient-pin
+      (setq pins (osm--put-pin pins osm--x osm--y "#ff0088")))
+    (bookmark-maybe-load-default-file)
+    (dolist (bm bookmark-alist)
+      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+        (let* ((coord (bookmark-prop-get bm 'coordinates))
+               (x (osm--lon-to-x (cadr coord) osm--zoom))
+               (y (osm--lat-to-y (car coord) osm--zoom)))
+          (when (and (>= x x1) (< x x2) (>= y y1) (< y y2))
+            (setq pins (osm--put-pin pins x y "#ff8800"))))))
+    pins))
+
+(defun osm--inside-tile-p (x y p q)
+  "Return non-nil if position P/Q is inside tile X/Y."
   (setq x (* x 256) y (* y 256))
-  (and (>= p (- x 100)) (< p (+ x 256 100))
-       (>= q (- y 100)) (< q (+ y 256 100))
-       (cons (- p x) (- q y))))
-
-(defun osm--pins-at (x y)
-  "Get pins at X/Y."
-  ;; TODO Optimized k2 tree?
-  (let ((pins (cl-loop for (p q . _name) in osm--bookmark-positions
-                       for pin = (osm--pin-position x y p q)
-                       if pin collect (cons "#ff8800" pin))))
-    (if-let (pin (and osm--transient-pin
-                      (osm--pin-position x y osm--x osm--y)))
-        (nconc pins (list (cons "#ff0088" pin)))
-      pins)))
+  (and (>= p (- x 64)) (< p (+ x 256 64))
+       (>= q (- y 64)) (< q (+ y 256 64))))
 
 (autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y)
@@ -578,7 +593,7 @@ Should be at least 7 days according to the server usage policies."
     (when (file-exists-p file)
       `(image
         :width 256 :height 256
-        ,@(if-let (pins (osm--pins-at x y))
+        ,@(if-let (pins (alist-get y (alist-get x osm--pins)))
               (list :type 'svg :base-uri file
                     :data (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
@@ -609,7 +624,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (if (and osm--transient-pin (osm--pin-position x y osm--x osm--y))
+  (if (and osm--transient-pin (osm--inside-tile-p x y osm--x osm--y))
       (osm--make-tile x y)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
@@ -701,11 +716,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (error "Not an osm-mode buffer"))
   (rename-buffer (osm--buffer-name) 'unique)
   (osm--header)
-  (osm--bookmark-positions)
   (let* ((windows (or (get-buffer-window-list) (list (frame-root-window))))
          (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
          (win-height (cl-loop for w in windows maximize (window-pixel-height w))))
-    (setq osm--wx (/ win-width 2)
+    (setq osm--pins (osm--pin-positions)
+          osm--wx (/ win-width 2)
           osm--wy (/ win-height 2)
           osm--nx (1+ (ceiling win-width 256))
           osm--ny (1+ (ceiling win-height 256)))
