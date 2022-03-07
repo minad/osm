@@ -217,6 +217,9 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--bookmark-positions
   "Bookmark positions.")
 
+(defvar-local osm--transient-pin nil
+  "Transient pin.")
+
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
   (let ((w (/ (frame-pixel-width) 256))
@@ -522,52 +525,63 @@ Should be at least 7 days according to the server usage policies."
                 (py (osm--lat-to-y (car coord) osm--zoom)))
            `(,px ,py . ,(car bm))))))
 
-(defun osm--bookmarks-at (x y)
-  "Get bookmarks at X/Y."
-  ;; TODO Optimized k2 tree?
+(defun osm--pin-position (x y p q)
+  "Return position of pin P/Q in tile X/Y."
   (setq x (* x 256) y (* y 256))
-  (cl-loop for (p q . _name) in osm--bookmark-positions
-           if (and (>= p (- x 100)) (< p (+ x 256 100))
-                   (>= q (- y 100)) (< q (+ y 256 100)))
-           collect (cons (- p x) (- q y))))
+  (and (>= p (- x 100)) (< p (+ x 256 100))
+       (>= q (- y 100)) (< q (+ y 256 100))
+       (cons (- p x) (- q y))))
 
-(defun osm--make-tile (x y file)
+(defun osm--pins-at (x y)
+  "Get pins at X/Y."
+  ;; TODO Optimized k2 tree?
+  (let ((pins (cl-loop for (p q . _name) in osm--bookmark-positions
+                       for pin = (osm--pin-position x y p q)
+                       if pin collect (cons "#ff8800" pin))))
+    (if-let (pin (and osm--transient-pin
+                      (osm--pin-position x y osm--x osm--y)))
+        (nconc pins (list (cons "#aa0000" pin)))
+      pins)))
+
+(defun osm--make-tile (x y)
   "Make tile at X/Y from FILE."
-  `(image
-    :width 256 :height 256
-    ,@(if-let (positions (osm--bookmarks-at x y))
-      (list :type 'svg :base-uri file
-            :data (concat "<svg width='256' height='256' version='1.1'
+  (let ((file (osm--tile-file x y osm--zoom)))
+    (when (file-exists-p file)
+      `(image
+        :width 256 :height 256
+        ,@(if-let (pins (osm--pins-at x y))
+              (list :type 'svg :base-uri file
+                    :data (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='" (file-name-nondirectory file) "' height='256' width='256'/>"
 (mapconcat
- (lambda (pos)
-   (format "<g transform='translate(%s %s)' fill='#FF8800' stroke='#000000'>
+ (pcase-lambda (`(,color ,x . ,y))
+   (format "<g fill='%s' stroke='#000000' transform='translate(%s %s)'>
 <polygon points='0 0 7 -35 -7 -35'/>
 <circle cx='0' cy='-35' r='12'/>
-</g>"
-           (car pos) (cdr pos)))
- positions "")
+</g>" color x y))
+ pins "")
 "</svg>"))
-    (list :type
-          (if (member (file-name-extension file) '("jpg" "jpeg"))
-              'jpeg 'png)
-          :file file))))
+            (list :type
+                  (if (member (file-name-extension file) '("jpg" "jpeg"))
+                      'jpeg 'png)
+                  :file file))))))
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
-         (tile (and osm--tiles (gethash key osm--tiles))))
-    (if tile
-        (progn (setcar tile osm--cookie) (cdr tile))
-      (let ((file (osm--tile-file x y osm--zoom)))
-        (when (file-exists-p file)
-          (when (and osm-max-tiles (not osm--tiles))
-            (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
-          (setq tile (cons osm--cookie (osm--make-tile x y file)))
-          (when osm--tiles
-            (puthash key tile osm--tiles))
-          (cdr tile))))))
+  (if (and osm--transient-pin (osm--pin-position x y osm--x osm--y))
+      (osm--make-tile x y)
+    (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
+           (tile (and osm--tiles (gethash key osm--tiles))))
+      (if tile
+          (progn (setcar tile osm--cookie) (cdr tile))
+        (setq tile (osm--make-tile x y))
+        (when tile
+          (when osm-max-tiles
+            (unless osm--tiles
+              (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles))
+              (puthash key (cons osm--cookie tile) osm--tiles)))
+          tile)))))
 
 (defun osm--display-tile (x y tile)
   "Display TILE at X/Y."
@@ -741,10 +755,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
             osm--active nil
             osm--queue nil))
     (when (or (not (and osm--x osm--y)) at)
+      (let ((buffer (current-buffer))
+            (sym (make-symbol "osm--remove-transient-pin")))
+        (fset sym (lambda ()
+                    (with-current-buffer buffer
+                      (setq osm--transient-pin nil)
+                      (remove-hook 'pre-command-hook sym))))
+        (add-hook 'pre-command-hook sym))
       (setq at (or at (osm--home-coordinates))
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
-            osm--y (osm--lat-to-y (nth 0 at) osm--zoom)))
+            osm--y (osm--lat-to-y (nth 0 at) osm--zoom)
+            osm--transient-pin t))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
