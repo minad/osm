@@ -30,6 +30,8 @@
 
 * Configuration
 
+The package is available on GNU ELPA and can be installed with =package-install=.
+
 #+begin_src emacs-lisp
   (use-package osm
     :bind (("C-c m h" . osm-home)
