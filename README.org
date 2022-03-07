@@ -29,7 +29,7 @@
   (use-package osm
     :bind (("C-c m h" . osm-home)
            ("C-c m s" . osm-search)
-           ("C-c m S" . osm-server)
+           ("C-c m t" . osm-server)
            ("C-c m g" . osm-goto))
     :init
     ;; Load Org link support
@@ -72,7 +72,7 @@ Key bindings in =osm-mode= buffer:
 - ~g~: =osm-goto= - Go to location
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
-- ~S~: =osm-server= - Select server
+- ~t~: =osm-server= - Select tile server
 - ~l~: =org-store-link= - Store org link
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~B~: =osm-bookmark-jump= - Jump to bookmark

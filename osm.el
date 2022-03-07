@@ -156,7 +156,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "h" #'osm-home)
     (define-key map "g" #'osm-goto)
     (define-key map "s" #'osm-search)
-    (define-key map "S" #'osm-server)
+    (define-key map "t" #'osm-server)
     (define-key map "l" 'org-store-link)
     (define-key map "b" #'osm-bookmark-set)
     (define-key map "B" #'osm-bookmark-jump)
@@ -848,7 +848,7 @@ MSG is a message prefix string."
 
 ;;;###autoload
 (defun osm-server (server)
-  "Select SERVER."
+  "Select tile SERVER."
   (interactive
    (let* ((fmt #("%-20s %s" 6 8 (face font-lock-comment-face)))
           (servers
