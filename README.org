@@ -42,7 +42,7 @@
 To store a bookmark press the key ~b~, to store Org links press the key ~l~. You can
 also use a custom binding, e.g., ~C-c l~. Then the link can be inserted into an Org
 buffer with ~C-c C-l~. Bookmarks and Org links can be created at point with the
-mouse, see ~osm-bookmark-click~ and ~osm-org-link-click~.
+mouse, see ~osm-bookmark-set-click~ and ~osm-org-link-click~.
 
 Examples:
 
@@ -67,13 +67,13 @@ Key bindings in =osm-mode= buffer:
 - ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
 - ~<mouse-1>~: =osm-zoom-click= - Zoom to point
 - ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
-- ~<mouse-3>~: =osm-bookmark-click= - Store point as bookmark
+- ~<mouse-3>~: =osm-bookmark-set-click= - Store point as bookmark
 - ~g~: =osm-goto= - Go to location
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
 - ~S~: =osm-server= - Select server
 - ~l~: =org-store-link= - Store org link
-- ~b~: =osm-bookmark= - Set bookmark
+- ~b~: =osm-bookmark-set= - Set bookmark
 - ~B~: =osm-bookmark-jump= - Jump to bookmark
 - ~q~: =quit-window= - Close buffer and window
 - ~c~: =clone-buffer= - Clone buffer

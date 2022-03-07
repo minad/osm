@@ -137,7 +137,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "\d" #'osm-zoom-out)
     (define-key map [mouse-1] #'osm-zoom-click)
     (define-key map [mouse-2] #'osm-org-link-click)
-    (define-key map [mouse-3] #'osm-bookmark-click)
+    (define-key map [mouse-3] #'osm-bookmark-set-click)
     (define-key map [drag-mouse-1] #'osm-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
@@ -157,7 +157,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "s" #'osm-search)
     (define-key map "S" #'osm-server)
     (define-key map "l" 'org-store-link)
-    (define-key map "b" #'osm-bookmark)
+    (define-key map "b" #'osm-bookmark-set)
     (define-key map "B" #'osm-bookmark-jump)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
@@ -212,6 +212,9 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--y nil
   "X coordinate on the map in pixel.")
+
+(defvar-local osm--bookmark-positions
+  "Bookmark positions.")
 
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
@@ -358,13 +361,13 @@ Should be at least 7 days according to the server usage policies."
       (cl-incf osm--y (- y osm--wy))
       (osm-zoom-in))))
 
-(defun osm-bookmark-click (event)
+(defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
   (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
                (osm--x (+ osm--x (- x osm--wx)))
                (osm--y (+ osm--y (- y osm--wy))))
-    (osm-bookmark)))
+    (osm-bookmark-set)))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
@@ -489,6 +492,27 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
+(defun osm--bookmark-positions ()
+  "Compute bookmark positions."
+  (setq osm--bookmark-positions
+        (cl-loop
+         for bm in bookmark-alist
+         if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+         collect
+         (let* ((coord (bookmark-prop-get bm 'coordinates))
+                (px (osm--lon-to-x (cadr coord) osm--zoom))
+                (py (osm--lat-to-y (car coord) osm--zoom)))
+           (cons px py)))))
+
+(defun osm--bookmarks-at (x y)
+  "Get bookmarks at X/Y."
+  ;; TODO Optimized k2 tree?
+  (setq x (* x 256) y (* y 256))
+  (cl-loop for (p . q) in (osm--bookmark-positions)
+           if (and (>= p (- x 100)) (< p (+ x 256 100))
+                   (>= q (- y 100)) (< q (+ y 256 100)))
+           collect (cons (- p x) (- q y))))
+
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
@@ -500,9 +524,25 @@ Should be at least 7 days according to the server usage policies."
           (when (and osm-max-tiles (not osm--tiles))
             (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
           (setq tile
-                `(,osm--cookie
-                  image :type ,(if (member (file-name-extension file) '("jpg" "jpeg")) 'jpeg 'png)
-                  :width 256 :height 256 :file ,file))
+                (if-let (positions (osm--bookmarks-at x y))
+                    (list :type 'svg :base-uri file
+                          :data (concat "<svg width='256' height='256' version='1.1'
+xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+<image xlink:href='" (file-name-nondirectory file) "' height='256' width='256'/>"
+(mapconcat
+ (lambda (pos)
+   (format "<g transform='translate(%s %s)' fill='#FF8800' stroke='#000000'>
+<polygon points='0 0 7 -35 -7 -35'/>
+<circle cx='0' cy='-35' r='12'/>
+</g>"
+           (car pos) (cdr pos)))
+ positions "")
+"</svg>"))
+                  (list :type
+                        (if (member (file-name-extension file) '("jpg" "jpeg"))
+                            'jpeg 'png)
+                        :file file)))
+          (setq tile `(,osm--cookie image :width 256 :height 256 ,@tile))
           (when osm--tiles
             (puthash key tile osm--tiles))
           (cdr tile))))))
@@ -583,6 +623,7 @@ Should be at least 7 days according to the server usage policies."
     (error "Not an osm-mode buffer"))
   (rename-buffer (osm--buffer-name) 'unique)
   (osm--header)
+  (osm--bookmark-positions)
   (let* ((windows (or (get-buffer-window-list) (list (frame-root-window))))
          (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
          (win-height (cl-loop for w in windows maximize (window-pixel-height w))))
@@ -621,7 +662,7 @@ Should be at least 7 days according to the server usage policies."
   "Make osm bookmark record."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
   `(,(osm--bookmark-name)
-    (coordinate ,(osm--lat) ,(osm--lon) ,osm--zoom)
+    (coordinates ,(osm--lat) ,(osm--lon) ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
@@ -712,17 +753,18 @@ Should be at least 7 days according to the server usage policies."
             nil t nil 'bookmark-history)
            bookmark-alist)
           (error "No bookmark selected")))))
-  (set-buffer (osm--goto (bookmark-prop-get bm 'coordinate)
+  (set-buffer (osm--goto (bookmark-prop-get bm 'coordinates)
                          (bookmark-prop-get bm 'server))))
 
 ;;;###autoload
-(defun osm-bookmark ()
+(defun osm-bookmark-set ()
   "Create osm bookmark."
   (interactive)
   (let* ((def (osm--bookmark-name (osm--location-name "Bookmark")))
          (name (read-from-minibuffer "Bookmark name: " def nil nil nil def)))
     (bookmark-set name)
-    (message "Stored bookmark: %s" name)))
+    (message "Stored bookmark: %s" name)
+    (run-at-time 0 nil #'osm--revert)))
 
 (defun osm--location-name (msg)
   "Fetch location name of current position.
@@ -801,9 +843,9 @@ MSG is a message prefix string."
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark #'osm-bookmark-jump))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-bookmark-jump))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-bookmark-click #'osm-org-link-click))
+(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-bookmark-set-click #'osm-org-link-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
