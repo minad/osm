@@ -77,7 +77,7 @@ Key bindings in =osm-mode= buffer:
 - ~<mouse-1>~: =osm-zoom-click= - Zoom to point
 - ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
 - ~<mouse-3>~: =osm-bookmark-set-click= - Store point as bookmark
-- ~<S-mouse-3>~: =osm-bookmark-delete-click= - Delete bookmark at point
+- ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-drag= - Drag the map with the mouse
 - ~g~: =osm-goto= - Go to location
 - ~h~: =osm-home= - Go to home location

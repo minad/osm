@@ -139,6 +139,10 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map [osm-transient] #'ignore)
+    (define-key map [osm-bookmark mouse-1] #'osm-bookmark-delete-click)
+    (define-key map [osm-bookmark mouse-2] #'osm-bookmark-delete-click)
+    (define-key map [osm-bookmark mouse-3] #'osm-bookmark-delete-click)
     (define-key map "+" #'osm-zoom-in)
     (define-key map "-" #'osm-zoom-out)
     (define-key map " " #'osm-zoom-in)
@@ -147,7 +151,6 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [mouse-1] #'osm-zoom-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
-    (define-key map [S-mouse-3] #'osm-bookmark-delete-click)
     (define-key map [down-mouse-1] #'osm-drag)
     (define-key map [down-mouse-2] #'osm-drag)
     (define-key map [down-mouse-3] #'osm-drag)
@@ -391,7 +394,7 @@ Should be at least 7 days according to the server usage policies."
       (setq osm--zoom (1+ osm--zoom)
             osm--x (* osm--x 2)
             osm--y (* osm--y 2))
-      (osm--set-transient-pin)
+      (osm--put-transient-pin 'osm-transient "#ff0088" "Center")
       (osm--update))))
 
 (defun osm-bookmark-set-click (event)
@@ -416,11 +419,12 @@ Should be at least 7 days according to the server usage policies."
                (p (osm--lon-to-x (cadr coord) osm--zoom))
                (q (osm--lat-to-y (car coord) osm--zoom))
                (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
-          (when (and (< d 400) (< d min))
+          (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
             (setq min d found (car bm))))))
     (unless found
       (error "No bookmark at point"))
-    (osm-bookmark-delete found)))
+    (when (y-or-n-p (format "Delete bookmark '%s'? " found))
+      (osm-bookmark-delete found))))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
@@ -429,7 +433,7 @@ Should be at least 7 days according to the server usage policies."
                (osm--x (+ osm--x (- x osm--wx)))
                (osm--y (+ osm--y (- y osm--wy))))
     (call-interactively 'org-store-link)
-    (osm--set-transient-pin "#7a9"))
+    (osm--put-transient-pin 'osm-transient "#7a9" "Org Link"))
   (osm--update))
 
 (defun osm-zoom-in (&optional n)
@@ -549,11 +553,10 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--put-pin (x y color)
-  "Put pin at X/Y with COLOR in pins hash table."
-  (let ((x0 (/ x 256))
-        (y0 (/ y 256)))
-    (push `(,color ,(- x (* x0 256)) . ,(- y (* y0 256)))
+(defun osm--put-pin (x y id color help)
+  "Put pin at X/Y with COLOR, HELP and ID in pins hash table."
+  (let ((x0 (/ x 256)) (y0 (/ y 256)))
+    (push `(,(- x (* x0 256)) ,(- y (* y0 256)) ,id ,color . ,help)
           (gethash (cons x0 y0) osm--pins))
     (cl-loop
      for i from -1 to 1 do
@@ -562,7 +565,7 @@ Should be at least 7 days according to the server usage policies."
       (let ((x1 (/ (+ x (* 64 i)) 256))
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
-          (push `(,color ,(- x (* x1 256)) . ,(- y (* y1 256)))
+          (push `(,(- x (* x1 256)) ,(- y (* y1 256)) ,id ,color . ,help)
                 (gethash (cons x1 y1) osm--pins))))))))
 
 (defun osm--update-pins ()
@@ -576,7 +579,7 @@ Should be at least 7 days according to the server usage policies."
       (let* ((coord (bookmark-prop-get bm 'coordinates))
              (x (osm--lon-to-x (cadr coord) osm--zoom))
              (y (osm--lat-to-y (car coord) osm--zoom)))
-        (osm--put-pin x y "#ff8800")))))
+        (osm--put-pin x y 'osm-bookmark "#ff8800" (car bm))))))
 
 (defun osm--inside-tile-p (x y p q)
   "Return non-nil if position P/Q is inside tile X/Y."
@@ -592,32 +595,36 @@ Should be at least 7 days according to the server usage policies."
       `(image
         :width 256 :height 256
         ,@(if-let (pins (gethash (cons x y) osm--pins))
-              (list :type 'svg :base-uri file
-                    :data (concat "<svg width='256' height='256' version='1.1'
-xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
-<image xlink:href='"
-                                  (if (> emacs-major-version 27)
-                                      (file-name-nondirectory file)
-                                    ;; NOTE: On Emacs 27, :base-uri and embedding by file
-                                    ;; path is not supported. Use the less efficient base64 encoding.
-                                    (svg--image-data
-                                     file
-                                     (if (member (file-name-extension file) '("jpg" "jpeg"))
-                                         "image/jpeg" "image/png")
-                                     nil))
-                                  "' height='256' width='256'/>"
-                                  (mapconcat
-                                   (pcase-lambda (`(,color ,x . ,y))
-                                     (format "
+              (let* ((areas nil)
+                     (svg-pins
+                     (mapconcat
+                      (pcase-lambda (`(,px ,py ,id ,color . ,help))
+                        (push `((poly . [,px ,py ,(- px 20) ,(- py 40) ,px ,(- py 50) ,(+ px 20) ,(- py 40) ])
+                                ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
+                              areas)
+                        (format "
 <g fill='%s' stroke='#000000' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" color x y)) ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
-                                   pins "")
-                                  "</svg>"))
+</g>" color px py)) ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
+                      pins "")))
+                (list :type 'svg :base-uri file :map areas
+                      :data (concat "<svg width='256' height='256' version='1.1'
+xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+<image xlink:href='"
+                                    (if (> emacs-major-version 27)
+                                        (file-name-nondirectory file)
+                                      ;; NOTE: On Emacs 27, :base-uri and embedding by file
+                                      ;; path is not supported. Use the less efficient base64 encoding.
+                                      (svg--image-data
+                                       file
+                                       (if (member (file-name-extension file) '("jpg" "jpeg"))
+                                           "image/jpeg" "image/png")
+                                       nil))
+                                    "' height='256' width='256'/>" svg-pins "</svg>")))
             (list :type
                   (if (member (file-name-extension file) '("jpg" "jpeg"))
                       'jpeg 'png)
@@ -843,12 +850,12 @@ c53 0 96 43 96 96S309 256 256 256z'/>
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
             osm--y (osm--lat-to-y (nth 0 at) osm--zoom))
-      (osm--set-transient-pin))
+      (osm--put-transient-pin 'osm-transient "#ff0088" "Center"))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--set-transient-pin (&optional color)
-  "Set transient pin to COLOR."
+(defun osm--put-transient-pin (id color help)
+  "Set transient pin with COLOR, ID and HELP."
   (unless osm--transient-pin
     (let ((buffer (current-buffer))
           (sym (make-symbol "osm--remove-transient-pin")))
@@ -857,7 +864,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
                     (setq osm--transient-pin nil)
                     (remove-hook 'pre-command-hook sym))))
       (add-hook 'pre-command-hook sym)
-      (setq osm--transient-pin (list osm--x osm--y (or color "#ff0088"))))))
+      (setq osm--transient-pin (list osm--x osm--y id color help)))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
