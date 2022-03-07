@@ -172,9 +172,6 @@ We need two distinct images which are not `eq' for the display properties.")
 (defvar osm--clean-cache 0
   "Last time the tile cache was cleaned.")
 
-(defvar osm--location-name nil
-  "Location name used by `osm--bookmark-name'.")
-
 (defvar-local osm--url-index 0
   "Current url index to query the servers in a round-robin fashion.")
 
@@ -595,13 +592,13 @@ We need two distinct images which are not `eq' for the display properties.")
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (let ((osm--location-name (osm--location-name "Org link")))
-    (list (osm--lat) (osm--lon) osm--zoom
-          (and (not (eq osm-server (default-value 'osm-server))) osm-server)
-          (let ((name (string-remove-prefix "osm: " (osm--bookmark-name))))
-            (if (eq osm-server (default-value 'osm-server))
-                (string-remove-suffix (concat " " (osm--server-property :name)) name)
-              name)))))
+  (list (osm--lat) (osm--lon) osm--zoom
+        (and (not (eq osm-server (default-value 'osm-server))) osm-server)
+        (let ((name (string-remove-prefix
+                     "osm: " (osm--bookmark-name (osm--location-name "Org link")))))
+          (if (eq osm-server (default-value 'osm-server))
+              (string-remove-suffix (concat " " (osm--server-property :name)) name)
+            name))))
 
 (defun osm--buffer-name ()
   "Return buffer name."
@@ -609,10 +606,10 @@ We need two distinct images which are not `eq' for the display properties.")
           (osm--lat) (osm--lon) osm--zoom
           (osm--server-property :name)))
 
-(defun osm--bookmark-name ()
-  "Return bookmark name."
+(defun osm--bookmark-name (&optional loc)
+  "Return bookmark name with optional LOC name."
   (format "osm: %s%.2f° %.2f° Z%s %s"
-          (if osm--location-name (concat osm--location-name ", ") "")
+          (if loc (concat loc ", ") "")
           (osm--lat) (osm--lon) osm--zoom
           (osm--server-property :name)))
 
@@ -687,28 +684,27 @@ We need two distinct images which are not `eq' for the display properties.")
 (defun osm-bookmark ()
   "Create osm bookmark."
   (interactive)
-  (let ((osm--location-name (osm--location-name "Bookmark")))
-    (call-interactively #'bookmark-set)))
+  (let* ((def (osm--bookmark-name (osm--location-name "Bookmark")))
+         (name (read-from-minibuffer "Bookmark name: " def nil nil nil def)))
+    (bookmark-set name)
+    (message "Stored bookmark: %s" name)))
 
 (defun osm--location-name (msg)
   "Fetch location name of current position.
 MSG is a message prefix string."
   (message "%s: Fetching name of %.2f %.2f..." msg (osm--lat) (osm--lon))
-  (let ((name
-         (ignore-errors
-           (alist-get
-            'display_name
-            (json-parse-string
-             (shell-command-to-string
-              (concat
-               "curl -f -s "
-               (shell-quote-argument
-                (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
-                        (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
-             :array-type 'list
-             :object-type 'alist)))))
-    (message "%s" (or name "No name found"))
-    name))
+  (ignore-errors
+    (alist-get
+     'display_name
+     (json-parse-string
+      (shell-command-to-string
+       (concat
+        "curl -f -s "
+        (shell-quote-argument
+         (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
+                 (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
+      :array-type 'list
+      :object-type 'alist))))
 
 ;;;###autoload
 (defun osm-search ()
