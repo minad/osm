@@ -138,6 +138,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [mouse-1] #'osm-zoom-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
+    (define-key map [S-mouse-3] #'osm-bookmark-delete-click)
     (define-key map [drag-mouse-1] #'osm-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
@@ -369,6 +370,23 @@ Should be at least 7 days according to the server usage policies."
                (osm--y (+ osm--y (- y osm--wy))))
     (osm-bookmark-set)))
 
+(defun osm-bookmark-delete-click (event)
+  "Delete bookmark at position of click EVENT."
+  (interactive "@e")
+  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
+               (x (+ osm--x (- x osm--wx)))
+               (y (+ osm--y (- y osm--wy)))
+               (min most-positive-fixnum)
+               (found nil))
+    (cl-loop for (p q . name) in osm--bookmark-positions
+             for d = (+ (* (- p x) (- p x)) (* (- q y) (- q y)))
+             if (and (< d 2500) (< d min)) do
+             (setq min d found name))
+    (unless found
+      (error "No bookmark at point"))
+    (bookmark-delete found)
+    (osm--revert)))
+
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
   (interactive "@e")
@@ -502,13 +520,13 @@ Should be at least 7 days according to the server usage policies."
          (let* ((coord (bookmark-prop-get bm 'coordinates))
                 (px (osm--lon-to-x (cadr coord) osm--zoom))
                 (py (osm--lat-to-y (car coord) osm--zoom)))
-           (cons px py)))))
+           `(,px ,py . ,(car bm))))))
 
 (defun osm--bookmarks-at (x y)
   "Get bookmarks at X/Y."
   ;; TODO Optimized k2 tree?
   (setq x (* x 256) y (* y 256))
-  (cl-loop for (p . q) in (osm--bookmark-positions)
+  (cl-loop for (p q . _name) in osm--bookmark-positions
            if (and (>= p (- x 100)) (< p (+ x 256 100))
                    (>= q (- y 100)) (< q (+ y 256 100)))
            collect (cons (- p x) (- q y))))
@@ -578,10 +596,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       "          ")))
 
 (defun osm--revert (&rest _)
-  "Revert buffer."
-  (when (eq major-mode #'osm-mode)
-    (when osm--tiles (clrhash osm--tiles))
-    (osm--update)))
+  "Revert osm buffers."
+  (dolist (buf (buffer-list))
+    (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
+      (with-current-buffer buf
+        (when osm--tiles (clrhash osm--tiles))
+        (osm--update)))))
 
 (defun osm--resize (&rest _)
   "Resize buffer."
@@ -845,7 +865,8 @@ MSG is a message prefix string."
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-bookmark-jump))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-bookmark-set-click #'osm-org-link-click))
+(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-org-link-click
+                    #'osm-bookmark-set-click #'osm-bookmark-delete-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
