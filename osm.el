@@ -680,12 +680,12 @@ c53 0 96 43 96 96S309 256 256 256z'/>
 (defun osm--header ()
   "Update header line."
   (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
-         (meter '(1 2 5 10 20 50 100 200 500 1000 2000 5000 10000 20000 50000 100000 200000 500000 1000000 2000000 5000000 10000000))
          (server (osm--server-property :name))
-         (idx 0))
-    (while (and (< idx (1- (length meter))) (< (/ (nth (1+ idx) meter) meter-per-pixel) 100))
+         (meter 1) (idx 0)
+         (factor '(2 2.5 2)))
+    (while (and (< idx 20) (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 100))
+      (setq meter (round (* meter (nth (mod idx 3) factor))))
       (cl-incf idx))
-    (setq meter (nth idx meter))
     (setq-local
      header-line-format
      (list
