@@ -89,11 +89,16 @@
      :description "Map with hill shading provided by Stamen"
      :min-zoom 2 :max-zoom 18 :max-connections 2
      :url "https://stamen-tiles-[abc].a.ssl.fastly.net/terrain/%z/%x/%y.png")
-    (stamen-toner
-     :name "Stamen Toner"
+    (stamen-toner-dark
+     :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
      :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner/%z/%x/%y.png"))
+     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner/%z/%x/%y.png")
+    (stamen-toner-light
+     :name "Stamen Toner Lite"
+     :description "Artistic map in toner style provided by Stamen"
+     :min-zoom 2 :max-zoom 19 :max-connections 2
+     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner-lite/%z/%x/%y.png"))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
