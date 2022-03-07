@@ -544,12 +544,12 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--put-pin (pins x y color)
-  "Put pin at X/Y with COLOR in PINS alist."
+(defun osm--put-pin (x y color)
+  "Put pin at X/Y with COLOR in pins alist."
   (let ((x0 (/ x 256))
         (y0 (/ y 256)))
     (push `(,color ,(- x (* x0 256)) . ,(- y (* y0 256)))
-          (alist-get y0 (alist-get x0 pins)))
+          (alist-get y0 (alist-get x0 osm--pins)))
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
@@ -558,27 +558,20 @@ Should be at least 7 days according to the server usage policies."
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
           (push `(,color ,(- x (* x1 256)) . ,(- y (* y1 256)))
-                (alist-get y1 (alist-get x1 pins)))))))
-    pins))
+                (alist-get y1 (alist-get x1 osm--pins)))))))))
 
-(defun osm--pin-positions ()
+(defun osm--compute-pins ()
   "Compute pin positions."
-  (let ((x1 (- osm--x osm--wx 64))
-        (x2 (+ osm--x osm--wx 64))
-        (y1 (- osm--y osm--wy 64))
-        (y2 (+ osm--y osm--wy 64))
-        pins)
-    (when osm--transient-pin
-      (setq pins (osm--put-pin pins osm--x osm--y "#ff0088")))
-    (bookmark-maybe-load-default-file)
-    (dolist (bm bookmark-alist)
-      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-        (let* ((coord (bookmark-prop-get bm 'coordinates))
-               (x (osm--lon-to-x (cadr coord) osm--zoom))
-               (y (osm--lat-to-y (car coord) osm--zoom)))
-          (when (and (>= x x1) (< x x2) (>= y y1) (< y y2))
-            (setq pins (osm--put-pin pins x y "#ff8800"))))))
-    pins))
+  (setq osm--pins nil)
+  (when osm--transient-pin
+    (osm--put-pin osm--x osm--y "#ff0088"))
+  (bookmark-maybe-load-default-file)
+  (dolist (bm bookmark-alist)
+    (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+      (let* ((coord (bookmark-prop-get bm 'coordinates))
+             (x (osm--lon-to-x (cadr coord) osm--zoom))
+             (y (osm--lat-to-y (car coord) osm--zoom)))
+        (osm--put-pin x y "#ff8800")))))
 
 (defun osm--inside-tile-p (x y p q)
   "Return non-nil if position P/Q is inside tile X/Y."
@@ -722,11 +715,11 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (let* ((windows (or (get-buffer-window-list) (list (frame-root-window))))
          (win-width (cl-loop for w in windows maximize (window-pixel-width w)))
          (win-height (cl-loop for w in windows maximize (window-pixel-height w))))
-    (setq osm--pins (osm--pin-positions)
-          osm--wx (/ win-width 2)
+    (setq osm--wx (/ win-width 2)
           osm--wy (/ win-height 2)
           osm--nx (1+ (ceiling win-width 256))
           osm--ny (1+ (ceiling win-height 256)))
+    (osm--compute-pins)
     (with-silent-modifications
       (erase-buffer)
       (dotimes (_j osm--ny)
