@@ -79,12 +79,6 @@ Key bindings in =osm-mode= buffer:
 - ~q~: =quit-window= - Close buffer and window
 - ~c~: =clone-buffer= - Clone buffer
 
-* Wishlist
-
-It would be nice to have overlays on top of the map, location markers, routes,
-GPS tracks, etc. In the [[https://github.com/minad/osm/tree/svg][svg branch]] I experiment with SVG tiles, composed of the
-bitmap background and markers on top.
-
 * Related projects
 
 There have been other attempts at map viewers in Emacs before.
