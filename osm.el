@@ -777,17 +777,19 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (or (assoc
        (completing-read
         "Bookmark: "
-        (cl-loop for bm in bookmark-alist
-                 if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-                 collect (car bm))
+        (or (cl-loop for bm in bookmark-alist
+                     if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+                     collect (car bm))
+            (error "No bookmarks found"))
         nil t nil 'bookmark-history)
        bookmark-alist)
       (error "No bookmark selected")))
 
-;;;###autoload
 (defun osm-bookmark-set ()
   "Create osm bookmark."
   (interactive)
+  (unless (eq major-mode #'osm-mode)
+    (error "Not an osm-mode buffer"))
   (let* ((def (osm--bookmark-name (osm--location-name "Bookmark")))
          (name (read-from-minibuffer "Bookmark name: " def nil nil nil def)))
     (bookmark-set name)
