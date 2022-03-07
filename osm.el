@@ -602,8 +602,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
         (when tile
           (when osm-max-tiles
             (unless osm--tiles
-              (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles))
-              (puthash key (cons osm--cookie tile) osm--tiles)))
+              (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
+            (puthash key (cons osm--cookie tile) osm--tiles))
           tile)))))
 
 (defun osm--display-tile (x y tile)
