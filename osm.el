@@ -384,8 +384,7 @@ Should be at least 7 days according to the server usage policies."
              (setq min d found name))
     (unless found
       (error "No bookmark at point"))
-    (bookmark-delete found)
-    (osm--revert)))
+    (osm-bookmark-delete found)))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
@@ -512,6 +511,7 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--bookmark-positions ()
   "Compute bookmark positions."
+  (bookmark-maybe-load-default-file)
   (setq osm--bookmark-positions
         (cl-loop
          for bm in bookmark-alist
@@ -760,21 +760,29 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
   "Jump to osm bookmark BM."
-  (interactive
-   (list
-    (progn
-      (bookmark-maybe-load-default-file)
-      (or (assoc
-           (completing-read
-            "Bookmark: "
-            (cl-loop for bm in bookmark-alist
-                     if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-                     collect (car bm))
-            nil t nil 'bookmark-history)
-           bookmark-alist)
-          (error "No bookmark selected")))))
+  (interactive (list (osm--bookmark-read)))
   (set-buffer (osm--goto (bookmark-prop-get bm 'coordinates)
                          (bookmark-prop-get bm 'server))))
+
+;;;###autoload
+(defun osm-bookmark-delete (bm)
+  "Delete osm bookmark BM."
+  (interactive (list (osm--bookmark-read)))
+  (bookmark-delete bm)
+  (osm--revert))
+
+(defun osm--bookmark-read ()
+  "Read bookmark name."
+  (bookmark-maybe-load-default-file)
+  (or (assoc
+       (completing-read
+        "Bookmark: "
+        (cl-loop for bm in bookmark-alist
+                 if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+                 collect (car bm))
+        nil t nil 'bookmark-history)
+       bookmark-alist)
+      (error "No bookmark selected")))
 
 ;;;###autoload
 (defun osm-bookmark-set ()
@@ -863,7 +871,8 @@ MSG is a message prefix string."
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-bookmark-jump))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-bookmark-jump
+                   #'osm-bookmark-delete))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-org-link-click
                     #'osm-bookmark-set-click #'osm-bookmark-delete-click))
