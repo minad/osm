@@ -148,7 +148,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map " " #'osm-zoom-in)
     (define-key map (kbd "S-SPC") #'osm-zoom-out)
     (define-key map "\d" #'osm-zoom-out)
-    (define-key map [mouse-1] #'osm-zoom-click)
+    (define-key map [mouse-1] #'osm-center-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
     (define-key map [down-mouse-1] #'osm-drag)
@@ -384,16 +384,29 @@ Should be at least 7 days according to the server usage policies."
                        (lambda () (eq (car-safe last-input-event) 'mouse-movement))
                        (lambda () (setq track-mouse nil)))))
 
-(defun osm-zoom-click (event)
-  "Zoom to the location of the click EVENT."
+(defun osm--zoom-in-wheel (_n)
+  "Zoom in with the mouse wheel."
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
+    (when (< osm--zoom (osm--server-property :max-zoom))
+      (cl-incf osm--x (/ (- x osm--wx) 2))
+      (cl-incf osm--y (/ (- y osm--wy) 2))
+      (osm-zoom-in))))
+
+(defun osm--zoom-out-wheel (_n)
+  "Zoom out with the mouse wheel."
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
+    (when (> osm--zoom (osm--server-property :min-zoom))
+      (cl-decf osm--x (- x osm--wx))
+      (cl-decf osm--y (- y osm--wy))
+      (osm-zoom-out))))
+
+(defun osm-center-click (event)
+  "Center to the location of the click EVENT."
   (interactive "e")
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (setq osm--zoom (1+ osm--zoom)
-            osm--x (* osm--x 2)
-            osm--y (* osm--y 2))
       (osm--put-transient-pin 'osm-transient "#ff0088" "Center")
       (osm--update))))
 
@@ -546,10 +559,10 @@ Should be at least 7 days according to the server usage policies."
               buffer-read-only t
               fringe-indicator-alist '((truncation . nil))
               revert-buffer-function #'osm--revert
-              mwheel-scroll-up-function #'osm-down
-              mwheel-scroll-down-function #'osm-up
-              mwheel-scroll-left-function #'osm-left
-              mwheel-scroll-right-function #'osm-right
+              mwheel-scroll-up-function #'osm--zoom-out-wheel
+              mwheel-scroll-down-function #'osm--zoom-in-wheel
+              mwheel-scroll-left-function #'osm--zoom-out-wheel
+              mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
@@ -1002,7 +1015,7 @@ MSG is a message prefix string."
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-org-link-click
+(dolist (sym (list #'osm-drag #'osm-center-click #'osm-org-link-click
                     #'osm-bookmark-set-click #'osm-bookmark-delete-click))
   (put sym 'completion-predicate #'ignore))
 
