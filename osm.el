@@ -410,10 +410,22 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
-               (osm--x (+ osm--x (- x osm--wx)))
-               (osm--y (+ osm--y (- y osm--wy))))
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
+    (osm--put-transient-pin 'bookmark
+                            (+ osm--x (- x osm--wx))
+                            (+ osm--y (- y osm--wy))
+                            "New bookmark")
     (osm-bookmark-set)))
+
+(defun osm-org-link-click (event)
+  "Store link at position of click EVENT."
+  (interactive "@e")
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
+    (osm--put-transient-pin 'org-link
+                            (+ osm--x (- x osm--wx))
+                            (+ osm--y (- y osm--wy))
+                            "New Org Link")
+    (call-interactively 'org-store-link)))
 
 (defun osm-bookmark-select-click (event)
   "Select bookmark at position of click EVENT."
@@ -435,16 +447,6 @@ Should be at least 7 days according to the server usage policies."
       (message "Selected '%s'" (cddr found))
       (apply #'osm--put-transient-pin 'selected-bookmark found)
       (osm--update))))
-
-(defun osm-org-link-click (event)
-  "Store link at position of click EVENT."
-  (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
-               (osm--x (+ osm--x (- x osm--wx)))
-               (osm--y (+ osm--y (- y osm--wy))))
-    (call-interactively 'org-store-link)
-    (osm--put-transient-pin 'org-link osm--x osm--y "Org Link"))
-  (osm--update))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -799,20 +801,20 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (dotimes (_ (- (hash-table-count osm--tiles) osm-max-tiles))
         (remhash (cdr (pop items)) osm--tiles)))))
 
-(defun osm--make-bookmark ()
-  "Make osm bookmark record."
+(defun osm--make-bookmark (&optional name lat lon)
+  "Make osm bookmark record with NAME at LAT/LON."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
-  `(,(osm--bookmark-name)
-    (coordinates ,(osm--lat) ,(osm--lon) ,osm--zoom)
+  `(,(or name (osm--bookmark-name))
+    (coordinates ,(or lat (osm--lat)) ,(or lon (osm--lon)) ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (list (osm--lat) (osm--lon) osm--zoom
-        (and (not (eq osm-server (default-value 'osm-server))) osm-server)
-        (let ((name (string-remove-prefix
-                     "osm: " (osm--bookmark-name (osm--location-name "Org link")))))
+  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'org-link "Org link")))
+    (setq name (string-remove-prefix "osm: " (osm--bookmark-name name)))
+    (list lat lon osm--zoom
+          (and (not (eq osm-server (default-value 'osm-server))) osm-server)
           (if (eq osm-server (default-value 'osm-server))
               (string-remove-suffix (concat " " (osm--server-property :name)) name)
             name))))
@@ -928,28 +930,39 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (interactive)
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
-  (let* ((def (osm--bookmark-name (osm--location-name "Bookmark")))
-         (name (read-from-minibuffer "Bookmark name: " def nil nil nil def)))
-    (bookmark-set name)
-    (message "Stored bookmark: %s" name)
-    (run-at-time 0 nil #'osm--revert)))
+  (unwind-protect
+      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'bookmark "Bookmark"))
+                   (def (osm--bookmark-name desc))
+                   (name (read-from-minibuffer "Bookmark name: " def nil nil nil def))
+                   (bookmark-make-record-function
+                    (lambda () (osm--make-bookmark name lat lon))))
+        (bookmark-set name)
+        (message "Stored bookmark: %s" name))
+    (osm--revert)))
 
-(defun osm--location-name (msg)
-  "Fetch location name of current position.
-MSG is a message prefix string."
-  (message "%s: Fetching name of %.2f %.2f..." msg (osm--lat) (osm--lon))
-  (ignore-errors
-    (alist-get
-     'display_name
-     (json-parse-string
-      (shell-command-to-string
-       (concat
-        "curl -f -s "
-        (shell-quote-argument
-         (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
-                 (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
-      :array-type 'list
-      :object-type 'alist))))
+(defun osm--location-data (id help)
+  "Fetch location info for ID with HELP."
+  (unless osm--transient-pin
+    (osm--put-transient-pin id osm--x osm--y help))
+  (let ((lat (osm--y-to-lat (caddr osm--transient-pin) osm--zoom))
+        (lon (osm--x-to-lon (cadr osm--transient-pin) osm--zoom)))
+    (message "%s: Fetching name of %.2f %.2f..." help lat lon)
+    ;; Redisplay before slow fetching
+    (osm--update)
+    (redisplay)
+    (list lat lon
+          (ignore-errors
+            (alist-get
+             'display_name
+             (json-parse-string
+              (shell-command-to-string
+               (concat
+                "curl -f -s "
+                (shell-quote-argument
+                 (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
+                         (min 18 (max 3 osm--zoom)) lat lon))))
+              :array-type 'list
+              :object-type 'alist))))))
 
 ;;;###autoload
 (defun osm-search ()
