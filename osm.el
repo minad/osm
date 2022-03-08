@@ -132,9 +132,9 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map [osm-transient] #'ignore)
-    (define-key map [osm-bookmark mouse-1] #'osm-bookmark-delete-click)
-    (define-key map [osm-bookmark mouse-2] #'osm-bookmark-delete-click)
-    (define-key map [osm-bookmark mouse-3] #'osm-bookmark-delete-click)
+    (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
+    (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
+    (define-key map [osm-bookmark mouse-3] #'osm-bookmark-select-click)
     (define-key map "+" #'osm-zoom-in)
     (define-key map "-" #'osm-zoom-out)
     (define-key map " " #'osm-zoom-in)
@@ -393,7 +393,7 @@ Should be at least 7 days according to the server usage policies."
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (osm--put-transient-pin 'osm-transient "#ff0088" "Center" 'auto-remove)
+      (osm--put-transient-pin 'osm-transient osm--x osm--y "#ff0088" "Center" 'auto-remove)
       (osm--update))))
 
 (defun osm-bookmark-set-click (event)
@@ -404,8 +404,8 @@ Should be at least 7 days according to the server usage policies."
                (osm--y (+ osm--y (- y osm--wy))))
     (osm-bookmark-set)))
 
-(defun osm-bookmark-delete-click (event)
-  "Delete bookmark at position of click EVENT."
+(defun osm-bookmark-select-click (event)
+  "Select bookmark at position of click EVENT."
   (interactive "@e")
   (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
                (x (+ osm--x (- x osm--wx)))
@@ -419,11 +419,11 @@ Should be at least 7 days according to the server usage policies."
                (q (osm--lat-to-y (car coord) osm--zoom))
                (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
           (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
-            (setq min d found (car bm))))))
-    (unless found
-      (error "No bookmark at point"))
-    (when (y-or-n-p (format "Delete bookmark '%s'? " found))
-      (osm-bookmark-delete found))))
+            (setq min d found `(,p ,q . ,(car bm)))))))
+    (osm--put-transient-pin 'osm-selected-bookmark
+                            (car found) (cadr found)
+                            "#FF0000" (cddr found))
+    (osm--update)))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
@@ -432,7 +432,7 @@ Should be at least 7 days according to the server usage policies."
                (osm--x (+ osm--x (- x osm--wx)))
                (osm--y (+ osm--y (- y osm--wy))))
     (call-interactively 'org-store-link)
-    (osm--put-transient-pin 'osm-transient "#7a9" "Org Link" 'auto-remove))
+    (osm--put-transient-pin 'osm-transient osm--x osm--y "#7a9" "Org Link" 'auto-remove))
   (osm--update))
 
 (defun osm-zoom-in (&optional n)
@@ -848,12 +848,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
             osm--y (osm--lat-to-y (nth 0 at) osm--zoom))
-      (osm--put-transient-pin 'osm-transient "#ff0088" "Center" 'auto-remove))
+      (osm--put-transient-pin 'osm-transient osm--x osm--y "#ff0088" "Center" 'auto-remove))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--put-transient-pin (id color help &optional auto-remove)
-  "Set transient pin with COLOR, ID and HELP.
+(defun osm--put-transient-pin (id x y color help &optional auto-remove)
+  "Set transient pin at X/Y with COLOR, ID and HELP.
 AUTO-REMOVE the pin if non-nil."
   (let ((buffer (current-buffer))
         (sym (make-symbol "osm--remove-transient-pin")))
@@ -864,7 +864,7 @@ AUTO-REMOVE the pin if non-nil."
                     (remove-hook 'pre-command-hook sym))))
       (add-hook 'pre-command-hook sym))
     (setf (alist-get id osm--transient-pins)
-          (list osm--x osm--y color help))))
+          (list x y color help))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1003,7 +1003,7 @@ MSG is a message prefix string."
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-drag #'osm-center-click #'osm-org-link-click
-                    #'osm-bookmark-set-click #'osm-bookmark-delete-click))
+                    #'osm-bookmark-set-click #'osm-bookmark-select-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
