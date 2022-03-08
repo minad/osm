@@ -95,11 +95,11 @@
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-pin-colors
-  '((selected-bookmark "#e20" "#600")
-    (bookmark "#f80" "#820")
-    (center "#08f" "#028")
-    (home "#80f" "#208")
-    (org-link "#7a9" "#254"))
+  '((osm-selected-bookmark "#e20" "#600")
+    (osm-bookmark "#f80" "#820")
+    (osm-center "#08f" "#028")
+    (osm-home "#80f" "#208")
+    (osm-org-link "#7a9" "#254"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type (list string string)))
 
@@ -140,13 +140,14 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [org-link] #'ignore)
-    (define-key map [center] #'ignore)
-    (define-key map [home] #'ignore)
-    (define-key map [selected-bookmark] #'ignore)
-    (define-key map [bookmark mouse-1] #'osm-bookmark-select-click)
-    (define-key map [bookmark mouse-2] #'osm-bookmark-select-click)
-    (define-key map [bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [osm-home] #'ignore)
+    (define-key map [osm-org-link] #'ignore)
+    (define-key map [osm-center] #'ignore)
+    (define-key map [osm-selected-bookmark] #'ignore)
+    (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
+    (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
+    (define-key map [osm-osm-bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [home] #'osm-home)
     (define-key map "+" #'osm-zoom-in)
     (define-key map "-" #'osm-zoom-out)
     (define-key map " " #'osm-zoom-in)
@@ -407,14 +408,14 @@ Should be at least 7 days according to the server usage policies."
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (osm--put-transient-pin 'center osm--x osm--y "Center")
+      (osm--put-transient-pin 'osm-center osm--x osm--y "Center")
       (osm--update))))
 
 (defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--put-transient-pin 'selected-bookmark
+    (osm--put-transient-pin 'osm-selected-bookmark
                             (+ osm--x (- x osm--wx))
                             (+ osm--y (- y osm--wy))
                             "New bookmark")
@@ -424,7 +425,7 @@ Should be at least 7 days according to the server usage policies."
   "Store link at position of click EVENT."
   (interactive "@e")
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--put-transient-pin 'org-link
+    (osm--put-transient-pin 'osm-org-link
                             (+ osm--x (- x osm--wx))
                             (+ osm--y (- y osm--wy))
                             "New Org Link")
@@ -448,7 +449,7 @@ Should be at least 7 days according to the server usage policies."
             (setq min d found (list p q (car bm)))))))
     (when found
       (message "%s" (caddr found))
-      (apply #'osm--put-transient-pin 'selected-bookmark found)
+      (apply #'osm--put-transient-pin 'osm-selected-bookmark found)
       (osm--update))))
 
 (defun osm-zoom-in (&optional n)
@@ -593,7 +594,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--update-pins ()
   "Compute pin positions."
   (setq osm--pins (make-hash-table :test #'equal))
-  (osm--put-pin 'home
+  (osm--put-pin 'osm-home
                 (osm--lon-to-x (cadr osm-home) osm--zoom)
                 (osm--lat-to-y (car osm-home) osm--zoom)
                 "Home")
@@ -603,7 +604,7 @@ Should be at least 7 days according to the server usage policies."
   (dolist (bm bookmark-alist)
     (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
       (let ((coord (bookmark-prop-get bm 'coordinates)))
-        (osm--put-pin 'bookmark
+        (osm--put-pin 'osm-bookmark
                       (osm--lon-to-x (cadr coord) osm--zoom)
                       (osm--lat-to-y (car coord) osm--zoom)
                       (car bm))))))
@@ -872,7 +873,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
             osm--y (osm--lat-to-y (nth 0 at) osm--zoom))
-      (osm--put-transient-pin 'center osm--x osm--y "Center"))
+      (osm--put-transient-pin 'osm-center osm--x osm--y "Center"))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
