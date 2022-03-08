@@ -38,67 +38,59 @@
   :group 'web
   :prefix "osm-")
 
+(defvar osm--server-defaults
+  '(:min-zoom 2 :max-zoom 19 :max-connections 2 :subdomains ("a" "b" "c"))
+  "Default server properties.")
+
 (defcustom osm-server-list
   '((default
      :name "Mapnik"
      :description "Standard Mapnik map provided by OpenStreetMap"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.org/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png")
     (de
      :name "Mapnik(de)"
      :description "Localized Mapnik map provided by OpenStreetMap Germany"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.de/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png")
     (fr
      :name "Mapnik(fr)"
      :description "Localized Mapnik map by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
     (humanitarian
      :name "Humanitarian"
      :description "Humanitarian map provided by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/hot/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png")
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
-     :min-zoom 2 :max-zoom 17 :max-connections 2
-     :url "https://[abc].tile.opentopomap.org/%z/%x/%y.png")
+     :url "https://%s.tile.opentopomap.org/%z/%x/%y.png")
     (opvn
-     :name "ÖPNV"
+     :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
-     :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url "http://[abc].tile.memomaps.de/tilegen/%z/%x/%y.png")
+     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png")
     (stamen-watercolor
      :name "Stamen Watercolor"
      :description "Artistic map in watercolor style provided by Stamen"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
     (stamen-terrain
-     :name "Stamen Terrain"
+     :name "Stamen Terrain" :max-zoom 18
      :description "Map with hill shading provided by Stamen"
-     :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/terrain/%z/%x/%y.png")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png")
     (stamen-toner-dark
      :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner/%z/%x/%y.png")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png")
     (stamen-toner-light
      :name "Stamen Toner Lite"
      :description "Artistic map in toner style provided by Stamen"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner-lite/%z/%x/%y.png"))
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
@@ -205,8 +197,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--cookie 0
   "Tile cache cookie.")
 
-(defvar-local osm--url-index 0
-  "Current url index to query the servers in a round-robin fashion.")
+(defvar-local osm--subdomain-index 0
+  "Subdomain index to query the servers in a round-robin fashion.")
 
 (defvar-local osm--queue nil
   "Download queue of tiles.")
@@ -287,21 +279,18 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--server-property (prop)
   "Return server property PROP."
-  (plist-get (alist-get osm-server osm-server-list) prop))
+  (or (plist-get (alist-get osm-server osm-server-list) prop)
+      (plist-get osm--server-defaults prop)))
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
-  (let ((url (osm--server-property :url))
-        (count 1))
-    (save-match-data
-      (when (string-match "\\`\\(.*\\)\\[\\(.*\\)\\]\\(.*\\)\\'" url)
-        (setq count (- (match-end 2) (match-beginning 2))
-              url (concat (match-string 1 url)
-                          (char-to-string (aref (match-string 2 url) osm--url-index))
-                          (match-string 3 url)))))
+  (let* ((url (osm--server-property :url))
+         (sub (osm--server-property :subdomains))
+         (count (length sub)))
     (prog1
-        (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)))
-      (setq osm--url-index (mod (1+ osm--url-index) count)))))
+        (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
+                           (?s . ,(nth (mod osm--subdomain-index count) sub))))
+      (setq osm--subdomain-index (mod (1+ osm--subdomain-index) count)))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
@@ -324,10 +313,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--download ()
   "Download next tile in queue."
   (when-let (job (and (< (length osm--active)
-                         (* (save-match-data
-                              (if (string-match "\\[\\(.*\\)\\]"
-                                                (osm--server-property :url))
-                                  (- (match-end 1) (match-beginning 1)) 1))
+                         (* (length (osm--server-property :subdomains))
                             (osm--server-property :max-connections)))
                       (pop osm--queue)))
     (push job osm--active)
