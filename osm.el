@@ -411,7 +411,7 @@ Should be at least 7 days according to the server usage policies."
   "Create bookmark at position of click EVENT."
   (interactive "@e")
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--put-transient-pin 'bookmark
+    (osm--put-transient-pin 'selected-bookmark
                             (+ osm--x (- x osm--wx))
                             (+ osm--y (- y osm--wy))
                             "New bookmark")
@@ -931,7 +931,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'bookmark "Bookmark"))
+      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'selected-bookmark "Bookmark"))
                    (def (osm--bookmark-name desc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil nil def))
                    (bookmark-make-record-function
