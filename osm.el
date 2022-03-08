@@ -176,8 +176,8 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "s" #'osm-search)
     (define-key map "t" #'osm-server)
     (define-key map "l" 'org-store-link)
-    (define-key map "B" #'osm-bookmark-set)
-    (define-key map "b" #'osm-bookmark-jump)
+    (define-key map "b" #'osm-bookmark-set)
+    (define-key map "j" #'osm-bookmark-jump)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
     (define-key map "<" nil)
@@ -875,19 +875,22 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
         (sym (make-symbol "osm--remove-transient-pin")))
     (fset sym (lambda ()
                 (with-current-buffer buffer
-                  (remove-hook 'pre-command-hook sym)
-                  ;; HACK: handle bookmark deletion and renaming
+                  ;; Handle bookmark deletion and renaming
                   (pcase this-command
+                    ('undefined nil)
                     ((and (guard (eq id 'selected-bookmark))
                           cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
+                     (remove-hook 'pre-command-hook sym)
                      (setq osm--transient-pin nil
                            this-command
                            (lambda ()
                              (interactive)
                              (funcall cmd help))))
-                    ((guard osm--transient-pin)
-                     (setq osm--transient-pin nil)
-                     (osm--update))))))
+                    (_
+                     (remove-hook 'pre-command-hook sym)
+                     (when osm--transient-pin
+                       (setq osm--transient-pin nil)
+                       (osm--update)))))))
     (add-hook 'pre-command-hook sym)
     (setq osm--transient-pin (list id x y help))))
 

@@ -40,7 +40,7 @@ take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional co
            ("C-c m s" . osm-search)
            ("C-c m t" . osm-server)
            ("C-c m g" . osm-goto)
-           ("C-c m b" . osm-bookmark-jump))
+           ("C-c m j" . osm-bookmark-jump))
     :init
     ;; Load Org link support
     (with-eval-after-load 'org
@@ -89,7 +89,7 @@ Key bindings in =osm-mode= buffer:
 - ~t~: =osm-server= - Select tile server
 - ~l~: =org-store-link= - Store org link
 - ~b~: =osm-bookmark-set= - Set bookmark
-- ~B~: =osm-bookmark-jump= - Jump to bookmark
+- ~j~: =osm-bookmark-jump= - Jump to bookmark
 - ~q~: =quit-window= - Close buffer and window
 - ~c~: =clone-buffer= - Clone buffer
 
