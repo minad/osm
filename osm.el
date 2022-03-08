@@ -559,6 +559,7 @@ Should be at least 7 days according to the server usage policies."
               buffer-read-only t
               fringe-indicator-alist '((truncation . nil))
               revert-buffer-function #'osm--revert
+              mouse-wheel-progressive-speed nil
               mwheel-scroll-up-function #'osm--zoom-out-wheel
               mwheel-scroll-down-function #'osm--zoom-in-wheel
               mwheel-scroll-left-function #'osm--zoom-out-wheel
