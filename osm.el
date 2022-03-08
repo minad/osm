@@ -829,7 +829,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'org-link "Org link")))
+  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'osm-org-link "Org link")))
     (setq name (string-remove-prefix "osm: " (osm--bookmark-name name)))
     (list lat lon osm--zoom
           (and (not (eq osm-server (default-value 'osm-server))) osm-server)
@@ -896,7 +896,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                   (pcase this-command
                     ((or 'undefined 'ignore)
                      nil)
-                    ((and (guard (eq id 'selected-bookmark))
+                    ((and (guard (eq id 'osm-selected-bookmark))
                           cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
                      (remove-hook 'pre-command-hook sym)
                      (setq osm--transient-pin nil
@@ -971,7 +971,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'selected-bookmark "Bookmark"))
+      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "Bookmark"))
                    (def (osm--bookmark-name desc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
