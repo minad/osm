@@ -584,8 +584,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--put-pin (id x y help)
   "Put pin at X/Y with HELP and ID in pins hash table."
   (let ((x0 (/ x 256)) (y0 (/ y 256)))
-    (push `(,(- x (* x0 256)) ,(- y (* y0 256)) ,id . ,help)
-          (gethash (cons x0 y0) osm--pins))
+    (push `(,x, y ,id . ,help) (gethash (cons x0 y0) osm--pins))
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
@@ -593,8 +592,7 @@ Should be at least 7 days according to the server usage policies."
       (let ((x1 (/ (+ x (* 32 i)) 256))
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
-          (push `(,(- x (* x1 256)) ,(- y (* y1 256)) ,id . ,help)
-                (gethash (cons x1 y1) osm--pins))))))))
+          (push `(,x ,y ,id . ,help) (gethash (cons x1 y1) osm--pins))))))))
 
 (defun osm--update-pins ()
   "Compute pin positions."
@@ -624,11 +622,14 @@ Should be at least 7 days according to the server usage policies."
         :width 256 :height 256
         ,@(if (or osm-tile-border pins)
               (let* ((areas nil)
+                     (x0 (* 256 x))
+                     (y0 (* 256 y))
                      (svg-pins
                       (mapconcat
                        (lambda (pin)
                          (pcase-let* ((`(,p ,q ,id . ,help) pin)
                                       (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
+                           (setq p (- p x0) q (- q y0))
                            (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
                                    ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
                                  areas)
