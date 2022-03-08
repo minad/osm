@@ -142,6 +142,7 @@ Should be at least 7 days according to the server usage policies."
   (let ((map (make-sparse-keymap)))
     (define-key map [org-link] #'ignore)
     (define-key map [center] #'ignore)
+    (define-key map [home] #'ignore)
     (define-key map [selected-bookmark] #'ignore)
     (define-key map [bookmark mouse-1] #'osm-bookmark-select-click)
     (define-key map [bookmark mouse-2] #'osm-bookmark-select-click)
