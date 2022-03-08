@@ -553,6 +553,12 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
+(defun osm--pin-at-p (x y p q)
+  "Return non-nil if pin P/Q is inside tile X/Y."
+  (setq x (* x 256) y (* y 256))
+  (and (>= p (- x 32)) (< p (+ x 256 32))
+       (>= q (- y 64)) (< q (+ y 256)))) ;; no + 64 here!
+
 (defun osm--put-pin (id x y color help)
   "Put pin at X/Y with COLOR, HELP and ID in pins hash table."
   (let ((x0 (/ x 256)) (y0 (/ y 256)))
@@ -561,8 +567,8 @@ Should be at least 7 days according to the server usage policies."
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
-      for j from -1 to 1 do
-      (let ((x1 (/ (+ x (* 64 i)) 256))
+      for j from -1 to 0 do
+      (let ((x1 (/ (+ x (* 32 i)) 256))
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
           (push `(,(- x (* x1 256)) ,(- y (* y1 256)) ,id ,color . ,help)
@@ -581,12 +587,6 @@ Should be at least 7 days according to the server usage policies."
              (y (osm--lat-to-y (car coord) osm--zoom)))
         (osm--put-pin 'osm-bookmark x y "#ff8800" (car bm))))))
 
-(defun osm--inside-tile-p (x y p q)
-  "Return non-nil if position P/Q is inside tile X/Y."
-  (setq x (* x 256) y (* y 256))
-  (and (>= p (- x 64)) (< p (+ x 256 64))
-       (>= q (- y 64)) (< q (+ y 256 64))))
-
 (autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y)
   "Make tile at X/Y from FILE."
@@ -598,8 +598,8 @@ Should be at least 7 days according to the server usage policies."
               (let* ((areas nil)
                      (svg-pins
                      (mapconcat
-                      (pcase-lambda (`(,px ,py ,id ,color . ,help))
-                        (push `((poly . [,px ,py ,(- px 20) ,(- py 40) ,px ,(- py 50) ,(+ px 20) ,(- py 40) ])
+                      (pcase-lambda (`(,p ,q ,id ,color . ,help))
+                        (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
                                 ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
                               areas)
                         (format "
@@ -609,7 +609,7 @@ Should be at least 7 days according to the server usage policies."
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" color px py)) ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
+</g>" color p q)) ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       pins "")))
                 (list :type 'svg :base-uri file :map areas
                       :data (concat "<svg width='256' height='256' version='1.1'
@@ -632,8 +632,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (if (cl-loop for (_id px py . _rest) in osm--transient-pins
-               thereis (osm--inside-tile-p x y px py))
+  (if (cl-loop for (_id p q . _rest) in osm--transient-pins
+               thereis (osm--pin-at-p x y p q))
       (osm--make-tile x y)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
