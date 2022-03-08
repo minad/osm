@@ -95,12 +95,12 @@
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-pin-colors
-  '((selected-bookmark . "#e20")
-    (bookmark . "#f80")
-    (center . "#f08")
-    (org-link . "#7a9"))
+  '((selected-bookmark "#e20" "#600")
+    (bookmark "#f80" "#820")
+    (center "#08f" "#028")
+    (org-link "#7a9" "#254"))
   "Colors of pins."
-  :type '(alist :key-type symbol :value-type string))
+  :type '(alist :key-type symbol :value-type (list string string)))
 
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
@@ -608,20 +608,22 @@ Should be at least 7 days according to the server usage policies."
         ,@(if-let (pins (gethash (cons x y) osm--pins))
               (let* ((areas nil)
                      (svg-pins
-                     (mapconcat
-                      (pcase-lambda (`(,p ,q ,id . ,help))
+                      (mapconcat
+                       (lambda (pin)
+                         (pcase-let* ((`(,p ,q ,id . ,help) pin)
+                                      (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
                         (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
                                 ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
                               areas)
                         ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                         (format "
-<g fill='%s' stroke='#000000' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
+<g fill='%s' stroke='%s' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" (alist-get id osm-pin-colors) p q))
+</g>" bg fg p q)))
                       pins "")))
                 (list :type 'svg :base-uri file :map areas
                       :data (concat "<svg width='256' height='256' version='1.1'
