@@ -116,6 +116,11 @@
   "Scroll step in pixel."
   :type 'integer)
 
+(defcustom osm-tile-border nil
+  "Display tile borders.
+Useful for debugging."
+  :type 'boolean)
+
 (defcustom osm-small-step 16
   "Scroll step in pixel."
   :type 'integer)
@@ -612,22 +617,23 @@ Should be at least 7 days according to the server usage policies."
 (autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y)
   "Make tile at X/Y from FILE."
-  (let ((file (osm--tile-file x y osm--zoom)))
+  (let ((file (osm--tile-file x y osm--zoom))
+        (pins (gethash (cons x y) osm--pins)))
     (when (file-exists-p file)
       `(image
         :width 256 :height 256
-        ,@(if-let (pins (gethash (cons x y) osm--pins))
+        ,@(if (or osm-tile-border pins)
               (let* ((areas nil)
                      (svg-pins
                       (mapconcat
                        (lambda (pin)
                          (pcase-let* ((`(,p ,q ,id . ,help) pin)
                                       (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
-                        (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
-                                ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
-                              areas)
-                        ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
-                        (format "
+                           (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
+                                   ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
+                                 areas)
+                           ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
+                           (format "
 <g fill='%s' stroke='%s' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
@@ -635,7 +641,7 @@ C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
 </g>" bg fg p q)))
-                      pins "")))
+                       pins "")))
                 (list :type 'svg :base-uri file :map areas
                       :data (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
@@ -649,7 +655,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                        (if (member (file-name-extension file) '("jpg" "jpeg"))
                                            "image/jpeg" "image/png")
                                        nil))
-                                    "' height='256' width='256'/>" svg-pins "</svg>")))
+                                    "' height='256' width='256'/>" svg-pins
+                                    (and osm-tile-border
+                                         "<path d='m0 0 l 0 256 256 0' stroke='#000' fill='none'/>")
+                                    "</svg>")))
             (list :type
                   (if (member (file-name-extension file) '("jpg" "jpeg"))
                       'jpeg 'png)
@@ -658,7 +667,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (if (pcase osm--transient-pin
-       (`(,_id ,p ,q . ,_) (osm--pin-at-p x y p q)))
+        (`(,_id ,p ,q . ,_) (osm--pin-at-p x y p q)))
       (osm--make-tile x y)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
@@ -1073,7 +1082,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-drag #'osm-center-click #'osm-org-link-click
-                    #'osm-bookmark-set-click #'osm-bookmark-select-click))
+                   #'osm-bookmark-set-click #'osm-bookmark-select-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
