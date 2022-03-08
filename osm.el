@@ -241,8 +241,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--pins nil
   "Pin hash table.")
 
-(defvar-local osm--transient-pins nil
-  "Transient pins.")
+(defvar-local osm--transient-pin nil
+  "Transient pin.")
 
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
@@ -588,8 +588,8 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--update-pins ()
   "Compute pin positions."
   (setq osm--pins (make-hash-table :test #'equal))
-  (dolist (pin osm--transient-pins)
-    (apply #'osm--put-pin pin))
+  (when osm--transient-pin
+    (apply #'osm--put-pin osm--transient-pin))
   (bookmark-maybe-load-default-file)
   (dolist (bm bookmark-alist)
     (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
@@ -646,8 +646,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (if (cl-loop for (_id p q . _rest) in osm--transient-pins
-               thereis (osm--pin-at-p x y p q))
+  (if (pcase osm--transient-pin
+       (`(,_id ,p ,q . ,_) (osm--pin-at-p x y p q)))
       (osm--make-tile x y)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
@@ -873,15 +873,14 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (fset sym (lambda ()
                 (with-current-buffer buffer
                   (remove-hook 'pre-command-hook sym)
-                  (setq osm--transient-pins (assq-delete-all id osm--transient-pins))
+                  (setq osm--transient-pin nil)
                   ;; HACK: handle bookmark deletion
                   (when (and (eq this-command #'osm-bookmark-delete)
                              (eq id 'selected-bookmark))
                     (osm-bookmark-delete help)
                     (setq this-command #'ignore)))))
     (add-hook 'pre-command-hook sym)
-    (setf (alist-get id osm--transient-pins)
-          (list x y help))))
+    (setq osm--transient-pin (list id x y help))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
