@@ -970,7 +970,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (interactive)
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
   (let* ((search (completing-read
-                  "Location: " osm--search-history
+                  "Location: "
+                  (osm--sorted-table osm--search-history)
                   nil nil nil 'osm--search-history))
          (json (json-parse-string
                 (shell-command-to-string
@@ -993,11 +994,20 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
          (selected (or (cdr (assoc
                              (completing-read
                               (format "Matches for '%s': " search)
-                              results nil t nil t)
+                              (osm--sorted-table results)
+                              nil t)
                              results))
                        (error "No selection"))))
     (osm-goto (car selected) (cadr selected)
               (apply #'osm--boundingbox-to-zoom (cddr selected)))))
+
+(defun osm--sorted-table (coll)
+  "Sorted completion table from COLL."
+  (lambda (str pred action)
+    (if (eq action 'metadata)
+        '(metadata (display-sort-function . identity)
+                   (cycle-sort-function . identity))
+      (complete-with-action action coll str pred))))
 
 ;;;###autoload
 (defun osm-server (server)
