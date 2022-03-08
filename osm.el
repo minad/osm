@@ -601,8 +601,6 @@ Should be at least 7 days according to the server usage policies."
                 (osm--lon-to-x (cadr osm-home) osm--zoom)
                 (osm--lat-to-y (car osm-home) osm--zoom)
                 "Home")
-  (when osm--transient-pin
-    (apply #'osm--put-pin osm--transient-pin))
   (bookmark-maybe-load-default-file)
   (dolist (bm bookmark-alist)
     (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
@@ -613,68 +611,67 @@ Should be at least 7 days according to the server usage policies."
                       (car bm))))))
 
 (autoload 'svg--image-data "svg")
-(defun osm--make-tile (x y)
-  "Make tile at X/Y from FILE."
+(defun osm--make-tile (x y tpin)
+  "Make tile at X/Y from FILE.
+TPIN is an optional transient pin."
   (let ((file (osm--tile-file x y osm--zoom))
         (pins (gethash (cons x y) osm--pins)))
     (when (file-exists-p file)
-      `(image
-        :width 256 :height 256
-        ,@(if (or osm-tile-border pins)
-              (let* ((areas nil)
-                     (x0 (* 256 x))
-                     (y0 (* 256 y))
-                     (svg-pins
-                      (mapconcat
-                       (lambda (pin)
-                         (pcase-let* ((`(,p ,q ,id . ,help) pin)
-                                      (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
-                           (setq p (- p x0) q (- q y0))
-                           (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
-                                   ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
-                                 areas)
-                           ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
-                           (format "
+      (if (or osm-tile-border tpin pins)
+          (let* ((areas nil)
+                 (x0 (* 256 x))
+                 (y0 (* 256 y))
+                 (svg-pin
+                  (lambda (pin)
+                    (pcase-let* ((`(,p ,q ,id . ,help) pin)
+                                 (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
+                      (setq p (- p x0) q (- q y0))
+                      (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
+                              ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
+                            areas)
+                      ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
+                      (format "
 <g fill='%s' stroke='%s' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" bg fg p q)))
-                       pins "")))
-                (list :type 'svg :base-uri file :map areas
-                      :data (concat "<svg width='256' height='256' version='1.1'
+</g>" bg fg p q))))
+                 (svg-text
+                  (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
-                                    (if (> emacs-major-version 27)
-                                        (file-name-nondirectory file)
-                                      ;; NOTE: On Emacs 27, :base-uri and embedding by file
-                                      ;; path is not supported. Use the less efficient base64 encoding.
-                                      (svg--image-data
-                                       file
-                                       (if (member (file-name-extension file) '("jpg" "jpeg"))
-                                           "image/jpeg" "image/png")
-                                       nil))
-                                    "' height='256' width='256'/>" svg-pins
-                                    (and osm-tile-border
-                                         "<path d='m0 0 l 0 256 256 0' stroke='#000' fill='none'/>")
-                                    "</svg>")))
-            (list :type
-                  (if (member (file-name-extension file) '("jpg" "jpeg"))
-                      'jpeg 'png)
-                  :file file))))))
+                          (if (> emacs-major-version 27)
+                              (file-name-nondirectory file)
+                            ;; NOTE: On Emacs 27, :base-uri and embedding by file
+                            ;; path is not supported. Use the less efficient base64 encoding.
+                            (svg--image-data
+                             file
+                             (if (member (file-name-extension file) '("jpg" "jpeg"))
+                                 "image/jpeg" "image/png")
+                             nil))
+                          "' height='256' width='256'/>"
+                          (mapconcat svg-pin pins "")
+                          (and tpin (funcall svg-pin tpin))
+                          (and osm-tile-border
+                               "<path d='m0 0 l 0 256 256 0' stroke='#000' fill='none'/>")
+                          "</svg>")))
+            (list 'image :width 256 :height 256 :type 'svg :base-uri file :data svg-text :map areas))
+        (list 'image :width 256 :height 256 :file file :type
+              (if (member (file-name-extension file) '("jpg" "jpeg"))
+                  'jpeg 'png))))))
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (if (pcase osm--transient-pin
-        (`(,_id ,p ,q . ,_) (osm--pin-at-p x y p q)))
-      (osm--make-tile x y)
+        (`(,p ,q . ,_) (osm--pin-at-p x y p q)))
+      (osm--make-tile x y osm--transient-pin)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
       (if tile
           (progn (setcar tile osm--cookie) (cdr tile))
-        (setq tile (osm--make-tile x y))
+        (setq tile (osm--make-tile x y nil))
         (when tile
           (when osm-max-tiles
             (unless osm--tiles
@@ -911,7 +908,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                        (setq osm--transient-pin nil)
                        (osm--update)))))))
     (add-hook 'pre-command-hook sym)
-    (setq osm--transient-pin (list id x y help))))
+    (setq osm--transient-pin `(,x ,y ,id . ,help))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -985,8 +982,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Fetch location info for ID with HELP."
   (unless osm--transient-pin
     (osm--put-transient-pin id osm--x osm--y help))
-  (let ((lat (osm--y-to-lat (caddr osm--transient-pin) osm--zoom))
-        (lon (osm--x-to-lon (cadr osm--transient-pin) osm--zoom)))
+  (let ((lat (osm--y-to-lat (cadr osm--transient-pin) osm--zoom))
+        (lon (osm--x-to-lon (car osm--transient-pin) osm--zoom)))
     (message "%s: Fetching name of %.2f %.2f..." help lat lon)
     ;; Redisplay before slow fetching
     (osm--update)
