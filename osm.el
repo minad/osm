@@ -98,6 +98,7 @@
   '((selected-bookmark "#e20" "#600")
     (bookmark "#f80" "#820")
     (center "#08f" "#028")
+    (home "#80f" "#208")
     (org-link "#7a9" "#254"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type (list string string)))
@@ -591,15 +592,20 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--update-pins ()
   "Compute pin positions."
   (setq osm--pins (make-hash-table :test #'equal))
+  (osm--put-pin 'home
+                (osm--lon-to-x (cadr osm-home) osm--zoom)
+                (osm--lat-to-y (car osm-home) osm--zoom)
+                "Home")
   (when osm--transient-pin
     (apply #'osm--put-pin osm--transient-pin))
   (bookmark-maybe-load-default-file)
   (dolist (bm bookmark-alist)
     (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-      (let* ((coord (bookmark-prop-get bm 'coordinates))
-             (x (osm--lon-to-x (cadr coord) osm--zoom))
-             (y (osm--lat-to-y (car coord) osm--zoom)))
-        (osm--put-pin 'bookmark x y (car bm))))))
+      (let ((coord (bookmark-prop-get bm 'coordinates)))
+        (osm--put-pin 'bookmark
+                      (osm--lon-to-x (cadr coord) osm--zoom)
+                      (osm--lat-to-y (car coord) osm--zoom)
+                      (car bm))))))
 
 (autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y)
