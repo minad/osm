@@ -167,6 +167,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [M-down] #'osm-down-down)
     (define-key map [M-left] #'osm-left-left)
     (define-key map [M-right] #'osm-right-right)
+    (define-key map "n" #'osm-bookmark-rename)
     (define-key map "d" #'osm-bookmark-delete)
     (define-key map "\d" #'osm-bookmark-delete)
     (define-key map "c" #'clone-buffer)
@@ -444,7 +445,7 @@ Should be at least 7 days according to the server usage policies."
           (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
             (setq min d found (list p q (car bm)))))))
     (when found
-      (message "Selected '%s'" (cddr found))
+      (message "%s" (caddr found))
       (apply #'osm--put-transient-pin 'selected-bookmark found)
       (osm--update))))
 
@@ -875,12 +876,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (fset sym (lambda ()
                 (with-current-buffer buffer
                   (remove-hook 'pre-command-hook sym)
-                  (setq osm--transient-pin nil)
-                  ;; HACK: handle bookmark deletion
-                  (when (and (eq this-command #'osm-bookmark-delete)
-                             (eq id 'selected-bookmark))
-                    (osm-bookmark-delete help)
-                    (setq this-command #'ignore)))))
+                  ;; HACK: handle bookmark deletion and renaming
+                  (pcase this-command
+                    ((and (guard (eq id 'selected-bookmark))
+                          cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
+                     (setq osm--transient-pin nil
+                           this-command
+                           (lambda ()
+                             (interactive)
+                             (funcall cmd help))))
+                    ((guard osm--transient-pin)
+                     (setq osm--transient-pin nil)
+                     (osm--update))))))
     (add-hook 'pre-command-hook sym)
     (setq osm--transient-pin (list id x y help))))
 
@@ -911,6 +918,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (bookmark-delete bm)
   (osm--revert))
 
+;;;###autoload
+(defun osm-bookmark-rename (old-name)
+  "Rename osm bookmark OLD-NAME."
+  (interactive (list (car (osm--bookmark-read))))
+  (unwind-protect
+      (bookmark-rename
+       old-name
+       (read-from-minibuffer
+        "New name: " old-name nil nil
+        'bookmark-history old-name))
+    (osm--revert)))
+
 (defun osm--bookmark-read ()
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
@@ -933,7 +952,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (unwind-protect
       (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'selected-bookmark "Bookmark"))
                    (def (osm--bookmark-name desc))
-                   (name (read-from-minibuffer "Bookmark name: " def nil nil nil def))
+                   (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
                     (lambda () (osm--make-bookmark name lat lon))))
         (bookmark-set name)

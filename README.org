@@ -82,6 +82,7 @@ Key bindings in =osm-mode= buffer:
 - ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-drag= - Drag the map with the mouse
 - ~d~, ~DEL~: =osm-bookmark-delete= - Delete selected bookmark
+- ~n~: =osm-bookmark-rename= - Rename selected bookmark
 - ~g~: =osm-goto= - Go to location
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
