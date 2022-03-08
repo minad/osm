@@ -884,7 +884,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                 (with-current-buffer buffer
                   ;; Handle bookmark deletion and renaming
                   (pcase this-command
-                    ('undefined nil)
+                    ((or 'undefined 'ignore)
+                     nil)
                     ((and (guard (eq id 'selected-bookmark))
                           cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
                      (remove-hook 'pre-command-hook sym)
