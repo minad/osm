@@ -139,7 +139,6 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "-" #'osm-zoom-out)
     (define-key map " " #'osm-zoom-in)
     (define-key map (kbd "S-SPC") #'osm-zoom-out)
-    (define-key map "\d" #'osm-zoom-out)
     (define-key map [mouse-1] #'osm-center-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
@@ -158,6 +157,8 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [M-down] #'osm-down-down)
     (define-key map [M-left] #'osm-left-left)
     (define-key map [M-right] #'osm-right-right)
+    (define-key map "d" #'osm-bookmark-delete)
+    (define-key map "\d" #'osm-bookmark-delete)
     (define-key map "c" #'clone-buffer)
     (define-key map "h" #'osm-home)
     (define-key map "g" #'osm-goto)
@@ -393,7 +394,7 @@ Should be at least 7 days according to the server usage policies."
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (osm--put-transient-pin 'osm-transient osm--x osm--y "#ff0088" "Center" 'auto-remove)
+      (osm--put-transient-pin 'osm-transient osm--x osm--y "#ff0088" "Center")
       (osm--update))))
 
 (defun osm-bookmark-set-click (event)
@@ -420,6 +421,7 @@ Should be at least 7 days according to the server usage policies."
                (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
           (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
             (setq min d found `(,p ,q . ,(car bm)))))))
+    (message "Selected '%s'" (cddr found))
     (osm--put-transient-pin 'osm-selected-bookmark
                             (car found) (cadr found)
                             "#FF0000" (cddr found))
@@ -432,7 +434,7 @@ Should be at least 7 days according to the server usage policies."
                (osm--x (+ osm--x (- x osm--wx)))
                (osm--y (+ osm--y (- y osm--wy))))
     (call-interactively 'org-store-link)
-    (osm--put-transient-pin 'osm-transient osm--x osm--y "#7a9" "Org Link" 'auto-remove))
+    (osm--put-transient-pin 'osm-transient osm--x osm--y "#7a9" "Org Link"))
   (osm--update))
 
 (defun osm-zoom-in (&optional n)
@@ -557,7 +559,7 @@ Should be at least 7 days according to the server usage policies."
   "Return non-nil if pin P/Q is inside tile X/Y."
   (setq x (* x 256) y (* y 256))
   (and (>= p (- x 32)) (< p (+ x 256 32))
-       (>= q (- y 64)) (< q (+ y 256)))) ;; no + 64 here!
+       (>= q y) (< q (+ y 256 64))))
 
 (defun osm--put-pin (id x y color help)
   "Put pin at X/Y with COLOR, HELP and ID in pins hash table."
@@ -848,21 +850,24 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
             osm--y (osm--lat-to-y (nth 0 at) osm--zoom))
-      (osm--put-transient-pin 'osm-transient osm--x osm--y "#ff0088" "Center" 'auto-remove))
+      (osm--put-transient-pin 'osm-transient osm--x osm--y "#ff0088" "Center"))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--put-transient-pin (id x y color help &optional auto-remove)
-  "Set transient pin at X/Y with COLOR, ID and HELP.
-AUTO-REMOVE the pin if non-nil."
+(defun osm--put-transient-pin (id x y color help)
+  "Set transient pin at X/Y with COLOR, ID and HELP."
   (let ((buffer (current-buffer))
         (sym (make-symbol "osm--remove-transient-pin")))
-    (when auto-remove
-      (fset sym (lambda ()
-                  (with-current-buffer buffer
-                    (setq osm--transient-pins (assq-delete-all id osm--transient-pins))
-                    (remove-hook 'pre-command-hook sym))))
-      (add-hook 'pre-command-hook sym))
+    (fset sym (lambda ()
+                (with-current-buffer buffer
+                  (remove-hook 'pre-command-hook sym)
+                  (setq osm--transient-pins (assq-delete-all id osm--transient-pins))
+                  ;; HACK: handle bookmark deletion
+                  (when (and (eq this-command #'osm-bookmark-delete)
+                             (eq id 'osm-selected-bookmark))
+                    (osm-bookmark-delete help)
+                    (setq this-command #'ignore)))))
+    (add-hook 'pre-command-hook sym)
     (setf (alist-get id osm--transient-pins)
           (list x y color help))))
 
