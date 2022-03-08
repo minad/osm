@@ -581,10 +581,10 @@ Should be at least 7 days according to the server usage policies."
   (and (>= p (- x 32)) (< p (+ x 256 32))
        (>= q y) (< q (+ y 256 64))))
 
-(defun osm--put-pin (id x y help)
-  "Put pin at X/Y with HELP and ID in pins hash table."
+(defun osm--put-pin (pins id x y help)
+  "Put pin at X/Y with HELP and ID in PINS hash table."
   (let ((x0 (/ x 256)) (y0 (/ y 256)))
-    (push `(,x, y ,id . ,help) (gethash (cons x0 y0) osm--pins))
+    (push `(,x, y ,id . ,help) (gethash (cons x0 y0) pins))
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
@@ -592,30 +592,33 @@ Should be at least 7 days according to the server usage policies."
       (let ((x1 (/ (+ x (* 32 i)) 256))
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
-          (push `(,x ,y ,id . ,help) (gethash (cons x1 y1) osm--pins))))))))
+          (push `(,x ,y ,id . ,help) (gethash (cons x1 y1) pins))))))))
 
-(defun osm--update-pins ()
-  "Compute pin positions."
-  (setq osm--pins (make-hash-table :test #'equal))
-  (osm--put-pin 'osm-home
-                (osm--lon-to-x (cadr osm-home) osm--zoom)
-                (osm--lat-to-y (car osm-home) osm--zoom)
-                "Home")
-  (bookmark-maybe-load-default-file)
-  (dolist (bm bookmark-alist)
-    (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-      (let ((coord (bookmark-prop-get bm 'coordinates)))
-        (osm--put-pin 'osm-bookmark
-                      (osm--lon-to-x (cadr coord) osm--zoom)
-                      (osm--lat-to-y (car coord) osm--zoom)
-                      (car bm))))))
+(defun osm--get-pins (x y)
+  "Compute pin positions and get pin at X/Y."
+  (unless (eq (car osm--pins) osm--zoom)
+    (let ((pins (make-hash-table :test #'equal)))
+      (osm--put-pin pins 'osm-home
+                    (osm--lon-to-x (cadr osm-home) osm--zoom)
+                    (osm--lat-to-y (car osm-home) osm--zoom)
+                    "Home")
+      (bookmark-maybe-load-default-file)
+      (dolist (bm bookmark-alist)
+        (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+          (let ((coord (bookmark-prop-get bm 'coordinates)))
+            (osm--put-pin pins 'osm-bookmark
+                          (osm--lon-to-x (cadr coord) osm--zoom)
+                          (osm--lat-to-y (car coord) osm--zoom)
+                          (car bm)))))
+      (setq osm--pins (cons osm--zoom pins))))
+  (gethash (cons x y) (cdr osm--pins)))
 
 (autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y tpin)
   "Make tile at X/Y from FILE.
 TPIN is an optional transient pin."
   (let ((file (osm--tile-file x y osm--zoom))
-        (pins (gethash (cons x y) osm--pins)))
+        (pins (osm--get-pins x y)))
     (when (file-exists-p file)
       (if (or osm-tile-border tpin pins)
           (let* ((areas nil)
@@ -714,7 +717,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (dolist (buf (buffer-list))
     (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
       (with-current-buffer buf
-        (when osm--tiles (clrhash osm--tiles))
+        (setq osm--tiles nil osm--pins nil)
         (osm--update)))))
 
 (defun osm--resize (&rest _)
@@ -758,7 +761,6 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (rename-buffer (osm--buffer-name) 'unique)
   (osm--update-sizes)
   (osm--update-header)
-  (osm--update-pins)
   (osm--update-buffer)
   (osm--process-queue)
   (osm--purge-tiles)
