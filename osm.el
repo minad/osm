@@ -99,6 +99,7 @@
     (osm-bookmark "#f80" "#820")
     (osm-center "#08f" "#028")
     (osm-home "#80f" "#208")
+    (osm-poi "#88f" "#228")
     (osm-org-link "#7a9" "#254"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type (list string string)))
@@ -118,8 +119,8 @@
 
 (defcustom osm-tile-border nil
   "Display tile borders.
-Useful for debugging."
-  :type 'boolean)
+Useful for debugging, set to value `debug'."
+  :type '(choice boolean (const debug)))
 
 (defcustom osm-small-step 16
   "Scroll step in pixel."
@@ -148,6 +149,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [osm-home] #'ignore)
     (define-key map [osm-org-link] #'ignore)
     (define-key map [osm-center] #'ignore)
+    (define-key map [osm-poi] #'ignore)
     (define-key map [osm-selected-bookmark] #'ignore)
     (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
     (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
@@ -186,6 +188,8 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "l" 'org-store-link)
     (define-key map "b" #'osm-bookmark-set)
     (define-key map "j" #'osm-bookmark-jump)
+    (define-key map "x" #'osm-gpx-show)
+    (define-key map "X" #'osm-gpx-hide)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
     (define-key map "<" nil)
@@ -217,6 +221,9 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--tile-cookie 0
   "Tile cache cookie.")
 
+(defvar osm--gpx-files nil
+  "Global list of loaded tracks.")
+
 (defvar-local osm--subdomain-index 0
   "Subdomain index to query the servers in a round-robin fashion.")
 
@@ -247,8 +254,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--y nil
   "X coordinate on the map in pixel.")
 
-(defvar-local osm--pins nil
-  "Pin hash table.")
+(defvar-local osm--overlay-table nil
+  "Overlay hash table.")
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
@@ -595,33 +602,106 @@ Should be at least 7 days according to the server usage policies."
         (unless (and (= x0 x1) (= y0 y1))
           (push pin (gethash (cons x1 y1) pins))))))))
 
-(defun osm--get-pins (x y)
-  "Compute pin positions and get pin at X/Y."
-  (unless (eq (car osm--pins) osm--zoom)
-    (let ((pins (make-hash-table :test #'equal)))
-      (osm--put-pin pins 'osm-home
-                    (osm--lon-to-x (cadr osm-home) osm--zoom)
-                    (osm--lat-to-y (car osm-home) osm--zoom)
-                    "Home")
-      (bookmark-maybe-load-default-file)
-      (dolist (bm bookmark-alist)
-        (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-          (let ((coord (bookmark-prop-get bm 'coordinates)))
-            (osm--put-pin pins 'osm-bookmark
-                          (osm--lon-to-x (cadr coord) osm--zoom)
-                          (osm--lat-to-y (car coord) osm--zoom)
-                          (car bm)))))
-      (setq osm--pins (cons osm--zoom pins))))
-  (gethash (cons x y) (cdr osm--pins)))
+(defun osm--compute-pins ()
+  "Compute pin hash table."
+  (let ((pins (make-hash-table :test #'equal)))
+    (osm--put-pin pins 'osm-home
+                  (osm--lon-to-x (cadr osm-home) osm--zoom)
+                  (osm--lat-to-y (car osm-home) osm--zoom)
+                  "Home")
+    (bookmark-maybe-load-default-file)
+    (dolist (bm bookmark-alist)
+      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+        (let ((coord (bookmark-prop-get bm 'coordinates)))
+          (osm--put-pin pins 'osm-bookmark
+                        (osm--lon-to-x (cadr coord) osm--zoom)
+                        (osm--lat-to-y (car coord) osm--zoom)
+                        (car bm)))))
+    (dolist (file osm--gpx-files)
+      (dolist (pt (cddr file))
+        (osm--put-pin pins 'osm-poi
+                      (osm--lon-to-x (cddr pt) osm--zoom)
+                      (osm--lat-to-y (cadr pt) osm--zoom)
+                      (car pt))))
+    pins))
+
+;; TODO This is not yet as robust as it should be. Rethink the algorithm.
+(defun osm--compute-tracks ()
+  "Compute track hash table."
+  (let ((tracks (make-hash-table :test #'equal))
+        (segs (make-hash-table :test #'equal)))
+    (dolist (file osm--gpx-files)
+      (clrhash segs)
+      (dolist (seg (cadr file))
+        (let ((px0 (osm--lon-to-x (cdar seg) osm--zoom))
+              (py0 (osm--lat-to-y (caar seg) osm--zoom)))
+          (dolist (pt (cdr seg))
+            (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
+                   (py1 (osm--lat-to-y (car pt) osm--zoom))
+                   (x0 (/ px0 256))
+                   (y0 (/ py0 256))
+                   (x1 (/ px1 256))
+                   (y1 (/ py1 256))
+                   (pdx (- px1 px0))
+                   (pdy (- py1 py0))
+                   (dx (abs (- x1 x0)))
+                   (dy (- (abs (- y1 y0))))
+                   (sx (if (< x0 x1) 1 -1))
+                   (sy (if (< y0 y1) 1 -1))
+                   (err (+ dx dy)))
+              ;; Ignore point if too close to last point
+              (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
+                ;; Bresenham with "antialiasing"
+                (while
+                    (let ((v0 (cons px0 py0))
+                          (v1 (cons px1 py1))
+                          (ex (< (* err 2) dx))
+                          (ey (> (* err 2) dy))
+                          (key (cons x0 y0)))
+                      (unless (equal (gethash key segs) v0)
+                        (push v0 (gethash key segs)))
+                      (push v1 (gethash key segs))
+                      (unless (and (= x0 x1) (= y0 y1))
+                        ;; "Antialiasing"
+                        (when (and ey ex)
+                          (setq key (cons (+ x0 sx) y0))
+                          (unless (equal (gethash key segs) v0)
+                            (push v0 (gethash key segs)))
+                          (push v1 (gethash key segs))
+                          (setq key (cons x0 (+ y0 sy)))
+                          (unless (equal (gethash key segs) v0)
+                            (push v0 (gethash key segs)))
+                          (push v1 (gethash key segs)))
+                        (when ey
+                          (cl-incf err dy)
+                          (cl-incf x0 sx))
+                        (when ex
+                          (cl-incf err dx)
+                          (cl-incf y0 sy))
+                        t)))
+                (setq px0 px1 py0 py1))))))
+      (maphash (lambda (k v) (push v (gethash k tracks))) segs))
+    tracks))
+
+(defun osm--get-overlays (x y)
+  "Compute overlays and return the overlays in tile X/Y."
+  (unless (eq (car osm--overlay-table) osm--zoom)
+    ;; TODO: Do not compute overlays for the entire map, only for a reasonable viewport around the
+    ;; current center, maybe 10x the window size. Otherwise the spatial hash map for the tracks can
+    ;; get very large if a line segment spans many tiles.
+    (setq osm--overlay-table (list osm--zoom (osm--compute-pins) (osm--compute-tracks))))
+  (let ((pins (gethash (cons x y) (cadr osm--overlay-table)))
+        (tracks (gethash (cons x y) (caddr osm--overlay-table))))
+    (and (or pins tracks) (cons pins tracks))))
 
 (autoload 'svg--image-data "svg")
 (defun osm--make-tile (x y tpin)
   "Make tile at X/Y from FILE.
 TPIN is an optional transient pin."
   (let ((file (osm--tile-file x y osm--zoom))
-        (pins (osm--get-pins x y)))
+        (overlays (osm--get-overlays x y)))
     (when (file-exists-p file)
-      (if (or osm-tile-border tpin pins)
+      (if (or (eq osm-tile-border t) tpin overlays)
           (let* ((areas nil)
                  (x0 (* 256 x))
                  (y0 (* 256 y))
@@ -656,9 +736,20 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                  "image/jpeg" "image/png")
                              nil))
                           "' height='256' width='256'/>"
-                          (and osm-tile-border
-                               "<path d='m0 0 l 0 256 256 0' stroke='#000' fill='none'/>")
-                          (mapconcat svg-pin pins "")
+                          (mapconcat
+                           (lambda (seg)
+                             (format "<path stroke='#00A' stroke-width='10' stroke-linejoin='round' stroke-linecap='round' opacity='0.4' fill='none' d='M%s %s %s'/>"
+                                     (- (caar seg) x0) (- (cdar seg) y0)
+                                     (mapconcat
+                                      (pcase-lambda (`(,x . ,y))
+                                        (format " L %s %s" (- x x0) (- y y0)))
+                                      (cdr seg) "")))
+                           (cdr overlays) "")
+                          (pcase-exhaustive osm-tile-border
+                            ('nil nil)
+                            ('debug "<path d='M 1 1 L 1 255 255 255 255 1 Z' stroke='#000' stroke-width='2' fill='none'/>")
+                            ('t "<path d='M 0 0 L 0 256 256 256' stroke='#000' fill='none'/>"))
+                          (mapconcat svg-pin (car overlays) "")
                           (and tpin (funcall svg-pin tpin))
                           "</svg>")))
             (list 'image :width 256 :height 256 :type 'svg :base-uri file :data svg-text :map areas))
@@ -718,7 +809,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (dolist (buf (buffer-list))
     (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
       (with-current-buffer buf
-        (setq osm--tile-cache nil osm--pins nil)
+        (setq osm--tile-cache nil osm--overlay-table nil)
         (osm--update)))))
 
 (defun osm--resize (&rest _)
@@ -1049,6 +1140,58 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
         '(metadata (display-sort-function . identity)
                    (cycle-sort-function . identity))
       (complete-with-action action coll str pred))))
+
+(declare-function xml-get-children "xml")
+(declare-function xml-get-attribute "xml")
+(declare-function xml-node-children "xml")
+
+;;;###autoload
+(defun osm-gpx-show (file)
+  "Show the tracks of gpx FILE in an `osm-mode' buffer."
+  (interactive "fGPX file: ")
+  (require 'xml)
+  (let ((root (car (xml-parse-file file)))
+        (min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+    (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
+          (cons
+           (mapcan
+            (lambda (trk)
+              (mapcar
+               (lambda (seg)
+                 (mapcar
+                  (lambda (pt)
+                    (let ((lat (string-to-number (xml-get-attribute pt 'lat)))
+                          (lon (string-to-number (xml-get-attribute pt 'lon))))
+                      (setq min-lat (min lat min-lat)
+                            max-lat (max lat max-lat)
+                            min-lon (min lon min-lon)
+                            max-lon (max lon max-lon))
+                      (cons lat lon)))
+                  (xml-get-children seg 'trkpt)))
+               (xml-get-children trk 'trkseg)))
+            (xml-get-children root 'trk))
+           (mapcar
+            (lambda (pt)
+              (let ((lat (string-to-number (xml-get-attribute pt 'lat)))
+                    (lon (string-to-number (xml-get-attribute pt 'lon))))
+                (setq min-lat (min lat min-lat)
+                      max-lat (max lat max-lat)
+                      min-lon (min lon min-lon)
+                      max-lon (max lon max-lon))
+                `(,(car (xml-node-children (car (xml-get-children pt 'name)))) ,lat . ,lon)))
+            (xml-get-children root 'wpt))))
+    (osm--revert)
+    (osm-goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
+              (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon))))
+
+(defun osm-gpx-hide (file)
+  "Show the tracks of gpx FILE in an `osm-mode' buffer."
+  (interactive (list (completing-read "GPX file: "
+                                      (or osm--gpx-files
+                                          (error "No GPX files shown"))
+                                      nil t nil 'file-name-history)))
+  (setq osm--gpx-files (assoc-delete-all file osm--gpx-files))
+  (osm--revert))
 
 ;;;###autoload
 (defun osm-server (server)

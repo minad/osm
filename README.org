@@ -17,16 +17,17 @@
 
 * Features
 
+- Zoomable and moveable map display
+- Display of tracks from GPX file
 - Parallel fetching of tiles with curl
-- Scrolling in large and small steps
-- Zooming
+- Moving in large and small steps
 - Mouse support (dragging, clicking)
 - Map scale indicator
-- Jump to coordinate
+- Go to coordinate
 - Search for location by name
 - Org link support
 - Bookmarked positions with pins
-- Multiple preconfigured servers
+- Multiple preconfigured tile servers
 
 * Configuration
 
@@ -40,6 +41,7 @@ take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional co
            ("C-c m s" . osm-search)
            ("C-c m v" . osm-server)
            ("C-c m t" . osm-goto)
+           ("C-c m x" . osm-gpx-show)
            ("C-c m j" . osm-bookmark-jump))
     :init
     ;; Load Org link support
@@ -87,6 +89,8 @@ Key bindings in =osm-mode= buffer:
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
 - ~v~: =osm-server= - Select tile server
+- ~x~: =osm-gpx-show= - Show GPX file
+- ~X~: =osm-gpx-hide= - Hide GPX file
 - ~l~: =org-store-link= - Store org link
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~j~: =osm-bookmark-jump= - Jump to bookmark
