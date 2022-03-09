@@ -129,7 +129,7 @@ Useful for debugging."
   "Tile server name."
   :type 'symbol)
 
-(defcustom osm-cache-directory
+(defcustom osm-tile-directory
   (expand-file-name "var/osm/" user-emacs-directory)
   "Tile cache directory."
   :type 'string)
@@ -180,9 +180,9 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "\d" #'osm-bookmark-delete)
     (define-key map "c" #'clone-buffer)
     (define-key map "h" #'osm-home)
-    (define-key map "g" #'osm-goto)
+    (define-key map "t" #'osm-goto)
     (define-key map "s" #'osm-search)
-    (define-key map "t" #'osm-server)
+    (define-key map "v" #'osm-server)
     (define-key map "l" 'org-store-link)
     (define-key map "b" #'osm-bookmark-set)
     (define-key map "j" #'osm-bookmark-jump)
@@ -211,19 +211,19 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--purge-directory 0
   "Last time the tile cache was cleaned.")
 
-(defvar osm--tiles nil
+(defvar osm--tile-cache nil
   "Global tile memory cache.")
 
-(defvar osm--cookie 0
+(defvar osm--tile-cookie 0
   "Tile cache cookie.")
 
 (defvar-local osm--subdomain-index 0
   "Subdomain index to query the servers in a round-robin fashion.")
 
-(defvar-local osm--queue nil
+(defvar-local osm--download-queue nil
   "Download queue of tiles.")
 
-(defvar-local osm--active nil
+(defvar-local osm--download-active nil
   "Active download jobs.")
 
 (defvar-local osm--wx 0
@@ -233,7 +233,7 @@ Should be at least 7 days according to the server usage policies."
   "Half window height in pixel.")
 
 (defvar-local osm--nx 0
-  "Number of tiles in x diretion.")
+  "Number of tiles in x direction.")
 
 (defvar-local osm--ny 0
   "Number of tiles in y direction.")
@@ -316,27 +316,27 @@ Should be at least 7 days according to the server usage policies."
   "Return tile file name for coordinate X, Y and ZOOM."
   (expand-file-name
    (format "%s%s/%d-%d-%d.%s"
-           osm-cache-directory
+           osm-tile-directory
            (symbol-name osm-server)
            zoom x y
            (file-name-extension
             (url-file-nondirectory
              (osm--server-property :url))))))
 
-(defun osm--enqueue (x y)
+(defun osm--enqueue-download (x y)
   "Enqueue tile X/Y for download."
   (when (let ((n (expt 2 osm--zoom))) (and (>= x 0) (>= y 0) (< x n) (< y n)))
     (let ((job `(,x ,y . ,osm--zoom)))
-      (unless (or (member job osm--queue) (member job osm--active))
-        (setq osm--queue (nconc osm--queue (list job)))))))
+      (unless (or (member job osm--download-queue) (member job osm--download-active))
+        (setq osm--download-queue (nconc osm--download-queue (list job)))))))
 
 (defun osm--download ()
   "Download next tile in queue."
-  (when-let (job (and (< (length osm--active)
+  (when-let (job (and (< (length osm--download-active)
                          (* (length (osm--server-property :subdomains))
                             (osm--server-property :max-connections)))
-                      (pop osm--queue)))
-    (push job osm--active)
+                      (pop osm--download-queue)))
+    (push job osm--download-active)
     (pcase-let* ((`(,x ,y . ,zoom) job)
                  (buffer (current-buffer))
                  (dst (osm--tile-file x y zoom))
@@ -361,7 +361,7 @@ Should be at least 7 days according to the server usage policies."
                (osm--display-tile x y (osm--get-tile x y)))
              (delete-file tmp)
              (force-mode-line-update)
-             (setq osm--active (delq job osm--active))
+             (setq osm--download-active (delq job osm--download-active))
              (osm--download)))))
       (osm--download))))
 
@@ -538,7 +538,7 @@ Should be at least 7 days according to the server usage policies."
        (dolist (file
                 (ignore-errors
                   (directory-files-recursively
-                   osm-cache-directory
+                   osm-tile-directory
                    "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" nil)))
          (when (> (float-time
                    (time-since
@@ -583,8 +583,9 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--put-pin (pins id x y help)
   "Put pin at X/Y with HELP and ID in PINS hash table."
-  (let ((x0 (/ x 256)) (y0 (/ y 256)))
-    (push `(,x, y ,id . ,help) (gethash (cons x0 y0) pins))
+  (let ((x0 (/ x 256)) (y0 (/ y 256))
+        (pin `(,x, y ,id . ,help)))
+    (push pin (gethash (cons x0 y0) pins))
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
@@ -592,7 +593,7 @@ Should be at least 7 days according to the server usage policies."
       (let ((x1 (/ (+ x (* 32 i)) 256))
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
-          (push `(,x ,y ,id . ,help) (gethash (cons x1 y1) pins))))))))
+          (push pin (gethash (cons x1 y1) pins))))))))
 
 (defun osm--get-pins (x y)
   "Compute pin positions and get pin at X/Y."
@@ -655,10 +656,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                  "image/jpeg" "image/png")
                              nil))
                           "' height='256' width='256'/>"
-                          (mapconcat svg-pin pins "")
-                          (and tpin (funcall svg-pin tpin))
                           (and osm-tile-border
                                "<path d='m0 0 l 0 256 256 0' stroke='#000' fill='none'/>")
+                          (mapconcat svg-pin pins "")
+                          (and tpin (funcall svg-pin tpin))
                           "</svg>")))
             (list 'image :width 256 :height 256 :type 'svg :base-uri file :data svg-text :map areas))
         (list 'image :width 256 :height 256 :file file :type
@@ -671,15 +672,15 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
         (`(,p ,q . ,_) (osm--pin-at-p x y p q)))
       (osm--make-tile x y osm--transient-pin)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
-           (tile (and osm--tiles (gethash key osm--tiles))))
+           (tile (and osm--tile-cache (gethash key osm--tile-cache))))
       (if tile
-          (progn (setcar tile osm--cookie) (cdr tile))
+          (progn (setcar tile osm--tile-cookie) (cdr tile))
         (setq tile (osm--make-tile x y nil))
         (when tile
           (when osm-max-tiles
-            (unless osm--tiles
-              (setq osm--tiles (make-hash-table :test #'equal :size osm-max-tiles)))
-            (puthash key (cons osm--cookie tile) osm--tiles))
+            (unless osm--tile-cache
+              (setq osm--tile-cache (make-hash-table :test #'equal :size osm-max-tiles)))
+            (puthash key (cons osm--tile-cookie tile) osm--tile-cache))
           tile)))))
 
 (defun osm--display-tile (x y tile)
@@ -705,11 +706,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (interactive)
   (osm--goto osm-home nil))
 
-(defun osm--queue-info ()
+(defun osm--download-queue-info ()
   "Return queue info string."
-  (let ((n (length osm--queue)))
+  (let ((n (length osm--download-queue)))
     (if (> n 0)
-        (format "%10s " (format "(%s/%s)" (length osm--active) n))
+        (format "%10s " (format "(%s/%s)" (length osm--download-active) n))
       "          ")))
 
 (defun osm--revert (&rest _)
@@ -717,7 +718,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (dolist (buf (buffer-list))
     (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
       (with-current-buffer buf
-        (setq osm--tiles nil osm--pins nil)
+        (setq osm--tile-cache nil osm--pins nil)
         (osm--update)))))
 
 (defun osm--resize (&rest _)
@@ -751,7 +752,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
               (propertize " " 'face '(:inverse-video t)
                           'display '(space :width (3)))
               (propertize " " 'display `(space :align-to (- right ,(+ (length server) 12)))))
-      '(:eval (osm--queue-info))
+      '(:eval (osm--download-queue-info))
       server))))
 
 (defun osm--update ()
@@ -762,8 +763,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
-  (osm--process-queue)
-  (osm--purge-tiles)
+  (osm--process-download-queue)
+  (osm--purge-tile-cache)
   (osm--purge-directory))
 
 (defun osm--update-sizes ()
@@ -789,13 +790,13 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                (y (+ j (/ (- osm--y osm--wy) 256)))
                (tile (osm--get-tile x y)))
           (osm--display-tile x y tile)
-          (unless tile (osm--enqueue x y)))))))
+          (unless tile (osm--enqueue-download x y)))))))
 
-(defun osm--process-queue ()
+(defun osm--process-download-queue ()
   "Process the download queue."
-  (setq osm--queue
+  (setq osm--download-queue
         (sort
-         (cl-loop for job in osm--queue
+         (cl-loop for job in osm--download-queue
                   for (x y . zoom) = job
                   for i = (- x (/ (- osm--x osm--wx) 256))
                   for j = (- y (/ (- osm--y osm--wy) 256))
@@ -809,15 +810,15 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
            (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2))))))
   (osm--download))
 
-(defun osm--purge-tiles ()
+(defun osm--purge-tile-cache ()
   "Purge old tiles from the tile cache."
-  (cl-incf osm--cookie)
-  (when (and osm--tiles (> (hash-table-count osm--tiles) osm-max-tiles))
+  (cl-incf osm--tile-cookie)
+  (when (and osm--tile-cache (> (hash-table-count osm--tile-cache) osm-max-tiles))
     (let (items)
-      (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tiles)
+      (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tile-cache)
       (setq items (sort items #'car-less-than-car))
-      (dotimes (_ (- (hash-table-count osm--tiles) osm-max-tiles))
-        (remhash (cdr (pop items)) osm--tiles)))))
+      (dotimes (_ (- (hash-table-count osm--tile-cache) osm-max-tiles))
+        (remhash (cdr (pop items)) osm--tile-cache)))))
 
 (defun osm--make-bookmark (&optional name lat lon)
   "Make osm bookmark record with NAME at LAT/LON."
@@ -875,8 +876,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (osm-mode))
     (when (and server (not (eq osm-server server)))
       (setq osm-server server
-            osm--active nil
-            osm--queue nil))
+            osm--download-active nil
+            osm--download-queue nil))
     (when (or (not (and osm--x osm--y)) at)
       (setq at (or at osm-home)
             osm--zoom (nth 2 at)
