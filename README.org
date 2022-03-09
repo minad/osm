@@ -18,7 +18,7 @@
 * Features
 
 - Zoomable and moveable map display
-- Display of tracks from GPX file
+- Display of tracks and POIs from GPX file
 - Parallel fetching of tiles with curl
 - Moving in large and small steps
 - Mouse support (dragging, clicking)
@@ -89,8 +89,8 @@ Key bindings in =osm-mode= buffer:
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
 - ~v~: =osm-server= - Select tile server
-- ~x~: =osm-gpx-show= - Show GPX file
-- ~X~: =osm-gpx-hide= - Hide GPX file
+- ~x~: =osm-gpx-show= - Show tracks and POIs from GPX file
+- ~X~: =osm-gpx-hide= - Hide overlays from GPX file
 - ~l~: =org-store-link= - Store org link
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~j~: =osm-bookmark-jump= - Jump to bookmark
