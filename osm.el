@@ -31,6 +31,7 @@
 ;;; Code:
 
 (require 'bookmark)
+(require 'dom)
 (eval-when-compile (require 'cl-lib))
 
 (defgroup osm nil
@@ -1141,45 +1142,42 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                    (cycle-sort-function . identity))
       (complete-with-action action coll str pred))))
 
-(declare-function xml-get-children "xml")
-(declare-function xml-get-attribute "xml")
-(declare-function xml-node-children "xml")
-
 ;;;###autoload
 (defun osm-gpx-show (file)
   "Show the tracks of gpx FILE in an `osm-mode' buffer."
   (interactive "fGPX file: ")
-  (require 'xml)
-  (let ((root (car (xml-parse-file file)))
+  (let ((dom (with-temp-buffer
+               (insert-file-contents file)
+               (libxml-parse-xml-region (point-min) (point-max))))
         (min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
     (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
           (cons
-           (mapcan
-            (lambda (trk)
-              (mapcar
-               (lambda (seg)
-                 (mapcar
-                  (lambda (pt)
-                    (let ((lat (string-to-number (xml-get-attribute pt 'lat)))
-                          (lon (string-to-number (xml-get-attribute pt 'lon))))
-                      (setq min-lat (min lat min-lat)
-                            max-lat (max lat max-lat)
-                            min-lon (min lon min-lon)
-                            max-lon (max lon max-lon))
-                      (cons lat lon)))
-                  (xml-get-children seg 'trkpt)))
-               (xml-get-children trk 'trkseg)))
-            (xml-get-children root 'trk))
-           (mapcar
-            (lambda (pt)
-              (let ((lat (string-to-number (xml-get-attribute pt 'lat)))
-                    (lon (string-to-number (xml-get-attribute pt 'lon))))
+           (cl-loop
+            for trk in (dom-children dom)
+            if (eq (dom-tag trk) 'trk) nconc
+            (cl-loop
+             for seg in (dom-children trk)
+             if (eq (dom-tag seg) 'trkseg) collect
+             (cl-loop
+              for pt in (dom-children seg)
+              if (eq (dom-tag pt) 'trkpt) collect
+              (let ((lat (string-to-number (dom-attr pt 'lat)))
+                    (lon (string-to-number (dom-attr pt 'lon))))
                 (setq min-lat (min lat min-lat)
                       max-lat (max lat max-lat)
                       min-lon (min lon min-lon)
                       max-lon (max lon max-lon))
-                `(,(car (xml-node-children (car (xml-get-children pt 'name)))) ,lat . ,lon)))
-            (xml-get-children root 'wpt))))
+                (cons lat lon)))))
+           (cl-loop
+            for pt in (dom-children dom)
+            if (eq (dom-tag pt) 'wpt) collect
+            (let ((lat (string-to-number (dom-attr pt 'lat)))
+                  (lon (string-to-number (dom-attr pt 'lon))))
+              (setq min-lat (min lat min-lat)
+                    max-lat (max lat max-lat)
+                    min-lon (min lon min-lon)
+                    max-lon (max lon max-lon))
+              `(,(dom-text (dom-child-by-tag pt 'name)) ,lat . ,lon)))))
     (osm--revert)
     (osm-goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
               (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon))))
