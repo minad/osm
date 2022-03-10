@@ -626,8 +626,10 @@ Should be at least 7 days according to the server usage policies."
                       (car pt))))
     pins))
 
-;; TODO This is not yet as robust as it should be. Rethink the algorithm.
-;; Sometimes artifacts occur, set osm-tile-border=debug.
+;; TODO The Bresenham algorithm used here to add the line segments
+;; to the tiles has the issue that lines which go along a tile
+;; border may be drawn only partially. We can fix this by starting
+;; Bresenham at (x0±line width, y0±line width).
 (defun osm--compute-tracks ()
   "Compute track hash table."
   (let ((tracks (make-hash-table :test #'equal)))
@@ -655,13 +657,17 @@ Should be at least 7 days according to the server usage policies."
                        (err (+ dx dy)))
                 ;; Bresenham
                 (while
-                    (let ((err2 (* err 2)))
+                    (let ((ey (> (* err 2) dy))
+                          (ex (< (* err 2) dx)))
                       (push seg (gethash (cons x0 y0) tracks))
                       (unless (and (= x0 x1) (= y0 y1))
-                        (when (> err2 dy)
+                        (when (and ey ex)
+                          (push seg (gethash (cons x0 (+ y0 sy)) tracks))
+                          (push seg (gethash (cons (+ x0 sx) y0) tracks)))
+                        (when ey
                           (cl-incf err dy)
                           (cl-incf x0 sx))
-                        (when (< err2 dx)
+                        (when ex
                           (cl-incf err dx)
                           (cl-incf y0 sy))
                         t)))
