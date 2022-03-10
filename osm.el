@@ -155,11 +155,13 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [osm-home] #'ignore)
     (define-key map [osm-org-link] #'ignore)
     (define-key map [osm-center] #'ignore)
-    (define-key map [osm-poi] #'ignore)
     (define-key map [osm-selected-bookmark] #'ignore)
     (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
     (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
-    (define-key map [osm-osm-bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [osm-bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [osm-poi mouse-1] #'osm-poi-click)
+    (define-key map [osm-poi mouse-2] #'osm-poi-click)
+    (define-key map [osm-poi mouse-3] #'osm-poi-click)
     (define-key map [home] #'osm-home)
     (define-key map "+" #'osm-zoom-in)
     (define-key map "-" #'osm-zoom-out)
@@ -449,26 +451,43 @@ Should be at least 7 days according to the server usage policies."
                             "New Org Link")
     (call-interactively 'org-store-link)))
 
+(defun osm--pin-at (type x y)
+  "Get pin of TYPE at X/Y."
+  (let ((x (+ osm--x (- x osm--wx)))
+        (y (+ osm--y (- y osm--wy)))
+        (min most-positive-fixnum)
+        found)
+    (dolist (pin (car (osm--get-overlays (/ x 256) (/ y 256))))
+      (pcase-let ((`(,p ,q ,id . ,_) pin))
+        (when (eq type id)
+          (let ((d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
+            (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
+              (setq min d found pin))))))
+    found))
+
 (defun osm-bookmark-select-click (event)
   "Select bookmark at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
-               (x (+ osm--x (- x osm--wx)))
-               (y (+ osm--y (- y osm--wy)))
-               (min most-positive-fixnum)
-               (found nil))
-    (dolist (bm bookmark-alist)
-      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-        (let* ((coord (bookmark-prop-get bm 'coordinates))
-               (p (osm--lon-to-x (cadr coord) osm--zoom))
-               (q (osm--lat-to-y (car coord) osm--zoom))
-               (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
-          (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
-            (setq min d found (list p q (car bm)))))))
-    (when found
-      (message "%s" (caddr found))
-      (apply #'osm--put-transient-pin 'osm-selected-bookmark found)
+  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
+    (when-let (pin (osm--pin-at 'osm-bookmark x y))
+      (message "%s" (cdddr pin))
+      (osm--put-transient-pin 'osm-selected-bookmark
+                              (car pin) (cadr pin)
+                              (cdddr pin))
       (osm--update))))
+
+(defun osm-poi-click (event)
+  "Select point of interest at position of click EVENT."
+  (interactive "@e")
+  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
+    (when-let (pin (osm--pin-at 'osm-poi x y))
+      (message "%s" (cdddr pin))
+      (osm--goto
+       (list
+        (osm--y-to-lat (cadr pin) osm--zoom)
+        (osm--x-to-lon (car pin) osm--zoom)
+        osm--zoom)
+       nil))))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -588,7 +607,7 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--pin-at-p (x y p q)
+(defun osm--pin-inside-p (x y p q)
   "Return non-nil if pin P/Q is inside tile X/Y."
   (setq x (* x 256) y (* y 256))
   (and (>= p (- x 32)) (< p (+ x 256 32))
@@ -762,7 +781,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (if (pcase osm--transient-pin
-        (`(,p ,q . ,_) (osm--pin-at-p x y p q)))
+        (`(,p ,q . ,_) (osm--pin-inside-p x y p q)))
       (osm--draw-tile x y osm--transient-pin)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tile-cache (gethash key osm--tile-cache))))
