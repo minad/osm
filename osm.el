@@ -643,19 +643,20 @@ Should be at least 7 days according to the server usage policies."
               ;; Ignore point if too close to last point
               (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
                 (let* ((p1 (cons px1 py1))
+                       (seg (cons p0 p1))
                        (x0 (/ (car p0) 256))
                        (y0 (/ (cdr p0) 256))
                        (x1 (/ px1 256))
                        (y1 (/ py1 256))
-                       (dx (abs (- x1 x0)))
-                       (dy (- (abs (- y1 y0))))
                        (sx (if (< x0 x1) 1 -1))
                        (sy (if (< y0 y1) 1 -1))
+                       (dx (* sx (- x1 x0)))
+                       (dy (* sy (- y0 y1)))
                        (err (+ dx dy)))
                 ;; Bresenham
                 (while
                     (let ((err2 (* err 2)))
-                      (push (cons p0 p1) (gethash (cons x0 y0) tracks))
+                      (push seg (gethash (cons x0 y0) tracks))
                       (unless (and (= x0 x1) (= y0 y1))
                         (when (> err2 dy)
                           (cl-incf err dy)
