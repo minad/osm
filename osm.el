@@ -657,7 +657,7 @@ Should be at least 7 days according to the server usage policies."
                     (let ((err2 (* err 2)))
                       (push (cons p0 p1) (gethash (cons x0 y0) tracks))
                       (unless (and (= x0 x1) (= y0 y1))
-                        (when (< err2 dy)
+                        (when (> err2 dy)
                           (cl-incf err dy)
                           (cl-incf x0 sx))
                         (when (< err2 dx)
@@ -720,15 +720,20 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                  "image/jpeg" "image/png")
                              nil))
                           "' height='256' width='256'/>"
-                          (mapconcat
-                           (lambda (seg)
-                             (format "<path stroke='#00A' stroke-width='10' stroke-linejoin='round' stroke-linecap='round' opacity='0.4' fill='none' d='M%s %s %s'/>"
-                                     (- (caar seg) x0) (- (cdar seg) y0)
-                                     (mapconcat
-                                      (pcase-lambda (`(,x . ,y))
-                                        (format " L %s %s" (- x x0) (- y y0)))
-                                      (cdr seg) "")))
-                           (cdr overlays) "")
+                          (when-let (track (cdr overlays))
+                            (let (last)
+                              (format
+                               "<path stroke='#00A' stroke-width='10' stroke-linejoin='round' stroke-linecap='round' opacity='0.4' fill='none' d='%s'/>"
+                               (mapconcat
+                                (pcase-lambda (`(,beg . ,end))
+                                  (prog1
+                                      (if (equal beg last)
+                                          (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
+                                        (format "M%s %s L%s %s"
+                                                (- (car beg) x0) (- (cdr beg) y0)
+                                                (- (car end) x0) (- (cdr end) y0)))
+                                    (setq last end)))
+                                track ""))))
                           (pcase-exhaustive osm-tile-border
                             ('nil nil)
                             ('debug "<path d='M 1 1 L 1 255 255 255 255 1 Z' stroke='#000' stroke-width='2' fill='none'/>")
