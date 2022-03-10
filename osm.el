@@ -654,7 +654,7 @@ Should be at least 7 days according to the server usage policies."
                        (sx (if (< x0 x1) 1 -1))
                        (sy (if (< y0 y1) 1 -1))
                        (err (+ dx dy)))
-                ;; Bresenham with "antialiasing"
+                ;; Bresenham
                 (while
                     (let ((ex (< (* err 2) dx))
                           (ey (> (* err 2) dy))
@@ -663,16 +663,6 @@ Should be at least 7 days according to the server usage policies."
                         (push p0 (gethash key segs)))
                       (push p1 (gethash key segs))
                       (unless (and (= x0 x1) (= y0 y1))
-                        ;; "Antialiasing"
-                        (when (and ey ex)
-                          (setq key (cons (+ x0 sx) y0))
-                          (unless (equal (gethash key segs) p0)
-                            (push p0 (gethash key segs)))
-                          (push p1 (gethash key segs))
-                          (setq key (cons x0 (+ y0 sy)))
-                          (unless (equal (gethash key segs) p0)
-                            (push p0 (gethash key segs)))
-                          (push p1 (gethash key segs)))
                         (when ey
                           (cl-incf err dy)
                           (cl-incf x0 sx))
