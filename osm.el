@@ -630,10 +630,8 @@ Should be at least 7 days according to the server usage policies."
 ;; Sometimes artifacts occur, set osm-tile-border=debug.
 (defun osm--compute-tracks ()
   "Compute track hash table."
-  (let ((tracks (make-hash-table :test #'equal))
-        (segs (make-hash-table :test #'equal)))
+  (let ((tracks (make-hash-table :test #'equal)))
     (dolist (file osm--gpx-files)
-      (clrhash segs)
       (dolist (seg (cadr file))
         (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
                         (osm--lat-to-y (caar seg) osm--zoom))))
@@ -656,22 +654,17 @@ Should be at least 7 days according to the server usage policies."
                        (err (+ dx dy)))
                 ;; Bresenham
                 (while
-                    (let ((ex (< (* err 2) dx))
-                          (ey (> (* err 2) dy))
-                          (key (cons x0 y0)))
-                      (unless (equal (gethash key segs) p0)
-                        (push p0 (gethash key segs)))
-                      (push p1 (gethash key segs))
+                    (let ((err2 (* err 2)))
+                      (push (cons p0 p1) (gethash (cons x0 y0) tracks))
                       (unless (and (= x0 x1) (= y0 y1))
-                        (when ey
+                        (when (< err2 dy)
                           (cl-incf err dy)
                           (cl-incf x0 sx))
-                        (when ex
+                        (when (< err2 dx)
                           (cl-incf err dx)
                           (cl-incf y0 sy))
                         t)))
-                (setq p0 p1)))))))
-      (maphash (lambda (k v) (push v (gethash k tracks))) segs))
+                (setq p0 p1))))))))
     tracks))
 
 (defun osm--get-overlays (x y)
