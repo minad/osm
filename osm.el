@@ -105,6 +105,11 @@
   "Colors of pins."
   :type '(alist :key-type symbol :value-type (list string string)))
 
+(defcustom osm-track-style
+  "stroke:#00A;stroke-width:10;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
+  "SVG style used to draw tracks."
+  :type'string)
+
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
         (lon (bound-and-true-p calendar-longitude)))
@@ -730,7 +735,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                           (when-let (track (cdr overlays))
                             (let (last)
                               (format
-                               "<path stroke='#00A' stroke-width='10' stroke-linejoin='round' stroke-linecap='round' opacity='0.4' fill='none' d='%s'/>"
+                               "<path style='%s' d='%s'/>"
+                               osm-track-style
                                (mapconcat
                                 (pcase-lambda (`(,beg . ,end))
                                   (prog1
