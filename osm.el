@@ -660,23 +660,23 @@ Should be at least 7 days according to the server usage policies."
                        (dx (* sx (- x1 x0)))
                        (dy (* sy (- y0 y1)))
                        (err (+ dx dy)))
-                ;; Bresenham
-                (while
-                    (let ((ey (> (* err 2) dy))
-                          (ex (< (* err 2) dx)))
-                      (push seg (gethash (cons x0 y0) tracks))
-                      (unless (and (= x0 x1) (= y0 y1))
-                        (when (and ey ex)
-                          (push seg (gethash (cons x0 (+ y0 sy)) tracks))
-                          (push seg (gethash (cons (+ x0 sx) y0) tracks)))
-                        (when ey
-                          (cl-incf err dy)
-                          (cl-incf x0 sx))
-                        (when ex
-                          (cl-incf err dx)
-                          (cl-incf y0 sy))
-                        t)))
-                (setq p0 p1))))))))
+                  ;; Bresenham
+                  (while
+                      (let ((ey (> (* err 2) dy))
+                            (ex (< (* err 2) dx)))
+                        (push seg (gethash (cons x0 y0) tracks))
+                        (unless (and (= x0 x1) (= y0 y1))
+                          (when (and ey ex)
+                            (push seg (gethash (cons x0 (+ y0 sy)) tracks))
+                            (push seg (gethash (cons (+ x0 sx) y0) tracks)))
+                          (when ey
+                            (cl-incf err dy)
+                            (cl-incf x0 sx))
+                          (when ex
+                            (cl-incf err dx)
+                            (cl-incf y0 sy))
+                          t)))
+                  (setq p0 p1))))))))
     tracks))
 
 (defun osm--get-overlays (x y)
@@ -691,13 +691,13 @@ Should be at least 7 days according to the server usage policies."
     (and (or pins tracks) (cons pins tracks))))
 
 (autoload 'svg--image-data "svg")
-(defun osm--make-tile (x y tpin)
+(defun osm--draw-tile (x y tpin)
   "Make tile at X/Y from FILE.
 TPIN is an optional transient pin."
   (let ((file (osm--tile-file x y osm--zoom))
-        (overlays (osm--get-overlays x y)))
+        overlays)
     (when (file-exists-p file)
-      (if (or (eq osm-tile-border t) tpin overlays)
+      (if (or (setq overlays (osm--get-overlays x y)) (eq osm-tile-border t) tpin)
           (let* ((areas nil)
                  (x0 (* 256 x))
                  (y0 (* 256 y))
@@ -733,16 +733,16 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                              nil))
                           "' height='256' width='256'/>"
                           (when-let (track (cdr overlays))
-                            (let (last)
-                              (format
-                               "<path style='%s' d='%s'/>"
-                               osm-track-style
+                            (format
+                             "<path style='%s' d='%s'/>"
+                             osm-track-style
+                             (let (last)
                                (mapconcat
                                 (pcase-lambda (`(,beg . ,end))
                                   (prog1
                                       (if (equal beg last)
                                           (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
-                                        (format "M%s %s L%s %s"
+                                        (format "M%s %sL%s %s"
                                                 (- (car beg) x0) (- (cdr beg) y0)
                                                 (- (car end) x0) (- (cdr end) y0)))
                                     (setq last end)))
@@ -763,12 +763,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Get tile at X/Y."
   (if (pcase osm--transient-pin
         (`(,p ,q . ,_) (osm--pin-at-p x y p q)))
-      (osm--make-tile x y osm--transient-pin)
+      (osm--draw-tile x y osm--transient-pin)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tile-cache (gethash key osm--tile-cache))))
       (if tile
           (progn (setcar tile osm--tile-cookie) (cdr tile))
-        (setq tile (osm--make-tile x y nil))
+        (setq tile (osm--draw-tile x y nil))
         (when tile
           (when osm-max-tiles
             (unless osm--tile-cache
