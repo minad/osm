@@ -72,6 +72,7 @@ Top-level commands:
 - =osm-goto=: Go to coordinates
 - =osm-server=: Select server
 - =osm-bookmark-jump=: Jump to bookmark
+- =osm-gpx-show=: Show GPX file in map viewer
 
 Key bindings in =osm-mode= buffer:
 - ~<arrow>~: Small step scrolling

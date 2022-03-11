@@ -495,6 +495,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
   (interactive "p")
+  (osm--barf-unless-osm)
   (setq n (or n 1))
   (cl-loop for i from n above 0
            if (< osm--zoom (osm--server-property :max-zoom)) do
@@ -515,11 +516,11 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--move (dx dy step)
   "Move by DX/DY with STEP size."
-  (setq
-   osm--x (min (* 256 (1- (expt 2 osm--zoom)))
-               (max 0 (+ osm--x (* dx step))))
-   osm--y (min (* 256 (1- (expt 2 osm--zoom)))
-               (max 0 (+ osm--y (* dy step)))))
+  (osm--barf-unless-osm)
+  (setq osm--x (min (* 256 (1- (expt 2 osm--zoom)))
+                    (max 0 (+ osm--x (* dx step))))
+        osm--y (min (* 256 (1- (expt 2 osm--zoom)))
+                    (max 0 (+ osm--y (* dy step)))))
   (osm--update))
 
 (defun osm-right (&optional n)
@@ -1227,6 +1228,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                       (or osm--gpx-files
                                           (error "No GPX files shown"))
                                       nil t nil 'file-name-history)))
+  (osm--barf-unless-osm)
   (setq osm--gpx-files (assoc-delete-all file osm--gpx-files))
   (osm--revert))
 
@@ -1260,10 +1262,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-center-click #'osm-org-link-click
-                   #'osm-bookmark-set-click #'osm-bookmark-select-click))
+                   #'osm-poi-click #'osm-bookmark-set-click #'osm-bookmark-select-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
