@@ -608,13 +608,20 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--make-bookmark)
-  (add-hook 'change-major-mode-hook #'osm--barf-unsupported nil 'local)
-  (add-hook 'write-contents-functions #'osm--barf-unsupported nil 'local)
+  (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
+  (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--barf-unsupported ()
-  "Barf for unsupported operation."
-  (error "Operation is not supported"))
+(defun osm--barf-write ()
+  "Barf for write operation."
+  (set-buffer-modified-p nil)
+  (setq buffer-read-only t)
+  (set-visited-file-name nil)
+  (error "Writing the buffer to a file is not supported"))
+
+(defun osm--barf-change-mode ()
+  "Barf for change mode operation."
+  (error "Changing the major mode is not supported"))
 
 (defun osm--barf-unless-osm ()
   "Barf if not an `osm-mode' buffer."
