@@ -170,9 +170,9 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [mouse-1] #'osm-center-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
-    (define-key map [down-mouse-1] #'osm-drag)
-    (define-key map [down-mouse-2] #'osm-drag)
-    (define-key map [down-mouse-3] #'osm-drag)
+    (define-key map [down-mouse-1] #'osm-mouse-drag)
+    (define-key map [down-mouse-2] #'osm-mouse-drag)
+    (define-key map [down-mouse-3] #'osm-mouse-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
     (define-key map [left] #'osm-left)
@@ -380,7 +380,7 @@ Should be at least 7 days according to the server usage policies."
              (osm--download)))))
       (osm--download))))
 
-(defun osm-drag (event)
+(defun osm-mouse-drag (event)
   "Handle drag EVENT."
   (interactive "@e")
   (pcase-let ((`(,sx . ,sy) (posn-x-y (event-start event)))
@@ -396,6 +396,9 @@ Should be at least 7 days according to the server usage policies."
           (define-key map [mouse-1] #'ignore)
           (define-key map [mouse-2] #'ignore)
           (define-key map [mouse-3] #'ignore)
+          (define-key map [drag-mouse-1] #'ignore)
+          (define-key map [drag-mouse-2] #'ignore)
+          (define-key map [drag-mouse-3] #'ignore)
           (pcase-let ((`(,ex . ,ey) (posn-x-y event)))
             (setq osm--x (- sx ex)
                   osm--y (- sy ey))
@@ -1243,7 +1246,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-drag #'osm-center-click #'osm-org-link-click
+(dolist (sym (list #'osm-mouse-drag #'osm-center-click #'osm-org-link-click
                    #'osm-bookmark-set-click #'osm-bookmark-select-click))
   (put sym 'completion-predicate #'ignore))
 
