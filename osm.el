@@ -608,7 +608,18 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--make-bookmark)
+  (add-hook 'change-major-mode-hook #'osm--barf-unsupported nil 'local)
+  (add-hook 'write-contents-functions #'osm--barf-unsupported nil 'local)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
+
+(defun osm--barf-unsupported ()
+  "Barf for unsupported operation."
+  (error "Operation is not supported"))
+
+(defun osm--barf-unless-osm ()
+  "Barf if not an `osm-mode' buffer."
+  (unless (eq major-mode #'osm-mode)
+    (error "Not an osm-mode buffer")))
 
 (defun osm--pin-inside-p (x y p q)
   "Return non-nil if pin P/Q is inside tile X/Y."
@@ -872,8 +883,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--update ()
   "Update map display."
-  (unless (eq major-mode #'osm-mode)
-    (error "Not an osm-mode buffer"))
+  (osm--barf-unless-osm)
   (rename-buffer (osm--buffer-name) 'unique)
   (osm--update-sizes)
   (osm--update-header)
@@ -1084,8 +1094,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm-bookmark-set ()
   "Create osm bookmark."
   (interactive)
-  (unless (eq major-mode #'osm-mode)
-    (error "Not an osm-mode buffer"))
+  (osm--barf-unless-osm)
   (unwind-protect
       (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "Bookmark"))
                    (def (osm--bookmark-name desc))
