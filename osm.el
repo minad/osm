@@ -39,9 +39,15 @@
   :group 'web
   :prefix "osm-")
 
-(defvar osm--server-defaults
+(defcustom osm-curl-options
+  "--fail --location --silent"
+  "Additional Curl command line options."
+  :type 'string)
+
+(defcustom osm-server-defaults
   '(:min-zoom 2 :max-zoom 19 :max-connections 2 :subdomains ("a" "b" "c"))
-  "Default server properties.")
+  "Default server properties."
+  :type 'plist)
 
 (defcustom osm-server-list
   '((default
@@ -315,7 +321,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--server-property (prop)
   "Return server property PROP."
   (or (plist-get (alist-get osm-server osm-server-list) prop)
-      (plist-get osm--server-defaults prop)))
+      (plist-get osm-server-defaults prop)))
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
@@ -364,7 +370,7 @@ Should be at least 7 days according to the server usage policies."
        :connection-type 'pipe
        :noquery t
        :command
-       (list "curl" "-f" "-s" "-o" tmp (osm--tile-url x y zoom))
+       `("curl" ,@(split-string osm-curl-options) "--output" ,tmp ,(osm--tile-url x y zoom))
        :filter #'ignore
        :sentinel
        (lambda (_proc status)
@@ -1130,7 +1136,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
              (json-parse-string
               (shell-command-to-string
                (concat
-                "curl -f -s "
+                "curl " osm-curl-options " "
                 (shell-quote-argument
                  (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
                          (min 18 (max 3 osm--zoom)) lat lon))))
@@ -1148,10 +1154,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                   nil nil nil 'osm--search-history))
          (json (json-parse-string
                 (shell-command-to-string
-                 (concat "curl -f -s "
-                         (shell-quote-argument
-                          (concat "https://nominatim.openstreetmap.org/search?format=json&q="
-                                  (url-encode-url search)))))
+                 (concat
+                  "curl " osm-curl-options " "
+                  (shell-quote-argument
+                   (concat "https://nominatim.openstreetmap.org/search?format=json&q="
+                           (url-encode-url search)))))
                 :array-type 'list
                 :object-type 'alist))
          (results (mapcar
