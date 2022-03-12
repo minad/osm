@@ -609,6 +609,7 @@ Should be at least 7 days according to the server usage policies."
               buffer-read-only t
               fringe-indicator-alist '((truncation . nil))
               revert-buffer-function #'osm--revert
+              mode-line-process '(:eval (osm--download-queue-info))
               mouse-wheel-progressive-speed nil
               mwheel-scroll-up-function #'osm--zoom-out-wheel
               mwheel-scroll-down-function #'osm--zoom-in-wheel
@@ -850,8 +851,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Return queue info string."
   (let ((n (length osm--download-queue)))
     (if (> n 0)
-        (format "%10s " (format "(%s/%s)" (length osm--download-active) n))
-      "          ")))
+        (format "[%s/%s]" (length osm--download-active) n))))
 
 (defun osm--revert (&rest _)
   "Revert osm buffers."
@@ -866,6 +866,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (when (eq major-mode #'osm-mode)
     (osm--update)))
 
+(defun osm--header-button (text action)
+  "Format header line button with TEXT and ACTION."
+  (propertize text
+              'keymap (let ((map (make-sparse-keymap)))
+                        (define-key map [header-line mouse-1]
+                          (lambda ()
+                            (interactive "@")
+                            (call-interactively action)))
+                        map)
+              'face '(:box (:line-width -2 :style released-button))
+              'mouse-face '(:box (:line-width -2 :style pressed-button))))
+
 (defun osm--update-header ()
   "Update header line."
   (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ (osm--lat) (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
@@ -877,23 +889,25 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (cl-incf idx))
     (setq-local
      header-line-format
-     (list
-      (format "%s %s    Z%-2d    %s %5s %s %s%s%s %s"
-              (format #("%7.2f°" 0 5 (face bold)) (osm--lat))
-              (format #("%7.2f°" 0 5 (face bold)) (osm--lon))
-              osm--zoom
-              (propertize " " 'display '(space :align-to (- center 10)))
-              (if (>= meter 1000) (/ meter 1000) meter)
-              (if (>= meter 1000) "km" "m")
-              (propertize " " 'face '(:inverse-video t)
-                          'display '(space :width (3)))
-              (propertize " " 'face '(:strike-through t)
-                          'display `(space :width (,(floor (/ meter meter-per-pixel)))))
-              (propertize " " 'face '(:inverse-video t)
-                          'display '(space :width (3)))
-              (propertize " " 'display `(space :align-to (- right ,(+ (length server) 12)))))
-      '(:eval (osm--download-queue-info))
-      server))))
+     (concat
+      (format #(" %7.2f°" 0 6 (face bold)) (osm--lat))
+      (format #(" %7.2f°" 0 6 (face bold)) (osm--lon))
+      (format "   Z%-2d " osm--zoom)
+      (propertize " " 'display '(space :align-to (- center 10)))
+      (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
+      (if (>= meter 1000) "km " "m ")
+      (propertize " " 'face '(:inverse-video t)
+                  'display '(space :width (3)))
+      (propertize " " 'face '(:strike-through t)
+                  'display `(space :width (,(floor (/ meter meter-per-pixel)))))
+      (propertize " " 'face '(:inverse-video t)
+                  'display '(space :width (3)))
+      (propertize " " 'display `(space :align-to (- right ,(+ 8 (length server)) (10))))
+      (osm--header-button " + " #'osm-zoom-in)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button " - " #'osm-zoom-out)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button (format " %s " server) #'osm-server)))))
 
 (defun osm--update ()
   "Update map display."
