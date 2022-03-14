@@ -53,53 +53,82 @@
   '((default
      :name "Mapnik"
      :description "Standard Mapnik map provided by OpenStreetMap"
-     :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
+     :copyright ("Map data © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
      :name "Mapnik(de)"
      :description "Localized Mapnik map provided by OpenStreetMap Germany"
-     :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
     (fr
      :name "Mapnik(fr)"
      :description "Localized Mapnik map by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
     (humanitarian
      :name "Humanitarian"
      :description "Humanitarian map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {Yohan Boniface & Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {CyclOSM contributors|https://www.cyclosm.org/}"))
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
-     :url "https://%s.tile.opentopomap.org/%z/%x/%y.png")
+     :url "https://%s.tile.opentopomap.org/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
+                 "Elevation data: {SRTM|https://www2.jpl.nasa.gov/srtm/}"))
     (opvn
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
-     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png")
+     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {ÖPNVKarte|https://www.öpnvkarte.de}"))
     (stamen-watercolor
      :name "Stamen Watercolor"
      :description "Artistic map in watercolor style provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-terrain
      :name "Stamen Terrain" :max-zoom 18
      :description "Map with hill shading provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-dark
      :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-light
      :name "Stamen Toner Lite"
      :description "Artistic map in toner style provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"))
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"
+     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
+
+(defcustom osm-copyright-info t
+  "Display the copyright information above the map."
+  :type 'boolean)
 
 (defcustom osm-pin-colors
   '((osm-selected-bookmark "#e20" "#600")
@@ -273,6 +302,9 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
+
+(defvar-local osm--copyright-overlay nil
+  "Overlay used for the copyright message.")
 
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
@@ -916,6 +948,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
+  (osm--copyright-info)
   (osm--process-download-queue)
   (osm--purge-tile-cache)
   (osm--purge-directory))
@@ -929,6 +962,35 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           osm--wy (/ win-height 2)
           osm--nx (1+ (ceiling win-width 256))
           osm--ny (1+ (ceiling win-height 256)))))
+
+(defun osm--format-link (text url)
+  "Format link with TEXT to URL."
+  (propertize text 'face 'button
+              'keymap (let ((map (make-sparse-keymap)))
+                        (define-key map [mouse-1]
+                          (lambda ()
+                            (interactive "@")
+                            (browse-url url)))
+                        map)))
+
+(defun osm--copyright-info ()
+  "Display copyright info."
+  (when-let (copyright (and osm-copyright-info (osm--server-property :copyright)))
+    (setq copyright (replace-regexp-in-string
+                     "{\\(.*?\\)|\\(.*?\\)}"
+                     (lambda (str)
+                       (osm--format-link
+                        (match-string 1 str)
+                        (match-string 2 str)))
+                     (concat (string-join copyright " | ") "\n")))
+    (if osm--copyright-overlay
+        (move-overlay osm--copyright-overlay (point-min) (point-min))
+      (setq osm--copyright-overlay (make-overlay (point-min) (point-min))))
+    (add-face-text-property
+     0 (length copyright)
+     '(:inherit variable-pitch :height 0.75)
+     t copyright)
+    (overlay-put osm--copyright-overlay 'before-string copyright)))
 
 (defun osm--update-buffer ()
   "Update buffer display."
