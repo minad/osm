@@ -54,42 +54,49 @@
      :name "Mapnik"
      :description "Standard Mapnik map provided by OpenStreetMap"
      :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
+     :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
      :name "Mapnik(de)"
      :description "Localized Mapnik map provided by OpenStreetMap Germany"
      :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
+     :group "Standard"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
     (fr
      :name "Mapnik(fr)"
      :description "Localized Mapnik map by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
+     :group "Standard"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
     (humanitarian
      :name "Humanitarian"
      :description "Humanitarian map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
+     :group "Special Purpose"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {Yohan Boniface & Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
+                 "Map style: © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
+     :group "Transportation"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {CyclOSM|https://www.cyclosm.org/} contributors"))
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
+     :group "Transportation"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
      :url "https://%s.tile.opentopomap.org/%z/%x/%y.png"
+     :group "Topographical"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
                  "Elevation data: {SRTM|https://www2.jpl.nasa.gov/srtm/}"))
@@ -97,30 +104,35 @@
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
      :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
+     :group "Transportation"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {ÖPNVKarte|https://www.öpnvkarte.de}"))
     (stamen-watercolor
      :name "Stamen Watercolor"
      :description "Artistic map in watercolor style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
+     :group "Artistic"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-terrain
      :name "Stamen Terrain" :max-zoom 18
      :description "Map with hill shading provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png"
+     :group "Artistic"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-dark
      :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png"
+     :group "Artistic"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-light
      :name "Stamen Toner Lite"
      :description "Artistic map in toner style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"
+     :group "Artistic"
      :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
   "List of tile servers."
@@ -350,9 +362,9 @@ Should be at least 7 days according to the server usage policies."
   "Convert LAT/ZOOM to y coordinate in pixel."
   (floor (* 256 (expt 2.0 zoom) (osm--lat-to-normalized-y lat))))
 
-(defun osm--server-property (prop)
-  "Return server property PROP."
-  (or (plist-get (alist-get osm-server osm-server-list) prop)
+(defun osm--server-property (prop &optional server)
+  "Return server property PROP for SERVER."
+  (or (plist-get (alist-get (or server osm-server) osm-server-list) prop)
       (plist-get osm-server-defaults prop)))
 
 (defun osm--tile-url (x y zoom)
@@ -983,7 +995,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                        (osm--format-link
                         (match-string 1 str)
                         (match-string 2 str)))
-                     (concat (string-join copyright " | ") "\n")))
+                     (concat (if (listp copyright)
+                                 (string-join copyright " | ")
+                               copyright)
+                             "\n")))
     (setq osm--copyright-overlay (make-overlay (point-min) (point-min)))
     (add-face-text-property
      0 (length copyright)
@@ -1314,6 +1329,24 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (setq osm--gpx-files (assoc-delete-all file osm--gpx-files))
   (osm--revert))
 
+(defun osm--server-annotation (cand)
+  "Annotation for server CAND."
+  (when-let* ((copyright (osm--server-property :copyright (get-text-property 0 'osm--server cand)))
+              (str
+               (replace-regexp-in-string
+                "{\\(.*?\\)|.*?}"
+                (lambda (str) (match-string 1 str))
+                (if (listp copyright) (string-join copyright " | ") copyright))))
+    (concat (propertize " " 'display ` (space :align-to (- right ,(length str) 2)))
+            " "
+            str)))
+
+(defun osm--server-group (cand transform)
+  "Group function for server CAND with candidate TRANSFORM."
+  (if transform
+      cand
+    (osm--server-property :group (get-text-property 0 'osm--server cand))))
+
 ;;;###autoload
 (defun osm-server (server)
   "Select tile SERVER."
@@ -1327,19 +1360,28 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           (servers
            (mapcar
             (lambda (x)
-              (cons
+              (propertize
                (format fmt
                        (plist-get (cdr x) :name)
                        (or (plist-get (cdr x) :description) ""))
-               (car x)))
+               'osm--server (car x)))
             osm-server-list))
           (selected (completing-read
-                     "Server: " servers nil t nil nil
+                     "Server: "
+                     (lambda (str pred action)
+                       (if (eq action 'metadata)
+                           '(metadata
+                             (annotation-function . osm--server-annotation)
+                             (group-function . osm--server-group))
+                         (complete-with-action action servers str pred)))
+                     nil t nil nil
                      (format fmt
                              (osm--server-property :name)
                              (or (osm--server-property :description) "")))))
-     (list (or (cdr (assoc selected servers))
-               (error "No server selected")))))
+     (list
+      (get-text-property 0 'osm--server
+                         (or (car (member selected servers))
+                             (error "No server selected"))))))
   (osm--goto nil server))
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
