@@ -54,74 +54,74 @@
      :name "Mapnik"
      :description "Standard Mapnik map provided by OpenStreetMap"
      :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
-     :copyright ("Map data © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
      :name "Mapnik(de)"
      :description "Localized Mapnik map provided by OpenStreetMap Germany"
      :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
     (fr
      :name "Mapnik(fr)"
      :description "Localized Mapnik map by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
     (humanitarian
      :name "Humanitarian"
      :description "Humanitarian map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Yohan Boniface & Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
-                 "Map style: © {CyclOSM contributors|https://www.cyclosm.org/}"))
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style: © {CyclOSM|https://www.cyclosm.org/} contributors"))
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
      :url "https://%s.tile.opentopomap.org/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
                  "Elevation data: {SRTM|https://www2.jpl.nasa.gov/srtm/}"))
     (opvn
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
      :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {ÖPNVKarte|https://www.öpnvkarte.de}"))
     (stamen-watercolor
      :name "Stamen Watercolor"
      :description "Artistic map in watercolor style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-terrain
      :name "Stamen Terrain" :max-zoom 18
      :description "Map with hill shading provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-dark
      :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-light
      :name "Stamen Toner Lite"
      :description "Artistic map in toner style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"
-     :copyright ("Map data: © {OSM Contributors|https://www.openstreetmap.org/copyright}"
+     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
