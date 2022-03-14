@@ -13,7 +13,9 @@
 #+html: <a href="https://stable.melpa.org/#/osm"><img alt="MELPA Stable" src="https://stable.melpa.org/packages/osm-badge.svg"/></a>
 
 [[https://github.com/minad/osm/blob/screenshots/osm.png?raw=true]]
-(Map tiles © https://opentopomap.org,  https://openstreetmap.org)
+
+The map data is [[https://www.openstreetmap.org/copyright][© OpenStreetMap contributors]], licensed under the [[https://opendatacommons.org/licenses/odbl/][ODbL]] The map
+rendering is [[https://opentopomap.org/about][© OpenTopoMap,]] licensed under the [[https://creativecommons.org/licenses/by-sa/3.0/][CC-BY-SA.]]
 
 * Features
 
