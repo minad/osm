@@ -1370,9 +1370,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                      "Server: "
                      (lambda (str pred action)
                        (if (eq action 'metadata)
-                           '(metadata
-                             (annotation-function . osm--server-annotation)
-                             (group-function . osm--server-group))
+                           `(metadata
+                             (annotation-function
+                              . ,(and osm-copyright #'osm--server-annotation))
+                             (group-function . ,#'osm--server-group))
                          (complete-with-action action servers str pred)))
                      nil t nil nil
                      (format fmt
