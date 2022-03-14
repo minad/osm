@@ -975,6 +975,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--display-copyright ()
   "Display copyright info."
+  (when osm--copyright-overlay (delete-overlay osm--copyright-overlay))
   (when-let (copyright (and osm-copyright (osm--server-property :copyright)))
     (setq copyright (replace-regexp-in-string
                      "{\\(.*?\\)|\\(.*?\\)}"
@@ -983,9 +984,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                         (match-string 1 str)
                         (match-string 2 str)))
                      (concat (string-join copyright " | ") "\n")))
-    (if osm--copyright-overlay
-        (move-overlay osm--copyright-overlay (point-min) (point-min))
-      (setq osm--copyright-overlay (make-overlay (point-min) (point-min))))
+    (setq osm--copyright-overlay (make-overlay (point-min) (point-min)))
     (add-face-text-property
      0 (length copyright)
      '(:inherit variable-pitch :height 0.75)
