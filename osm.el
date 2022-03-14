@@ -126,7 +126,7 @@
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
-(defcustom osm-copyright-info t
+(defcustom osm-copyright t
   "Display the copyright information above the map."
   :type 'boolean)
 
@@ -948,7 +948,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
-  (osm--copyright-info)
+  (osm--display-copyright)
   (osm--process-download-queue)
   (osm--purge-tile-cache)
   (osm--purge-directory))
@@ -973,9 +973,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                             (browse-url url)))
                         map)))
 
-(defun osm--copyright-info ()
+(defun osm--display-copyright ()
   "Display copyright info."
-  (when-let (copyright (and osm-copyright-info (osm--server-property :copyright)))
+  (when-let (copyright (and osm-copyright (osm--server-property :copyright)))
     (setq copyright (replace-regexp-in-string
                      "{\\(.*?\\)|\\(.*?\\)}"
                      (lambda (str)
