@@ -45,6 +45,12 @@ take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional co
            ("C-c m t" . osm-goto)
            ("C-c m x" . osm-gpx-show)
            ("C-c m j" . osm-bookmark-jump))
+
+    :custom
+    ;; Take a look at the customization group `osm' for more options.
+    (osm-server 'default) ;; Configure the tile server
+    (osm-copyright t)     ;; Display the copyright information
+
     :init
     ;; Load Org link support
     (with-eval-after-load 'org
