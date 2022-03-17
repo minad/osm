@@ -1144,8 +1144,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq osm--transient-pin `(,x ,y ,id . ,help))))
 
 ;;;###autoload
-(defun osm-goto (lat lon zoom &optional server &rest _ignored)
-  "Go to LAT/LON/ZOOM, optionally specifying the SERVER."
+(defun osm-goto (lat lon zoom)
+  "Go to LAT/LON/ZOOM."
   (interactive
    (pcase-let ((`(,lat ,lon ,zoom)
                 (mapcar #'string-to-number
@@ -1154,8 +1154,15 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  ;; Ignore description
-  (when (stringp server) (setq server nil))
+  (osm--goto (list lat lon zoom) nil)
+  nil)
+
+;;;###autoload
+(defun osm (lat lon zoom &optional server comment)
+  "Go to LAT/LON/ZOOM.
+Optionally specify a SERVER and a COMMENT."
+  (ignore comment)
+  (when (stringp server) (setq server nil)) ;; Ignore comment
   (osm--goto (list lat lon zoom) server)
   nil)
 
@@ -1393,7 +1400,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
   (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-org-link "Elisp link"))
-               (link (format "(osm-goto %s %s %s%s%s)"
+               (link (format "(osm %s %s %s%s%s)"
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
                                  ""
