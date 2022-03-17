@@ -263,7 +263,7 @@ Should be at least 7 days according to the server usage policies."
           (let* ((plist (cdr server))
                  (group (plist-get plist :group)))
             (unless (equal last-group group)
-              (push group menu)
+              (push (format "─── %s ───" group) menu)
               (setq last-group group))
             (push
              `[,(plist-get plist :name)
