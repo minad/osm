@@ -164,7 +164,10 @@
         (list lat lon 12)
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
-  :type '(list number number number))
+  :type '(list :tag "Coordinates"
+          (number :tag "Latitude  ")
+          (number :tag "Longitude ")
+          (number :tag "Zoom      ")))
 
 (defcustom osm-large-step 256
   "Scroll step in pixel."
@@ -294,7 +297,8 @@ Should be at least 7 days according to the server usage policies."
     ["Hide GPX" osm-gpx-hide t]
     "--"
     ["Clone" clone-buffer t]
-    ["Revert" revert-buffer t]))
+    ["Revert" revert-buffer t]
+    ["Customize" (customize-group 'osm) t]))
 
 (defconst osm--placeholder
   '(:type svg :width 256 :height 256
