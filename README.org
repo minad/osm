@@ -25,7 +25,7 @@ rendering is © [[https://opentopomap.org/about][OpenTopoMap]], licensed under t
 - Map scale indicator
 - Go to coordinate
 - Search for location by name
-- Org link support
+- Org and Elisp link support
 - Bookmarked positions with pins
 - Multiple preconfigured tile servers
 
@@ -57,10 +57,11 @@ take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional co
 
 * Bookmarks and Org links
 
-To store a bookmark press the key ~b~, to store Org links press the key ~l~. You can
-also use a custom binding, e.g., ~C-c l~. Then the link can be inserted into an Org
-buffer with ~C-c C-l~. Bookmarks and Org links can be created at point with the
-mouse, see ~osm-bookmark-set-click~ and ~osm-org-link-click~.
+To store a bookmark press the key ~b~, to store Org/Elisp links press the keys ~l~
+or ~e~ respectively. You can also use a custom binding, e.g., ~C-c l~. Then the link
+can be inserted into an Org buffer with ~C-c C-l~. Bookmarks and Org links can be
+created at point with the mouse, see ~osm-bookmark-set-click~ and
+~osm-org-link-click~.
 
 Examples:
 
@@ -99,6 +100,7 @@ Key bindings in =osm-mode= buffer:
 - ~x~: =osm-gpx-show= - Show tracks and POIs from GPX file
 - ~X~: =osm-gpx-hide= - Hide overlays from GPX file
 - ~l~: =org-store-link= - Store org link
+- ~e~: =osm-elisp-link= - Store Elisp link in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~j~: =osm-bookmark-jump= - Jump to bookmark
 - ~q~: =quit-window= - Close buffer and window

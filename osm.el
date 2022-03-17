@@ -240,7 +240,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "t" #'osm-goto)
     (define-key map "s" #'osm-search)
     (define-key map "v" #'osm-server)
-    (define-key map "L" #'osm-elisp-link)
+    (define-key map "e" #'osm-elisp-link)
     (define-key map "l" 'org-store-link)
     (define-key map "b" #'osm-bookmark-set)
     (define-key map "j" #'osm-bookmark-jump)
