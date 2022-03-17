@@ -55,7 +55,7 @@ take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional co
       (require 'osm-ol)))
 #+end_src
 
-* Bookmarks and Org links
+* Bookmarks, Org and Elisp links
 
 To store a bookmark press the key ~b~, to store Org/Elisp links press the keys ~l~
 or ~e~ respectively. You can also use a custom binding, e.g., ~C-c l~. Then the link
@@ -63,7 +63,9 @@ can be inserted into an Org buffer with ~C-c C-l~. Bookmarks and Org links can b
 created at point with the mouse, see ~osm-bookmark-set-click~ and
 ~osm-org-link-click~.
 
-Org link examples:
+**** Org link examples
+
+Click on a link or press ~RET~ to jump to the location.
 
 - [[osm:opentopomap:41.869560826994544,12.45849609375,6][Italia, 41.87° 12.46° OpenTopoMap]]
 - [[osm:51.48950698022105,-0.144195556640625,11][London, England, 51.49° -0.14°]]
@@ -71,7 +73,10 @@ Org link examples:
 - [[osm:stamen-watercolor:40.72956780913898,-73.97918701171875,12][New York, United States, 40.73° -73.98° Stamen Watercolor]]
 - [[osm:opentopomap:27.961656050984658,86.89224243164062,13][Mount Everest, 27.96° 86.89° OpenTopoMap]]
 
-Elisp link examples:
+**** Elisp link examples
+
+Place the point behind the closing parenthesis and press ~C-x C-e~ to jump to the
+location.
 
 #+begin_src emacs-lisp
   (osm 41.869561 12.458496 6 opentopomap "Lazio, Italia")
