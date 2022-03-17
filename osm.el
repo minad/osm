@@ -240,6 +240,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "t" #'osm-goto)
     (define-key map "s" #'osm-search)
     (define-key map "v" #'osm-server)
+    (define-key map "e" #'osm-elisp-link)
     (define-key map "l" 'org-store-link)
     (define-key map "b" #'osm-bookmark-set)
     (define-key map "j" #'osm-bookmark-jump)
@@ -1153,7 +1154,16 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--goto (list lat lon zoom) nil))
+  (osm--goto (list lat lon zoom) nil)
+  nil)
+
+;;;###autoload
+(defmacro osm (lat lon zoom &optional server comment)
+  "Go to LAT/LON/ZOOM.
+Optionally specify a SERVER and a COMMENT."
+  (ignore comment)
+  (when (stringp server) (setq server nil)) ;; Ignore comment
+  `(osm--goto (list ,lat ,lon ,zoom) ,(and (symbolp server) `',server)))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
@@ -1385,9 +1395,23 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                              (error "No server selected"))))))
   (osm--goto nil server))
 
+(defun osm-elisp-link ()
+  "Store coordinates as an Elisp link in the kill ring."
+  (interactive)
+  (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-org-link "Elisp link"))
+               (link (format "(osm %s %s %s%s%s)"
+                             lat lon osm--zoom
+                             (if (eq osm-server (default-value 'osm-server))
+                                 ""
+                               (format " '%s" osm-server))
+                             (if name (format " %S" name) ""))))
+    (kill-new link)
+    (message "Stored link in the kill ring")))
+
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
+                   #'osm-elisp-link))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-center-click #'osm-org-link-click
                    #'osm-poi-click #'osm-bookmark-set-click #'osm-bookmark-select-click))
