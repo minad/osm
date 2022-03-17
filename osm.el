@@ -1037,13 +1037,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--format-link (text url)
   "Format link with TEXT to URL."
-  (propertize text 'face 'button
-              'keymap (let ((map (make-sparse-keymap)))
-                        (define-key map [mouse-1]
-                          (lambda ()
-                            (interactive "@")
-                            (browse-url url)))
-                        map)))
+  (propertize text
+              'face 'button
+              'button t
+              'category 'default-button
+              'action (lambda (_) (browse-url url))))
 
 (defun osm--display-copyright ()
   "Display copyright info."
