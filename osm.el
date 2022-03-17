@@ -363,9 +363,6 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--transient-pin nil
   "Transient pin.")
 
-(defvar-local osm--copyright-overlay nil
-  "Overlay used for the copyright message.")
-
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
   (let ((w (/ (frame-pixel-width) 256))
@@ -1020,7 +1017,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
-  (osm--display-copyright)
+  (osm--update-copyright)
   (osm--process-download-queue)
   (osm--purge-tile-cache)
   (osm--purge-directory))
@@ -1035,34 +1032,46 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           osm--nx (1+ (ceiling win-width 256))
           osm--ny (1+ (ceiling win-height 256)))))
 
-(defun osm--format-link (text url)
+(defun osm--copyright-link (text url)
   "Format link with TEXT to URL."
   (propertize text
               'face 'button
-              'button t
-              'category 'default-button
-              'action (lambda (_) (browse-url url))))
+              'mouse-face 'highlight
+              'help-echo
+              (format "Go to %s" url)
+              'keymap
+              (let ((map (make-sparse-keymap)))
+                (define-key map [tab-line mouse-1]
+                  (lambda ()
+                    (interactive)
+                    (browse-url url)))
+                map)))
 
-(defun osm--display-copyright ()
-  "Display copyright info."
-  (when osm--copyright-overlay (delete-overlay osm--copyright-overlay))
-  (when-let (copyright (and osm-copyright (osm--server-property :copyright)))
-    (setq copyright (replace-regexp-in-string
-                     "{\\(.*?\\)|\\(.*?\\)}"
-                     (lambda (str)
-                       (osm--format-link
-                        (match-string 1 str)
-                        (match-string 2 str)))
-                     (concat (if (listp copyright)
-                                 (string-join copyright " | ")
-                               copyright)
-                             "\n")))
-    (setq osm--copyright-overlay (make-overlay (point-min) (point-min)))
-    (add-face-text-property
-     0 (length copyright)
-     '(:inherit variable-pitch :height 0.75)
-     t copyright)
-    (overlay-put osm--copyright-overlay 'before-string copyright)))
+(defun osm--update-copyright ()
+  "Update copyright info."
+  (let ((copyright (and osm-copyright (osm--server-property :copyright))))
+    (if (not copyright)
+        (when (eq 'osm-copyright (car-safe tab-line-format))
+          (kill-local-variable 'tab-line-format))
+      (setq copyright (replace-regexp-in-string
+                       "{\\(.*?\\)|\\(.*?\\)}"
+                       (lambda (str)
+                         (osm--copyright-link
+                          (match-string 1 str)
+                          (match-string 2 str)))
+                       (concat
+                        " "
+                        (if (listp copyright)
+                            (string-join copyright " | ")
+                          copyright)
+                        (propertize " "
+                                    'display
+                                    '(space :align-to right)))))
+      (add-face-text-property
+       0 (length copyright)
+       '(:inherit (header-line variable-pitch) :height 0.75)
+       t copyright)
+      (setq-local tab-line-format (list 'osm-copyright copyright)))))
 
 (defun osm--update-buffer ()
   "Update buffer display."
