@@ -65,7 +65,8 @@ created at point with the mouse, see ~osm-bookmark-set-click~ and
 
 **** Org link examples
 
-Click on a link or press ~RET~ to jump to the location.
+Click on a link or press ~RET~ to jump to the location. These links work in Org
+buffers in Emacs.
 
 - [[osm:opentopomap:41.869560826994544,12.45849609375,6][Italia, 41.87° 12.46° OpenTopoMap]]
 - [[osm:51.48950698022105,-0.144195556640625,11][London, England, 51.49° -0.14°]]
@@ -76,7 +77,7 @@ Click on a link or press ~RET~ to jump to the location.
 **** Elisp link examples
 
 Place the point behind the closing parenthesis and press ~C-x C-e~ to jump to the
-location.
+location. The Elisp links can be used in arbitary text files.
 
 #+begin_src emacs-lisp
   (osm 41.869561 12.458496 6 opentopomap "Lazio, Italia")
