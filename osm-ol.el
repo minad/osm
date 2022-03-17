@@ -55,7 +55,7 @@
        :type "osm"
        :description desc
        :link (format
-              "osm:%s%s,%s,%s"
+              "osm:%s%.6f,%.6f,%s"
               (if server (format "%s:" server) "")
               lat lon zoom)))))
 

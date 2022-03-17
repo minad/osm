@@ -1163,7 +1163,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 Optionally specify a SERVER and a COMMENT."
   (ignore comment)
   (when (stringp server) (setq server nil)) ;; Ignore comment
-  `(osm--goto (list ,lat ,lon ,zoom) ,(and (symbolp server) `',server)))
+  `(progn
+    (osm--goto (list ,lat ,lon ,zoom) ,(and server (symbolp server) `',server))
+    '(osm ,lat ,lon ,zoom ,@(and server (symbolp server) (list server)))))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
@@ -1399,11 +1401,11 @@ Optionally specify a SERVER and a COMMENT."
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
   (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-org-link "Elisp link"))
-               (link (format "(osm %s %s %s%s%s)"
+               (link (format "(osm %.6f %.6f %s%s%s)"
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
                                  ""
-                               (format " '%s" osm-server))
+                               (format " %s" osm-server))
                              (if name (format " %S" name) ""))))
     (kill-new link)
     (message "Stored link in the kill ring")))
