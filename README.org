@@ -21,7 +21,7 @@ rendering is © [[https://opentopomap.org/about][OpenTopoMap]], licensed under t
 - Display of tracks and POIs from GPX file
 - Parallel fetching of tiles with curl
 - Moving in large and small steps
-- Mouse support (dragging, clicking)
+- Mouse support (dragging, clicking, menu)
 - Map scale indicator
 - Go to coordinate
 - Search for location by name

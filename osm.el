@@ -253,9 +253,52 @@ Should be at least 7 days according to the server usage policies."
     map)
   "Keymap used by `osm-mode'.")
 
+(defvar osm-server-menu
+  `(menu-item
+    "Server menu" nil
+    :filter
+    (lambda (&optional _)
+      (let (menu last-group)
+        (dolist (server osm-server-list)
+          (let* ((plist (cdr server))
+                 (group (plist-get plist :group)))
+            (unless (equal last-group group)
+              (push group menu)
+              (setq last-group group))
+            (push
+             `[,(plist-get plist :name)
+               (osm-server ',(car server))
+               :style toggle
+               :selected (eq osm-server ',(car server))]
+             menu)))
+        (easy-menu-filter-return (nreverse menu)))))
+  "Server menu.")
+
+(easy-menu-define osm-menu osm-mode-map
+  "Menu for `osm-mode."
+  `("Osm mode"
+    ["Home" osm-home t]
+    ["Go to" osm-goto t]
+    ["Search" osm-search t]
+    ["Server" osm-server t]
+    "--"
+    ["Org Link" org-store-link t]
+    ["Elisp Link" osm-elisp-link t]
+    ("Bookmark"
+     ["Set" osm-bookmark-set t]
+     ["Jump" osm-bookmark-jump t]
+     ["Rename" osm-bookmark-rename t]
+     ["Delete" osm-bookmark-delete t])
+    "--"
+    ["Show GPX" osm-gpx-show t]
+    ["Hide GPX" osm-gpx-hide t]
+    "--"
+    ["Clone" clone-buffer t]
+    ["Revert" revert-buffer t]))
+
 (defconst osm--placeholder
   '(:type svg :width 256 :height 256
-    :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
+          :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
   <defs>
     <pattern id='grid' width='16' height='16'  patternUnits='userSpaceOnUse'>
       <path d='m 0 0 l 0 16 16 0' fill='none' stroke='#888888'/>
@@ -920,9 +963,14 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (propertize text
               'keymap (let ((map (make-sparse-keymap)))
                         (define-key map [header-line mouse-1]
-                          (lambda ()
-                            (interactive "@")
-                            (call-interactively action)))
+                          `(menu-item
+                            ""
+                            nil :filter
+                            ,(lambda (&optional _)
+                               (select-window
+                                (posn-window
+                                 (event-start last-input-event)))
+                               action)))
                         map)
               'face '(:box (:line-width -2 :style released-button))
               'mouse-face '(:box (:line-width -2 :style pressed-button))))
@@ -950,13 +998,16 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                   'display `(space :width (,(floor (/ meter meter-per-pixel)))))
       (propertize " " 'face '(:inverse-video t)
                   'display '(space :width (3)))
-      (propertize " " 'display `(space :align-to (- right ,(+ 13 (length server)) (10))))
+      (propertize " " 'display `(space :align-to
+                                       (- right ,(+ 5 3 3 2 (length server) 3) (,(+ 4 1 4 1 4 1 4)))))
       (format " Z%-2d " osm--zoom)
       (osm--header-button " + " #'osm-zoom-in)
       (propertize " " 'display '(space :width (1)))
       (osm--header-button " - " #'osm-zoom-out)
       (propertize " " 'display '(space :width (1)))
-      (osm--header-button (format " %s " server) #'osm-server)))))
+      (osm--header-button (format " %s " server) osm-server-menu)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button " ☰ " osm-menu)))))
 
 (defun osm--update ()
   "Update map display."
@@ -1129,7 +1180,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                 (with-current-buffer buffer
                   ;; Handle bookmark deletion and renaming
                   (pcase this-command
-                    ((or 'undefined 'ignore)
+                    ((or 'undefined 'ignore
+                         'mouse-drag-mode-line 'mouse-drag-header-line
+                         'keyboard-escape-quit 'keyboard-quit)
                      nil)
                     ((and (guard (eq id 'osm-selected-bookmark))
                           cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
@@ -1168,8 +1221,8 @@ Optionally specify a SERVER and a COMMENT."
   (ignore comment)
   (when (stringp server) (setq server nil)) ;; Ignore comment
   `(progn
-    (osm--goto (list ,lat ,lon ,zoom) ,(and server (symbolp server) `',server))
-    '(osm ,lat ,lon ,zoom ,@(and server (symbolp server) (list server)))))
+     (osm--goto (list ,lat ,lon ,zoom) ,(and server (symbolp server) `',server))
+     '(osm ,lat ,lon ,zoom ,@(and server (symbolp server) (list server)))))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
