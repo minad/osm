@@ -1158,13 +1158,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   nil)
 
 ;;;###autoload
-(defun osm (lat lon zoom &optional server comment)
+(defmacro osm (lat lon zoom &optional server comment)
   "Go to LAT/LON/ZOOM.
 Optionally specify a SERVER and a COMMENT."
   (ignore comment)
   (when (stringp server) (setq server nil)) ;; Ignore comment
-  (osm--goto (list lat lon zoom) server)
-  nil)
+  `(osm--goto (list ,lat ,lon ,zoom) ,(and (symbolp server) `',server)))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
