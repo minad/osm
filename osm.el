@@ -1334,13 +1334,13 @@ Optionally specify a SERVER and a COMMENT."
                 :object-type 'alist))
          (results (mapcar
                    (lambda (x)
-                     `(,(format "%s (%s° %s°)"
-                                (alist-get 'display_name x)
-                                (alist-get 'lat x)
-                                (alist-get 'lon x))
-                       ,(string-to-number (alist-get 'lat x))
-                       ,(string-to-number (alist-get 'lon x))
-                       ,@(mapcar #'string-to-number (alist-get 'boundingbox x))))
+                     (let ((lat (string-to-number (alist-get 'lat x)))
+                           (lon (string-to-number (alist-get 'lon x))))
+                       `(,(format "%s (%.6f° %.6f°)"
+                                  (alist-get 'display_name x)
+                                  lat lon)
+                         ,lat ,lon
+                         ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or json (error "No results"))))
          (selected (or (cdr (assoc
                              (completing-read
