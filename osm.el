@@ -1089,6 +1089,42 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           (osm--display-tile x y tile)
           (unless tile (osm--enqueue-download x y)))))))
 
+(defun osm--tile-as-href (href &optional link)
+  "Href for a tile. If LINK is specified, as a simple link. Otherwise, inline as base64."
+  (if link href
+    (with-temp-buffer
+      (insert-file-contents href)
+      (base64-encode-region (point-min) (point-max) t)
+      (goto-char (point-min))
+      (insert "data:image/jpeg;charset=utf-8;base64,")
+      (buffer-string))))
+
+(defun osm-export-as-svg (file as-links)
+  "Export OSM buffer to an svg image in FILE.
+
+By default, inline the tile images; with AS-LINKS, use links to existing tiles in cache.
+
+Interactively, ask for the FILE and use prefix arg for AS-LINKS."
+  (interactive "G\nP")
+  (let ((ny osm--ny)
+	(nx osm--nx)
+	(x0 osm--x)
+	(y0 osm--y)
+	(wx osm--wx)
+	(wy osm--wy)
+	(zoom osm--zoom))
+    (with-temp-file file
+      (insert "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">")
+      (dotimes (j ny)
+	(dotimes (i nx)
+	  (let* ((x (+ i (/ (- x0 osm--wx) 256)))
+		 (y (+ j (/ (- y0 osm--wy) 256)))
+		 (tile  (and osm--tile-cache (gethash `(,osm-server ,zoom ,x . ,y)
+						   osm--tile-cache))))
+	    (when-let (href (plist-get (cddr tile) :file))
+		  (insert (format "<image width=\"256\" height=\"256\" x=\"%d\" y=\"%d\" href=\"%s\"/>\n" (* 256 i)  (* 256 j) (osm--tile-as-href href as-links)))))))
+      (insert "</svg>"))))
+
 (defun osm--process-download-queue ()
   "Process the download queue."
   (setq osm--download-queue
