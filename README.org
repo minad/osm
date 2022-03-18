@@ -32,8 +32,10 @@ rendering is © [[https://opentopomap.org/about][OpenTopoMap]], licensed under t
 * Configuration
 
 The package is available on GNU ELPA and can be installed with =package-install=.
-The following is an example configuration which relies on =use-package=. Please
-take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional configuration.
+Note that osm.el requires Emacs 27 and depends on the external =curl= program.
+Emacs must be built with libxml, libjansson, librsvg, libjpeg and libpng
+support. The following is an example configuration which relies on =use-package=.
+Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional configuration.
 
 #+begin_src emacs-lisp
   (use-package osm
