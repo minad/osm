@@ -686,8 +686,9 @@ Should be at least 7 days according to the server usage policies."
       (warn "osm: Support for %s images is missing" type)))
   (unless (libxml-available-p)
     (warn "osm: libxml is not available"))
-  (unless (json-available-p)
-    (warn "osm: libjansson is not available"))
+  ;; json-available-p is not available on Emacs 27
+  ;; (unless (json-available-p)
+  ;;   (warn "osm: libjansson is not available"))
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
