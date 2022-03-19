@@ -1315,15 +1315,16 @@ Optionally specify a SERVER and a COMMENT."
               :object-type 'alist))))))
 
 ;;;###autoload
-(defun osm-search ()
-  "Search for location and display the map."
-  (interactive)
+(defun osm-search (search &optional lucky)
+  "Search for SEARCH and display the map.
+If the prefix argument LUCKY is non-nil take the first result and jump there."
+  (interactive
+   (list (completing-read "Location: "
+                          (osm--sorted-table osm--search-history)
+                          nil nil nil 'osm--search-history)
+         current-prefix-arg))
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((search (completing-read
-                  "Location: "
-                  (osm--sorted-table osm--search-history)
-                  nil nil nil 'osm--search-history))
-         (json (json-parse-string
+  (let* ((json (json-parse-string
                 (shell-command-to-string
                  (concat
                   "curl " osm-curl-options " "
@@ -1342,7 +1343,9 @@ Optionally specify a SERVER and a COMMENT."
                          ,lat ,lon
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or json (error "No results"))))
-         (selected (or (cdr (assoc
+         (selected (or
+                    (and (or lucky (not (cdr results))) (cdar results))
+                    (cdr (assoc
                              (completing-read
                               (format "Matches for '%s': " search)
                               (osm--sorted-table results)
