@@ -1329,10 +1329,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                           nil nil nil 'osm--search-history)
          current-prefix-arg))
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((json (osm--get-json
-                (concat "https://nominatim.openstreetmap.org/search?format=json&q="
-                        (url-encode-url search))))
-         (results (mapcar
+  (let* ((results (mapcar
                    (lambda (x)
                      (let ((lat (string-to-number (alist-get 'lat x)))
                            (lon (string-to-number (alist-get 'lon x))))
@@ -1341,7 +1338,11 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                                   lat lon)
                          ,lat ,lon
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
-                   (or json (error "No results"))))
+                   (or
+                    (osm--get-json
+                     (concat "https://nominatim.openstreetmap.org/search?format=json&q="
+                             (url-encode-url search)))
+                    (error "No results"))))
          (selected (or
                     (and (or lucky (not (cdr results))) (cdar results))
                     (cdr (assoc
