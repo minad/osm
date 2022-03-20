@@ -543,18 +543,19 @@ Should be at least 7 days according to the server usage policies."
   (when osm--transient-pin
     (setq osm--lat (car osm--transient-pin)
           osm--lon (cadr osm--transient-pin))
+    (message "%s" (cdddr osm--transient-pin))
     (osm--update)))
 
 (defun osm-transient-click (event)
   "Put a transient pin at location of the click EVENT."
   (interactive "@e")
-  (osm--put-transient-pin-event event 'osm-transient "Transient")
+  (osm--put-transient-pin-event event)
   (osm--update))
 
 (defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
-  (osm--put-transient-pin-event event 'osm-selected-bookmark "New bookmark")
+  (osm--put-transient-pin-event event 'osm-selected-bookmark "New Bookmark")
   (osm-bookmark-set))
 
 (defun osm-org-link-click (event)
@@ -583,7 +584,6 @@ Should be at least 7 days according to the server usage policies."
   (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
     (when-let (pin (osm--pin-at 'osm-bookmark x y))
       (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
-      (message "%s" (cdddr pin))
       (osm--update))))
 
 (defun osm-poi-click (event)
@@ -592,7 +592,6 @@ Should be at least 7 days according to the server usage policies."
   (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
     (when-let (pin (osm--pin-at 'osm-poi x y))
       (osm--put-transient-pin 'osm-selected-poi (car pin) (cadr pin) (cdddr pin))
-      (message "%s" (cdddr pin))
       (osm--update))))
 
 (defun osm-zoom-in (&optional n)
@@ -1192,9 +1191,12 @@ Optionally place transient pin with ID and HELP."
 
 (defun osm--put-transient-pin (id lat lon help)
   "Set transient pin at LAT/LON with ID and HELP."
-  (setq osm--transient-pin `(,lat ,lon ,id . ,help)))
+  (setq osm--transient-pin
+        `(,lat ,lon ,(or id 'osm-transient)
+               . ,(or help (format "Location %.6f° %.6f°" lat lon))))
+  (message "%s" (cdddr osm--transient-pin)))
 
-(defun osm--put-transient-pin-event (event id help)
+(defun osm--put-transient-pin-event (event &optional id help)
   "Set transient pin with ID and HELP at location of EVENT."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (osm--put-transient-pin id
@@ -1213,7 +1215,7 @@ Optionally place transient pin with ID and HELP."
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--goto lat lon zoom nil 'osm-transient "Transient")
+  (osm--goto lat lon zoom nil 'osm-transient nil)
   nil)
 
 ;;;###autoload
@@ -1294,7 +1296,7 @@ Optionally place transient pin with ID and HELP."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
     (osm--put-transient-pin id lat lon help)
-    (message "%s: Fetching name of %.2f %.2f..." help lat lon)
+    (message "%s: Fetching name of %.6f %.6f..." help lat lon)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
