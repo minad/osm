@@ -106,14 +106,14 @@ Key bindings in =osm-mode= buffer:
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
 - ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
-- ~<mouse-1>~: =osm-center-click= - Center to point
+- ~<mouse-1>~: =osm-transient-click= - Place transient pin at point
 - ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
 - ~<mouse-3>~: =osm-bookmark-set-click= - Store point as bookmark
 - ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-mouse-drag= - Drag the map with the mouse
 - ~d~, ~DEL~: =osm-bookmark-delete= - Delete selected bookmark
-- ~n~: =osm-bookmark-rename= - Rename selected bookmark
 - ~t~: =osm-goto= - Go to location
+- ~c~: =osm-center= - Center to currently marked pin
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
 - ~v~: =osm-server= - Select tile server
@@ -122,9 +122,10 @@ Key bindings in =osm-mode= buffer:
 - ~l~: =org-store-link= - Store org link
 - ~e~: =osm-elisp-link= - Store Elisp link in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
+- ~n~: =osm-bookmark-rename= - Rename selected bookmark
 - ~j~: =osm-bookmark-jump= - Jump to bookmark
 - ~q~: =quit-window= - Close buffer and window
-- ~c~: =clone-buffer= - Clone buffer
+- ~o~: =clone-buffer= - Clone buffer
 
 * Related projects
 
