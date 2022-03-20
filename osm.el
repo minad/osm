@@ -1217,14 +1217,20 @@ Optionally place transient pin with ID and HELP."
   nil)
 
 ;;;###autoload
-(defmacro osm (lat lon zoom &optional server comment)
-  "Go to LAT/LON/ZOOM.
-Optionally specify a SERVER and a COMMENT."
-  (ignore comment)
-  (when (stringp server) (setq server nil)) ;; Ignore comment
-  `(progn
-     (osm--goto ,lat ,lon ,zoom ,(and server (symbolp server) `',server) 'osm-link "Elisp Link")
-     '(osm ,lat ,lon ,zoom ,@(and server (symbolp server) (list server)))))
+(defmacro osm (&rest link)
+  "Go to LINK."
+  (pcase link
+    (`(,lat ,lon ,zoom . ,server)
+     (setq server (car server))
+     (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
+     `(progn
+       (osm--goto ,lat ,lon ,zoom ',server 'osm-link "Elisp Link")
+       '(osm ,lat ,lon ,zoom ,@(and server (list server)))))
+    ((and `(,search) (guard (stringp search)))
+     `(progn
+        (osm-search ,search)
+        '(osm ,search)))
+    (_ (error "Invalid osm link"))))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)

@@ -27,6 +27,7 @@
 
 ;; Only load osm on demand
 (autoload 'osm--goto "osm")
+(autoload 'osm-search "osm")
 (declare-function osm--org-link-data "osm")
 
 (org-link-set-parameters
@@ -37,17 +38,17 @@
 (defun osm-ol-open (link _)
   "Open osm LINK."
   (save-match-data
-    (unless (string-match
-             "\\`\\(?:\\([^:]+\\):\\)?\\([^,]+\\),\\([^,]+\\),\\([^,]+\\)\\'"
-             link)
-      (error "Invalid osm link"))
-    (osm--goto
-     (string-to-number (match-string 2 link))
-     (string-to-number (match-string 3 link))
-     (string-to-number (match-string 4 link))
-     (and (match-end 1) (intern (match-string 1 link)))
-     'osm-link
-     "Org Link")))
+    (cond
+     ((string-match
+       "\\`\\(?:\\([^:]+\\):\\)?\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)\\'" link)
+      (osm--goto
+       (string-to-number (match-string 2 link))
+       (string-to-number (match-string 3 link))
+       (string-to-number (match-string 4 link))
+       (and (match-end 1) (intern (match-string 1 link)))
+       'osm-link
+       "Org Link"))
+     (t (osm-search link)))))
 
 (defun osm-ol-store ()
   "Store osm link."
