@@ -200,8 +200,44 @@ Should be at least 7 days according to the server usage policies."
   "Size of tile memory cache."
   :type '(choice (const nil) integer))
 
+(defun osm--menu-item (menu)
+  "Generate menu item from MENU."
+  `(menu-item
+    ""
+    nil :filter
+    ,(lambda (&optional _)
+       (select-window
+        (posn-window
+         (event-start last-input-event)))
+       (easy-menu-filter-return (if (functionp menu)
+                                    (funcall menu)
+                                  menu)))))
+
+(defvar osm--menu
+  '(["Home" osm-home t]
+    ["Go to" osm-goto t]
+    ["Search" osm-search t]
+    ["Server" osm-server t]
+    "--"
+    ["Org Link" org-store-link t]
+    ["Elisp Link" osm-elisp-link t]
+    ("Bookmark"
+     ["Set" osm-bookmark-set t]
+     ["Jump" osm-bookmark-jump t]
+     ["Rename" osm-bookmark-rename t]
+     ["Delete" osm-bookmark-delete t])
+    "--"
+    ["Show GPX" osm-gpx-show t]
+    ["Hide GPX" osm-gpx-hide t]
+    "--"
+    ["Clone" clone-buffer t]
+    ["Revert" revert-buffer t]
+    ["Customize" (customize-group 'osm) t])
+  "Menu for `osm-mode.")
+
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map [menu-bar osm--menu] (osm--menu-item osm--menu))
     (define-key map [osm-home] #'ignore)
     (define-key map [osm-org-link] #'ignore)
     (define-key map [osm-center] #'ignore)
@@ -255,50 +291,6 @@ Should be at least 7 days according to the server usage policies."
     (define-key map ">" nil)
     map)
   "Keymap used by `osm-mode'.")
-
-(defvar osm-server-menu
-  `(menu-item
-    "Server menu" nil
-    :filter
-    (lambda (&optional _)
-      (let (menu last-group)
-        (dolist (server osm-server-list)
-          (let* ((plist (cdr server))
-                 (group (plist-get plist :group)))
-            (unless (equal last-group group)
-              (push (format "─── %s ───" group) menu)
-              (setq last-group group))
-            (push
-             `[,(plist-get plist :name)
-               (osm-server ',(car server))
-               :style toggle
-               :selected (eq osm-server ',(car server))]
-             menu)))
-        (easy-menu-filter-return (nreverse menu)))))
-  "Server menu.")
-
-(easy-menu-define osm-menu osm-mode-map
-  "Menu for `osm-mode."
-  `("Osm mode"
-    ["Home" osm-home t]
-    ["Go to" osm-goto t]
-    ["Search" osm-search t]
-    ["Server" osm-server t]
-    "--"
-    ["Org Link" org-store-link t]
-    ["Elisp Link" osm-elisp-link t]
-    ("Bookmark"
-     ["Set" osm-bookmark-set t]
-     ["Jump" osm-bookmark-jump t]
-     ["Rename" osm-bookmark-rename t]
-     ["Delete" osm-bookmark-delete t])
-    "--"
-    ["Show GPX" osm-gpx-show t]
-    ["Hide GPX" osm-gpx-hide t]
-    "--"
-    ["Clone" clone-buffer t]
-    ["Revert" revert-buffer t]
-    ["Customize" (customize-group 'osm) t]))
 
 (defconst osm--placeholder
   '(:type svg :width 256 :height 256
@@ -362,6 +354,23 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
+
+(defun osm--server-menu ()
+  "Generate server menu."
+  (let (menu last-group)
+    (dolist (server osm-server-list)
+      (let* ((plist (cdr server))
+             (group (plist-get plist :group)))
+        (unless (equal last-group group)
+          (push (format "─── %s ───" group) menu)
+          (setq last-group group))
+        (push
+         `[,(plist-get plist :name)
+           (osm-server ',(car server))
+           :style toggle
+           :selected (eq osm-server ',(car server))]
+         menu)))
+    (nreverse menu)))
 
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
@@ -965,14 +974,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (propertize text
               'keymap (let ((map (make-sparse-keymap)))
                         (define-key map [header-line mouse-1]
-                          `(menu-item
-                            ""
-                            nil :filter
-                            ,(lambda (&optional _)
-                               (select-window
-                                (posn-window
-                                 (event-start last-input-event)))
-                               action)))
+                          (if (commandp action)
+                              (lambda ()
+                                (interactive "@")
+                                (call-interactively action))
+                            (osm--menu-item action)))
                         map)
               'face '(:box (:line-width -2 :style released-button))
               'mouse-face '(:box (:line-width -2 :style pressed-button))))
@@ -1007,9 +1013,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (propertize " " 'display '(space :width (1)))
       (osm--header-button " - " #'osm-zoom-out)
       (propertize " " 'display '(space :width (1)))
-      (osm--header-button (format " %s " server) osm-server-menu)
+      (osm--header-button (format " %s " server) #'osm--server-menu)
       (propertize " " 'display '(space :width (1)))
-      (osm--header-button " ☰ " osm-menu)))))
+      (osm--header-button " ☰ " osm--menu)))))
 
 (defun osm--update ()
   "Update map display."
