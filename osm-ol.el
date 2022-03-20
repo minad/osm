@@ -42,10 +42,12 @@
              link)
       (error "Invalid osm link"))
     (osm--goto
-     (list (string-to-number (match-string 2 link))
-           (string-to-number (match-string 3 link))
-           (string-to-number (match-string 4 link)))
-     (and (match-end 1) (intern (match-string 1 link))))))
+     (string-to-number (match-string 2 link))
+     (string-to-number (match-string 3 link))
+     (string-to-number (match-string 4 link))
+     (and (match-end 1) (intern (match-string 1 link)))
+     'osm-link
+     "Org Link")))
 
 (defun osm-ol-store ()
   "Store osm link."

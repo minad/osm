@@ -147,9 +147,9 @@
     (osm-selected-poi "#e20" "#600")
     (osm-bookmark "#f80" "#820")
     (osm-transient "#08f" "#028")
-    (osm-home "#80f" "#208")
+    (osm-link "#f6f" "#808")
     (osm-poi "#88f" "#228")
-    (osm-link "#7a9" "#254"))
+    (osm-home "#80f" "#208"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type (list string string)))
 
@@ -943,7 +943,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm-home ()
   "Go to home coordinates."
   (interactive)
-  (osm--goto osm-home nil))
+  (osm--goto (nth 0 osm-home) (nth 1 osm-home) (nth 2 osm-home) nil 'osm-home "Home"))
 
 (defun osm--download-queue-info ()
   "Return queue info string."
@@ -1131,7 +1131,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'osm-link "Org link")))
+  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Org Link")))
     (setq name (string-remove-prefix "osm: " (osm--bookmark-name name)))
     (list lat lon osm--zoom
           (and (not (eq osm-server (default-value 'osm-server))) osm-server)
@@ -1152,15 +1152,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           osm--lat osm--lon osm--zoom
           (osm--server-property :name)))
 
-(defun osm--goto (at server)
-  "Go to AT, change SERVER."
+(defun osm--goto (lat lon zoom server id help)
+  "Go to LAT/LON/ZOOM, change SERVER.
+Optionally place transient pin with ID and HELP."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
       (or
        (and (eq major-mode #'osm-mode) (current-buffer))
-       (pcase-let* ((`(,def-lat ,def-lon ,def-zoom) (or at osm-home))
-                    (def-server (or server osm-server)))
+       (let ((def-server (or server osm-server))
+             (def-lat (or lat (nth 0 osm-home)))
+             (def-lon (or lon (nth 1 osm-home)))
+             (def-zoom (or zoom (nth 2 osm-home))))
          ;; Search for existing buffer
          (cl-loop
           for buf in (buffer-list) thereis
@@ -1177,12 +1180,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (setq osm-server server
             osm--download-active nil
             osm--download-queue nil))
-    (when (or (not (and osm--lon osm--lat)) at)
-      (setq at (or at osm-home)
-            osm--lat (nth 0 at)
-            osm--lon (nth 1 at)
-            osm--zoom (nth 2 at))
-      (osm--put-transient-pin 'osm-transient osm--lat osm--lon "Center"))
+    (when (or (not (and osm--lon osm--lat)) lat)
+      (setq osm--lat (or lat (nth 0 osm-home))
+            osm--lon (or lon (nth 1 osm-home))
+            osm--zoom (or zoom (nth 2 osm-home)))
+      (when id
+        (osm--put-transient-pin id osm--lat osm--lon help)))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
@@ -1193,11 +1196,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--put-transient-pin-event (event id help)
   "Set transient pin with ID and HELP at location of EVENT."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--put-transient-pin
-     id
-     (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
-     (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
-     help)))
+    (osm--put-transient-pin id
+                            (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
+                            (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
+                            help)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1210,7 +1212,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--goto (list lat lon zoom) nil)
+  (osm--goto lat lon zoom nil 'osm-transient "Transient")
   nil)
 
 ;;;###autoload
@@ -1220,15 +1222,17 @@ Optionally specify a SERVER and a COMMENT."
   (ignore comment)
   (when (stringp server) (setq server nil)) ;; Ignore comment
   `(progn
-     (osm--goto (list ,lat ,lon ,zoom) ,(and server (symbolp server) `',server))
+     (osm--goto ,lat ,lon ,zoom ,(and server (symbolp server) `',server) 'osm-link "Elisp Link")
      '(osm ,lat ,lon ,zoom ,@(and server (symbolp server) (list server)))))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
   "Jump to osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
-  (set-buffer (osm--goto (bookmark-prop-get bm 'coordinates)
-                         (bookmark-prop-get bm 'server))))
+  (let ((coords (bookmark-prop-get bm 'coordinates)))
+    (set-buffer (osm--goto (nth 0 coords) (nth 1 coords) (nth 2 coords)
+                               (bookmark-prop-get bm 'server)
+                               'osm-selected-bookmark (car bm)))))
 
 ;;;###autoload
 (defun osm-bookmark-delete (bm)
@@ -1269,7 +1273,7 @@ Optionally specify a SERVER and a COMMENT."
   (interactive)
   (osm--barf-unless-osm)
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "Bookmark"))
+      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "New Bookmark"))
                    (def (osm--bookmark-name desc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
@@ -1280,10 +1284,9 @@ Optionally specify a SERVER and a COMMENT."
 
 (defun osm--location-data (id help)
   "Fetch location info for ID with HELP."
-  (unless osm--transient-pin
-    (osm--put-transient-pin id osm--lat osm--lon help))
-  (let ((lat (car osm--transient-pin))
-        (lon (cadr osm--transient-pin)))
+  (let ((lat (or (car osm--transient-pin) osm--lat))
+        (lon (or (cadr osm--transient-pin) osm--lon)))
+    (osm--put-transient-pin id lat lon help)
     (message "%s: Fetching name of %.2f %.2f..." help lat lon)
     ;; Redisplay before slow fetching
     (osm--update)
@@ -1455,12 +1458,12 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
       (get-text-property 0 'osm--server
                          (or (car (member selected servers))
                              (error "No server selected"))))))
-  (osm--goto nil server))
+  (osm--goto nil nil nil server nil nil))
 
 (defun osm-elisp-link ()
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
-  (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-link "Elisp link"))
+  (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Elisp Link"))
                (link (format "(osm %.6f %.6f %s%s%s)"
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
