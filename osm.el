@@ -1192,31 +1192,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--put-transient-pin (id x y help)
   "Set transient pin at X/Y with ID and HELP."
-  (let ((buffer (current-buffer))
-        (sym (make-symbol "osm--remove-transient-pin")))
-    (fset sym (lambda ()
-                (with-current-buffer buffer
-                  ;; Handle bookmark deletion and renaming
-                  (pcase this-command
-                    ((or 'undefined 'ignore
-                         'mouse-drag-mode-line 'mouse-drag-header-line
-                         'keyboard-escape-quit 'keyboard-quit)
-                     nil)
-                    ((and (guard (eq id 'osm-selected-bookmark))
-                          cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
-                     (remove-hook 'pre-command-hook sym)
-                     (setq osm--transient-pin nil
-                           this-command
-                           (lambda ()
-                             (interactive)
-                             (funcall cmd help))))
-                    (_
-                     (remove-hook 'pre-command-hook sym)
-                     (when osm--transient-pin
-                       (setq osm--transient-pin nil)
-                       (osm--update)))))))
-    (add-hook 'pre-command-hook sym)
-    (setq osm--transient-pin `(,x ,y ,id . ,help))))
+  (setq osm--transient-pin `(,x ,y ,id . ,help)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1247,38 +1223,43 @@ Optionally specify a SERVER and a COMMENT."
   "Jump to osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
   (set-buffer (osm--goto (bookmark-prop-get bm 'coordinates)
-                         (bookmark-prop-get bm 'server))))
+                         (bookmark-prop-get bm 'server)))
+  (setq osm--transient-pin nil))
 
 ;;;###autoload
 (defun osm-bookmark-delete (bm)
   "Delete osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
   (bookmark-delete bm)
+  (setq osm--transient-pin nil)
   (osm--revert))
 
 ;;;###autoload
 (defun osm-bookmark-rename (old-name)
   "Rename osm bookmark OLD-NAME."
   (interactive (list (car (osm--bookmark-read))))
-  (unwind-protect
-      (bookmark-rename
-       old-name
-       (read-from-minibuffer
-        "New name: " old-name nil nil
-        'bookmark-history old-name))
+  (let ((new-name (read-from-minibuffer "New name: " old-name nil nil
+                                        'bookmark-history old-name)))
+    (when osm--transient-pin
+      (setf (cdddr osm--transient-pin) new-name))
+    (bookmark-rename old-name new-name)
     (osm--revert)))
 
 (defun osm--bookmark-read ()
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
   (or (assoc
-       (completing-read
-        "Bookmark: "
-        (or (cl-loop for bm in bookmark-alist
-                     if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-                     collect (car bm))
-            (error "No bookmarks found"))
-        nil t nil 'bookmark-history)
+       (if (and osm--transient-pin
+                (eq (caddr osm--transient-pin)
+                    'osm-selected-bookmark))
+           (cdddr osm--transient-pin)
+         (completing-read
+          "Bookmark: "
+          (or (cl-loop for bm in bookmark-alist
+                       if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+                       collect (car bm))
+              (error "No bookmarks found"))
+          nil t nil 'bookmark-history))
        bookmark-alist)
       (error "No bookmark selected")))
 
