@@ -600,17 +600,26 @@ Should be at least 7 days according to the server usage policies."
   "Zoom N times into the map."
   (interactive "p")
   (osm--barf-unless-osm)
-  (setq n (or n 1))
-  (cl-loop for i from n above 0
-           if (< osm--zoom (osm--server-property :max-zoom)) do
-           (setq osm--zoom (1+ osm--zoom)
-                 osm--x (* osm--x 2)
-                 osm--y (* osm--y 2)))
-  (cl-loop for i from n below 0
-           if (> osm--zoom (osm--server-property :min-zoom)) do
-           (setq osm--zoom (1- osm--zoom)
-                 osm--x (/ osm--x 2)
-                 osm--y (/ osm--y 2)))
+  (setq n (- (max (osm--server-property :min-zoom)
+                  (min (osm--server-property :max-zoom)
+                       (+ osm--zoom (or n 1))))
+             osm--zoom)
+        osm--zoom (+ osm--zoom n))
+  (cond
+   ((< n 0)
+    (setq n (lsh 1 (- n)))
+    (when osm--transient-pin
+      (setf (car osm--transient-pin) (/ (car osm--transient-pin) n)
+            (cadr osm--transient-pin) (/ (cadr osm--transient-pin) n)))
+    (setq osm--x (/ osm--x n)
+          osm--y (/ osm--y n)))
+   ((> n 0)
+    (setq n (lsh 1 n))
+    (when osm--transient-pin
+      (setf (car osm--transient-pin) (* (car osm--transient-pin) n)
+            (cadr osm--transient-pin) (* (cadr osm--transient-pin) n)))
+    (setq osm--x (* osm--x n)
+          osm--y (* osm--y n))))
   (osm--update))
 
 (defun osm-zoom-out (&optional n)
