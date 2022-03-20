@@ -216,6 +216,7 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar osm--menu
   '(["Home" osm-home t]
+    ["Center" osm-center t]
     ["Go to" osm-goto t]
     ["Search" osm-search t]
     ["Server" osm-server t]
@@ -1473,7 +1474,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
     (kill-new link)
     (message "Stored in the kill ring: %s" link)))
 
-(dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
+(dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
                    #'osm-elisp-link))
