@@ -742,13 +742,13 @@ Should be at least 7 days according to the server usage policies."
     (and (>= p (- x 32)) (< p (+ x 256 32))
          (>= q y) (< q (+ y 256 64)))))
 
-(defun osm--put-pin (pins id lat lon help)
-  "Put pin at X/Y with HELP and ID in PINS hash table."
+(defun osm--put-pin (pins id lat lon name)
+  "Put pin at X/Y with NAME and ID in PINS hash table."
   (let* ((x (osm--lon-to-x lon osm--zoom))
          (y (osm--lat-to-y lat osm--zoom))
          (x0 (/ x 256))
          (y0 (/ y 256))
-         (pin `(,x ,y ,lat ,lon ,id . ,help)))
+         (pin `(,x ,y ,lat ,lon ,id . ,name)))
     (push pin (gethash (cons x0 y0) pins))
     (cl-loop
      for i from -1 to 1 do
@@ -845,11 +845,11 @@ TPIN is an optional transient pin."
                  (y0 (* 256 y))
                  (svg-pin
                   (lambda (pin)
-                    (pcase-let* ((`(,p ,q ,_lat ,_lon ,id . ,help) pin)
+                    (pcase-let* ((`(,p ,q ,_lat ,_lon ,id . ,name) pin)
                                  (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
-                              ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
+                              ,id (help-echo ,(truncate-string-to-width name 20 0 nil t) pointer hand))
                             areas)
                       ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       (format "
@@ -1152,9 +1152,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           osm--lat osm--lon osm--zoom
           (osm--server-property :name)))
 
-(defun osm--goto (lat lon zoom server id help)
+(defun osm--goto (lat lon zoom server id name)
   "Go to LAT/LON/ZOOM, change SERVER.
-Optionally place transient pin with ID and HELP."
+Optionally place transient pin with ID and NAME."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
@@ -1185,24 +1185,24 @@ Optionally place transient pin with ID and HELP."
             osm--lon (or lon (nth 1 osm-home))
             osm--zoom (or zoom (nth 2 osm-home)))
       (when id
-        (osm--put-transient-pin id osm--lat osm--lon help)))
+        (osm--put-transient-pin id osm--lat osm--lon name)))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--put-transient-pin (id lat lon help)
-  "Set transient pin at LAT/LON with ID and HELP."
+(defun osm--put-transient-pin (id lat lon name)
+  "Set transient pin at LAT/LON with ID and NAME."
   (setq osm--transient-pin
         `(,lat ,lon ,(or id 'osm-transient)
-               . ,(or help (format "Location %.6f° %.6f°" lat lon))))
+               . ,(or name (format "Location %.6f° %.6f°" lat lon))))
   (message "%s" (cdddr osm--transient-pin)))
 
-(defun osm--put-transient-pin-event (event &optional id help)
-  "Set transient pin with ID and HELP at location of EVENT."
+(defun osm--put-transient-pin-event (event &optional id name)
+  "Set transient pin with ID and NAME at location of EVENT."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (osm--put-transient-pin id
                             (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
                             (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
-                            help)))
+                            name)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1291,12 +1291,12 @@ Optionally place transient pin with ID and HELP."
         (message "Stored bookmark: %s" name))
     (osm--revert)))
 
-(defun osm--location-data (id help)
-  "Fetch location info for ID with HELP."
+(defun osm--location-data (id name)
+  "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
-    (osm--put-transient-pin id lat lon help)
-    (message "%s: Fetching name of %.6f %.6f..." help lat lon)
+    (osm--put-transient-pin id lat lon name)
+    (message "%s: Fetching name of %.6f %.6f..." name lat lon)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
