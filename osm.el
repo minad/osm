@@ -502,8 +502,6 @@ Should be at least 7 days according to the server usage policies."
   (pcase-let ((`(,sx . ,sy) (posn-x-y (event-start event)))
               (win (selected-window))
               (map (make-sparse-keymap)))
-    (cl-incf sx (osm--x))
-    (cl-incf sy (osm--y))
     (define-key map [mouse-movement]
       (lambda (event)
         (interactive "e")
@@ -516,7 +514,8 @@ Should be at least 7 days according to the server usage policies."
           (define-key map [drag-mouse-2] #'ignore)
           (define-key map [drag-mouse-3] #'ignore)
           (pcase-let ((`(,ex . ,ey) (posn-x-y event)))
-            (osm--move-to (- sx ex) (- sy ey))
+            (osm--move (- sx ex) (- sy ey))
+            (setq sx ex sy ey)
             (osm--update)))))
     (setq track-mouse 'dragging)
     (set-transient-map map
@@ -527,19 +526,20 @@ Should be at least 7 days according to the server usage policies."
   "Zoom in with the mouse wheel."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
     (when (< osm--zoom (osm--server-property :max-zoom))
-      (osm--move-by (/ (- x osm--wx) 2) (/ (- y osm--wy) 2))
+      (osm--move (/ (- x osm--wx) 2) (/ (- y osm--wy) 2))
       (osm-zoom-in))))
 
 (defun osm--zoom-out-wheel (_n)
   "Zoom out with the mouse wheel."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
     (when (> osm--zoom (osm--server-property :min-zoom))
-      (osm--move-by (- osm--wx x) (- osm--wy y))
+      (osm--move (- osm--wx x) (- osm--wy y))
       (osm-zoom-out))))
 
 (defun osm-center ()
   "Center to location of transient pin."
   (interactive)
+  (osm--barf-unless-osm)
   (when osm--transient-pin
     (setq osm--lat (car osm--transient-pin)
           osm--lon (cadr osm--transient-pin))
@@ -608,26 +608,22 @@ Should be at least 7 days according to the server usage policies."
   (interactive "p")
   (osm-zoom-in (- (or n 1))))
 
-(defun osm--move-by (dx dy)
+(defun osm--move (dx dy)
   "Move by DX/DY."
-  (osm--move-to (+ (osm--x) dx) (+ (osm--y) dy)))
-
-(defun osm--move-to (x y)
-  "Move to X/Y."
   (osm--barf-unless-osm)
-  (setq osm--lon (osm--x-to-lon x osm--zoom)
-        osm--lat (osm--y-to-lat y osm--zoom)))
+  (setq osm--lon (osm--x-to-lon (+ (osm--x) dx) osm--zoom)
+        osm--lat (osm--y-to-lat (+ (osm--y) dy) osm--zoom)))
 
 (defun osm-right (&optional n)
   "Move N small stepz to the right."
   (interactive "p")
-  (osm--move-by (* (or n 1) osm-small-step) 0)
+  (osm--move (* (or n 1) osm-small-step) 0)
   (osm--update))
 
 (defun osm-down (&optional n)
   "Move N small stepz down."
   (interactive "p")
-  (osm--move-by 0 (* (or n 1) osm-small-step))
+  (osm--move 0 (* (or n 1) osm-small-step))
   (osm--update))
 
 (defun osm-up (&optional n)
@@ -643,13 +639,13 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-right-right (&optional n)
   "Move N large stepz to the right."
   (interactive "p")
-  (osm--move-by (* (or n 1) osm-large-step) 0)
+  (osm--move (* (or n 1) osm-large-step) 0)
   (osm--update))
 
 (defun osm-down-down (&optional n)
   "Move N large stepz down."
   (interactive "p")
-  (osm--move-by 0 (* (or n 1) osm-large-step))
+  (osm--move 0 (* (or n 1) osm-large-step))
   (osm--update))
 
 (defun osm-up-up (&optional n)
@@ -1472,6 +1468,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
 (defun osm-elisp-link ()
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
+  (osm--barf-unless-osm)
   (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Elisp Link"))
                (link (format "(osm %.6f %.6f %s%s%s)"
                              lat lon osm--zoom
