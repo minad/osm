@@ -845,7 +845,7 @@ TPIN is an optional transient pin."
                                  (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
-                              ,id (help-echo ,(truncate-string-to-width name 20 0 nil t) pointer hand))
+                              ,id (help-echo ,(truncate-string-to-width name 40 0 nil t) pointer hand))
                             areas)
                       ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       (format "
@@ -1340,16 +1340,17 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                              (url-encode-url search)))
                     (error "No results"))))
          (selected (or
-                    (and (or lucky (not (cdr results))) (cdar results))
-                    (cdr (assoc
-                             (completing-read
-                              (format "Matches for '%s': " search)
-                              (osm--sorted-table results)
-                              nil t)
-                             results))
-                       (error "No selection"))))
-    (osm-goto (car selected) (cadr selected)
-              (apply #'osm--boundingbox-to-zoom (cddr selected)))))
+                    (and (or lucky (not (cdr results))) (car results))
+                    (assoc
+                     (completing-read
+                      (format "Matches for '%s': " search)
+                      (osm--sorted-table results)
+                      nil t)
+                     results)
+                   (error "No selection"))))
+    (osm--goto (cadr selected) (caddr selected)
+               (apply #'osm--boundingbox-to-zoom (cdddr selected))
+               nil 'osm-transient (car selected))))
 
 (defun osm--sorted-table (coll)
   "Sorted completion table from COLL."
@@ -1396,8 +1397,9 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                     max-lon (max lon max-lon))
               `(,(dom-text (dom-child-by-tag pt 'name)) ,lat . ,lon)))))
     (osm--revert)
-    (osm-goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
-              (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon))))
+    (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
+               (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
+               nil nil nil)))
 
 (defun osm-gpx-hide (file)
   "Show the tracks of gpx FILE in an `osm-mode' buffer."
