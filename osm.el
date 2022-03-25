@@ -1011,8 +1011,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--update ()
   "Update map display."
   (osm--barf-unless-osm)
-  (rename-buffer (osm--buffer-name) 'unique)
-  (setq list-buffers-directory (osm--location-str))
+  (osm--rename-buffer)
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
@@ -1136,11 +1135,16 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
               (string-remove-suffix (concat " " (osm--server-property :name)) name)
             name))))
 
-(defun osm--buffer-name ()
-  "Return buffer name."
-  (format "*osm: %.2f° %.2f° Z%s %s*"
-          osm--lat osm--lon osm--zoom
-          (osm--server-property :name)))
+(defun osm--rename-buffer ()
+  "Rename current buffer."
+  (setq list-buffers-directory
+        (format "%.6f° %.6f° Z%s %s"
+                osm--lat osm--lon osm--zoom
+                (osm--server-property :name)))
+  (rename-buffer (format "*osm: %.2f° %.2f° Z%s %s*"
+                         osm--lat osm--lon osm--zoom
+                         (osm--server-property :name))
+                 'unique))
 
 (defun osm--bookmark-name (&optional loc)
   "Return bookmark name with optional LOC name."
