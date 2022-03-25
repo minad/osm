@@ -1012,6 +1012,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Update map display."
   (osm--barf-unless-osm)
   (rename-buffer (osm--buffer-name) 'unique)
+  (setq list-buffers-directory (osm--location-str))
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
@@ -1286,6 +1287,10 @@ Optionally place transient pin with ID and NAME."
         (bookmark-set name)
         (message "Stored bookmark: %s" name))
     (osm--revert)))
+
+(defun osm--location-str ()
+  "Returns the current location as a string."
+  (format "%.2f° %.2f° Z%s" osm--lat osm--lon osm--zoom))
 
 (defun osm--location-data (id name)
   "Fetch location info for ID with NAME."
