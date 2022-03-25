@@ -166,9 +166,9 @@
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
   :type '(list :tag "Coordinates"
-          (number :tag "Latitude  ")
-          (number :tag "Longitude ")
-          (number :tag "Zoom      ")))
+               (number :tag "Latitude  ")
+               (number :tag "Longitude ")
+               (number :tag "Zoom      ")))
 
 (defcustom osm-large-step 256
   "Scroll step in pixel."
@@ -1222,8 +1222,8 @@ Optionally place transient pin with ID and NAME."
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
      `(progn
-       (osm--goto ,lat ,lon ,zoom ',server 'osm-link "Elisp Link")
-       '(osm ,lat ,lon ,zoom ,@(and server (list server)))))
+        (osm--goto ,lat ,lon ,zoom ',server 'osm-link "Elisp Link")
+        '(osm ,lat ,lon ,zoom ,@(and server (list server)))))
     ((and `(,search) (guard (stringp search)))
      `(progn
         (osm-search ,search)
@@ -1236,8 +1236,8 @@ Optionally place transient pin with ID and NAME."
   (interactive (list (osm--bookmark-read)))
   (let ((coords (bookmark-prop-get bm 'coordinates)))
     (set-buffer (osm--goto (nth 0 coords) (nth 1 coords) (nth 2 coords)
-                               (bookmark-prop-get bm 'server)
-                               'osm-selected-bookmark (car bm)))))
+                           (bookmark-prop-get bm 'server)
+                           'osm-selected-bookmark (car bm)))))
 
 ;;;###autoload
 (defun osm-bookmark-delete (bm)
@@ -1347,7 +1347,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                       (osm--sorted-table results)
                       nil t)
                      results)
-                   (error "No selection"))))
+                    (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
                nil 'osm-transient (car selected))))
