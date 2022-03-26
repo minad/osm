@@ -1292,10 +1292,6 @@ Optionally place transient pin with ID and NAME."
         (message "Stored bookmark: %s" name))
     (osm--revert)))
 
-(defun osm--location-str ()
-  "Returns the current location as a string."
-  (format "%.2f° %.2f° Z%s" osm--lat osm--lon osm--zoom))
-
 (defun osm--location-data (id name)
   "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
