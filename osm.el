@@ -1123,6 +1123,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   `(,(or name (osm--bookmark-name))
     (coordinates ,(or lat osm--lat) ,(or lon osm--lon) ,osm--zoom)
     (server . ,osm-server)
+    (location . ,(osm--location-name))
     (handler . ,#'osm-bookmark-jump)))
 
 (defun osm--org-link-data ()
@@ -1292,12 +1293,13 @@ Optionally place transient pin with ID and NAME."
         (message "Stored bookmark: %s" name))
     (osm--revert)))
 
-(defun osm--location-data (id name)
+(defun osm--location-data (&optional id name)
   "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
-    (osm--put-transient-pin id lat lon name)
-    (message "%s: Fetching name of %.6f %.6f..." name lat lon)
+    (when (and id name)
+      (osm--put-transient-pin id lat lon name))
+    (message "%s: Fetching name of %.6f %.6f..." (or name "osm")  lat lon)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
@@ -1308,6 +1310,11 @@ Optionally place transient pin with ID and NAME."
              (osm--get-json
               (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
+
+(defun osm--location-name ()
+  "Fetch a suitable name for the location."
+  (let ((inhibit-message 1))
+    (nth 2 (osm--location-data))))
 
 (defun osm--get-json (url)
   "Get json from URL."
