@@ -1123,7 +1123,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                         osm--lat osm--lon nil))
 
 (defun osm--bookmark-record (name lat lon loc)
-  "Make osm bookmark record with NAME and LOC description at LAT/LON/ZOOM."
+  "Make osm bookmark record with NAME and LOC description at LAT/LON."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
   `(,name
     (location . ,(format "%s%.6f° %.6f° Z%s %s"
