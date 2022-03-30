@@ -121,7 +121,7 @@ Key bindings in =osm-mode= buffer:
 - ~v~: =osm-server= - Select tile server
 - ~x~: =osm-gpx-show= - Show tracks and POIs from GPX file
 - ~X~: =osm-gpx-hide= - Hide overlays from GPX file
-- ~l~: =org-store-link= - Store org link
+- ~l~: =org-store-link= - Store Org link
 - ~e~: =osm-elisp-link= - Store Elisp link in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~n~: =osm-bookmark-rename= - Rename selected bookmark
