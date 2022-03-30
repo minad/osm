@@ -1126,9 +1126,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Make osm bookmark record with NAME and LOC description at LAT/LON."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
   `(,name
-    (location . ,(format "%s%.6f° %.6f° Z%s %s"
-                         (if loc (concat loc ", ") "")
-                         lat lon osm--zoom (osm--server-property :name)))
+    (location . ,(osm--location-name lat lon loc 6))
     (coordinates ,lat ,lon ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
@@ -1136,7 +1134,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--org-link-data ()
   "Return Org link data."
   (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-link "New Org Link"))
-               (name (string-remove-prefix "osm: " (osm--bookmark-name lat lon loc))))
+               (name (osm--location-name lat lon loc 2)))
     (list lat lon osm--zoom
           (and (not (eq osm-server (default-value 'osm-server))) osm-server)
           (if (eq osm-server (default-value 'osm-server))
@@ -1145,20 +1143,21 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--rename-buffer ()
   "Rename current buffer."
-  (setq list-buffers-directory
-        (format "%.6f° %.6f° Z%s %s"
-                osm--lat osm--lon osm--zoom
-                (osm--server-property :name)))
-  (rename-buffer (format "*osm: %.2f° %.2f° Z%s %s*"
-                         osm--lat osm--lon osm--zoom
-                         (osm--server-property :name))
-                 'unique))
+  (setq list-buffers-directory (osm--location-name osm--lat osm--lon nil 6))
+  (rename-buffer
+   (format "*osm: %s*" (osm--location-name osm--lat osm--lon nil 2))
+   'unique))
+
+(defun osm--location-name (lat lon loc prec)
+  "Format location string LAT/LON with optional LOC description.
+The coordinates are formatted with precision PREC."
+  (format (format "%%s%%.%df° %%.%df° Z%%s %%s" prec prec)
+          (if loc (concat loc ", ") "")
+          lat lon osm--zoom (osm--server-property :name)))
 
 (defun osm--bookmark-name (lat lon loc)
   "Return bookmark name for LAT/LON/LOC."
-  (format "osm: %s%.2f° %.2f° Z%s %s"
-          (if loc (concat loc ", ") "")
-          lat lon osm--zoom (osm--server-property :name)))
+  (concat "osm: " (osm--location-name lat lon loc 2)))
 
 (defun osm--goto (lat lon zoom server id name)
   "Go to LAT/LON/ZOOM, change SERVER.
