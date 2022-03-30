@@ -709,7 +709,7 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-down-function #'osm--zoom-in-wheel
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
-              bookmark-make-record-function #'osm--make-bookmark)
+              bookmark-make-record-function #'osm--bookmark-record-default)
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
@@ -1117,18 +1117,26 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (dotimes (_ (- (hash-table-count osm--tile-cache) osm-max-tiles))
         (remhash (cdr (pop items)) osm--tile-cache)))))
 
-(defun osm--make-bookmark (&optional name lat lon)
-  "Make osm bookmark record with NAME at LAT/LON."
+(defun osm--bookmark-record-default ()
+  "Make osm bookmark record."
+  (osm--bookmark-record (osm--bookmark-name osm--lat osm--lon nil)
+                        osm--lat osm--lon nil))
+
+(defun osm--bookmark-record (name lat lon loc)
+  "Make osm bookmark record with NAME and LOC description at LAT/LON/ZOOM."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
-  `(,(or name (osm--bookmark-name))
-    (coordinates ,(or lat osm--lat) ,(or lon osm--lon) ,osm--zoom)
+  `(,name
+    (location . ,(format "%s%.6f° %.6f° Z%s %s"
+                         (if loc (concat loc ", ") "")
+                         lat lon osm--zoom (osm--server-property :name)))
+    (coordinates ,lat ,lon ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Org Link")))
-    (setq name (string-remove-prefix "osm: " (osm--bookmark-name name)))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-link "New Org Link"))
+               (name (string-remove-prefix "osm: " (osm--bookmark-name lat lon loc))))
     (list lat lon osm--zoom
           (and (not (eq osm-server (default-value 'osm-server))) osm-server)
           (if (eq osm-server (default-value 'osm-server))
@@ -1146,12 +1154,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                          (osm--server-property :name))
                  'unique))
 
-(defun osm--bookmark-name (&optional loc)
-  "Return bookmark name with optional LOC name."
+(defun osm--bookmark-name (lat lon loc)
+  "Return bookmark name for LAT/LON/LOC."
   (format "osm: %s%.2f° %.2f° Z%s %s"
           (if loc (concat loc ", ") "")
-          osm--lat osm--lon osm--zoom
-          (osm--server-property :name)))
+          lat lon osm--zoom (osm--server-property :name)))
 
 (defun osm--goto (lat lon zoom server id name)
   "Go to LAT/LON/ZOOM, change SERVER.
@@ -1283,11 +1290,11 @@ Optionally place transient pin with ID and NAME."
   (interactive)
   (osm--barf-unless-osm)
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "New Bookmark"))
-                   (def (osm--bookmark-name desc))
+      (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-selected-bookmark "New Bookmark"))
+                   (def (osm--bookmark-name lat lon loc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
-                    (lambda () (osm--make-bookmark name lat lon))))
+                    (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
         (message "Stored bookmark: %s" name))
     (osm--revert)))
@@ -1476,13 +1483,13 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Elisp Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-link "New Elisp Link"))
                (link (format "(osm %.6f %.6f %s%s%s)"
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
                                  ""
                                (format " %s" osm-server))
-                             (if name (format " %S" name) ""))))
+                             (if loc (format " %S" loc) ""))))
     (kill-new link)
     (message "Stored in the kill ring: %s" link)))
 
