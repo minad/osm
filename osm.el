@@ -1133,7 +1133,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-link "New Org Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Org Link"))
                (name (osm--location-name lat lon loc 2)))
     (list lat lon osm--zoom
           (and (not (eq osm-server (default-value 'osm-server))) osm-server)
@@ -1289,7 +1289,7 @@ Optionally place transient pin with ID and NAME."
   (interactive)
   (osm--barf-unless-osm)
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-selected-bookmark "New Bookmark"))
+      (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected-bookmark "New Bookmark"))
                    (def (osm--bookmark-name lat lon loc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
@@ -1298,7 +1298,7 @@ Optionally place transient pin with ID and NAME."
         (message "Stored bookmark: %s" name))
     (osm--revert)))
 
-(defun osm--location-data (id name)
+(defun osm--fetch-location-data (id name)
   "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
@@ -1311,11 +1311,11 @@ Optionally place transient pin with ID and NAME."
           (ignore-errors
             (alist-get
              'display_name
-             (osm--get-json
+             (osm--fetch-json
               (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
-(defun osm--get-json (url)
+(defun osm--fetch-json (url)
   "Get json from URL."
   (json-parse-string
    (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
@@ -1346,7 +1346,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                          ,lat ,lon
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or
-                    (osm--get-json
+                    (osm--fetch-json
                      (concat "https://nominatim.openstreetmap.org/search?format=json&q="
                              (url-encode-url search)))
                     (error "No results"))))
@@ -1482,7 +1482,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--location-data 'osm-link "New Elisp Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Elisp Link"))
                (link (format "(osm %.6f %.6f %s%s%s)"
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
