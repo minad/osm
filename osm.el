@@ -478,22 +478,23 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--download-filter (output)
   "Filter function for the download process which receives OUTPUT."
-  (dolist (line (split-string output "\n" t))
-    (when (string-match
-           "\\`\\([0-9]+\\) \\(.*?/\\([^/]+\\)/\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)\\..+\\.tmp\\)\\'"
-           line)
-      (let ((status (string-to-number (match-string 1 line)))
-            (file (match-string 2 line))
-            (server (intern-soft (match-string 3 line)))
-            (zoom (string-to-number (match-string 4 line)))
-            (x (string-to-number (match-string 5 line)))
-            (y (string-to-number (match-string 6 line))))
-        (when (and (= status 200) (= osm--zoom zoom) (eq osm-server server))
-          (ignore-errors (rename-file file (string-remove-suffix ".tmp" file) t))
-          (osm--display-tile x y (osm--get-tile x y)))
-        (setq osm--download-active (delete `(,x ,y . ,zoom) osm--download-active))
-        (delete-file file))))
-  (force-mode-line-update))
+  (while (string-match
+          "\\`\\([0-9]+\\) \\(.*?/\\([^/]+\\)/\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)\\..+\\)\n"
+          output)
+    (let ((status (match-string 1 output))
+          (file (match-string 2 output))
+          (server (intern-soft (match-string 3 output)))
+          (zoom (string-to-number (match-string 4 output)))
+          (x (string-to-number (match-string 5 output)))
+          (y (string-to-number (match-string 6 output))))
+      (setq output (substring output (match-end 0)))
+      (when (equal status "200")
+        (ignore-errors (rename-file file (string-remove-suffix ".tmp" file) t))
+        (when (and (= osm--zoom zoom) (eq osm-server server))
+          (osm--display-tile x y (osm--get-tile x y))))
+      (setq osm--download-active (delete `(,x ,y . ,zoom) osm--download-active))
+      (delete-file file)))
+  output)
 
 (defun osm--download-command ()
   "Build download command."
@@ -509,13 +510,14 @@ Should be at least 7 days according to the server usage policies."
                      "--output"
                      ,@args))
         (push job jobs)
-        (push job osm--download-active)
         (cl-incf count)))
     (dolist (job jobs)
+      (push job osm--download-active)
       (setq osm--download-queue (delq job osm--download-queue)))
     (setq osm--subdomain-index (mod (1+ osm--subdomain-index) subs))
-    `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
-      ,@(split-string-shell-command osm-curl-options) ,@(nreverse args))))
+    (cons `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
+            ,@(split-string-shell-command osm-curl-options) ,@(nreverse args))
+          jobs)))
 
 (defun osm--download ()
   "Download next tiles from the queue."
@@ -523,8 +525,10 @@ Should be at least 7 days according to the server usage policies."
                 (* (length (osm--server-property :subdomains))
                    (osm--server-property :max-connections)))
              osm--download-queue)
-    (let ((buffer (current-buffer))
-          (dir (concat osm-tile-directory (symbol-name osm-server))))
+    (pcase-let ((dir (concat osm-tile-directory (symbol-name osm-server)))
+                (`(,command . ,jobs) (osm--download-command))
+                (buffer (current-buffer))
+                (output ""))
       (unless (file-exists-p dir)
         (make-directory dir t))
       (cl-incf osm--download-processes)
@@ -532,19 +536,22 @@ Should be at least 7 days according to the server usage policies."
        :name "*osm curl*"
        :connection-type 'pipe
        :noquery t
-       :command
-       (osm--download-command)
+       :command command
        :filter
-       (lambda (_proc output)
+       (lambda (_proc out)
          (when (buffer-live-p buffer)
            (with-current-buffer buffer
-             (osm--download-filter output))))
+             (setq output (osm--download-filter (concat output out)))
+             (force-mode-line-update))))
        :sentinel
        (lambda (&rest _)
          (when (buffer-live-p buffer)
            (with-current-buffer buffer
+             (dolist (job jobs)
+               (setq osm--download-active (delq job osm--download-active)))
              (cl-decf osm--download-processes)
-             (osm--download)))))
+             (osm--download)
+             (force-mode-line-update)))))
       (osm--download))))
 
 (defun osm-mouse-drag (event)
@@ -994,9 +1001,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--download-queue-info ()
   "Return queue info string."
-  (let ((n (length osm--download-active)))
-    (if (> n 0)
-        (format "[%s/%s]" n (+ n (length osm--download-queue))))))
+  (if (> osm--download-processes 0)
+      (format "[%s/%s]" osm--download-processes
+              (+ (length osm--download-active)
+                 (length osm--download-queue)))))
 
 (defun osm--revert (&rest _)
   "Revert osm buffers."
