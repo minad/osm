@@ -39,7 +39,9 @@
 
 (require 'bookmark)
 (require 'dom)
-(eval-when-compile (require 'cl-lib))
+(eval-when-compile
+  (require 'cl-lib)
+  (require 'subr-x))
 
 (defgroup osm nil
   "OpenStreetMap viewer."
@@ -47,9 +49,15 @@
   :prefix "osm-")
 
 (defcustom osm-curl-options
-  "--fail --location --silent"
-  "Additional Curl command line options."
+  "--disable --fail --location --silent"
+  "Curl command line options."
   :type 'string)
+
+(defcustom osm-download-batch 4
+  "Number of tiles to fetch as a batch.
+This reduces the overhead of https handshake, since the connection is
+kept alive."
+  :type 'integer)
 
 (defcustom osm-server-defaults
   '(:min-zoom 2 :max-zoom 19 :max-connections 2 :subdomains ("a" "b" "c"))
@@ -339,6 +347,9 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--download-active nil
   "Active download jobs.")
 
+(defvar-local osm--download-processes 0
+  "Number of active download processes.")
+
 (defvar-local osm--wx 0
   "Half window width in pixel.")
 
@@ -442,13 +453,10 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
-  (let* ((url (osm--server-property :url))
-         (sub (osm--server-property :subdomains))
-         (count (length sub)))
-    (prog1
-        (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
-                           (?s . ,(nth (mod osm--subdomain-index count) sub))))
-      (setq osm--subdomain-index (mod (1+ osm--subdomain-index) count)))))
+  (let ((url (osm--server-property :url))
+        (sub (osm--server-property :subdomains)))
+    (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
+                       (?s . ,(nth (mod osm--subdomain-index (length sub)) sub))))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
@@ -468,38 +476,74 @@ Should be at least 7 days according to the server usage policies."
       (unless (or (member job osm--download-queue) (member job osm--download-active))
         (setq osm--download-queue (nconc osm--download-queue (list job)))))))
 
+(defun osm--download-filter (output)
+  "Filter function for the download process which receives OUTPUT."
+  (dolist (line (split-string output "\n" t))
+    (when (string-match
+           "\\`\\([0-9]+\\) \\(.*?/\\([^/]+\\)/\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)\\..+\\.tmp\\)\\'"
+           line)
+      (let ((status (string-to-number (match-string 1 line)))
+            (file (match-string 2 line))
+            (server (intern-soft (match-string 3 line)))
+            (zoom (string-to-number (match-string 4 line)))
+            (x (string-to-number (match-string 5 line)))
+            (y (string-to-number (match-string 6 line))))
+        (when (and (= status 200) (= osm--zoom zoom) (eq osm-server server))
+          (ignore-errors (rename-file file (string-remove-suffix ".tmp" file) t))
+          (osm--display-tile x y (osm--get-tile x y)))
+        (setq osm--download-active (delete `(,x ,y . ,zoom) osm--download-active))
+        (delete-file file))))
+  (force-mode-line-update))
+
+(defun osm--download-command ()
+  "Build download command."
+  (let* ((count 0)
+         (subs (length (osm--server-property :subdomains)))
+         (parallel (* subs (osm--server-property :max-connections)))
+         args jobs job)
+    (while (and (< count osm-download-batch)
+                (setq job (nth (* count parallel) osm--download-queue)))
+      (pcase-let ((`(,x ,y . ,zoom) job))
+        (setq args `(,(osm--tile-url x y zoom)
+                     ,(concat (osm--tile-file x y zoom) ".tmp")
+                     "--output"
+                     ,@args))
+        (push job jobs)
+        (push job osm--download-active)
+        (cl-incf count)))
+    (dolist (job jobs)
+      (setq osm--download-queue (delq job osm--download-queue)))
+    (setq osm--subdomain-index (mod (1+ osm--subdomain-index) subs))
+    `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
+      ,@(split-string-shell-command osm-curl-options) ,@(nreverse args))))
+
 (defun osm--download ()
-  "Download next tile in queue."
-  (when-let (job (and (< (length osm--download-active)
-                         (* (length (osm--server-property :subdomains))
-                            (osm--server-property :max-connections)))
-                      (pop osm--download-queue)))
-    (push job osm--download-active)
-    (pcase-let* ((`(,x ,y . ,zoom) job)
-                 (buffer (current-buffer))
-                 (dst (osm--tile-file x y zoom))
-                 (tmp (concat dst ".tmp"))
-                 (dir (file-name-directory tmp)))
+  "Download next tiles from the queue."
+  (when (and (< osm--download-processes
+                (* (length (osm--server-property :subdomains))
+                   (osm--server-property :max-connections)))
+             osm--download-queue)
+    (let ((buffer (current-buffer))
+          (dir (concat osm-tile-directory (symbol-name osm-server))))
       (unless (file-exists-p dir)
         (make-directory dir t))
+      (cl-incf osm--download-processes)
       (make-process
-       :name (format "osm %s %s %s" x y zoom)
+       :name "*osm curl*"
        :connection-type 'pipe
        :noquery t
        :command
-       `("curl" ,@(split-string osm-curl-options) "--output" ,tmp ,(osm--tile-url x y zoom))
-       :filter #'ignore
-       :sentinel
-       (lambda (_proc status)
+       (osm--download-command)
+       :filter
+       (lambda (_proc output)
          (when (buffer-live-p buffer)
            (with-current-buffer buffer
-             (when (and (string-match-p "finished" status)
-                        (eq osm--zoom zoom))
-               (ignore-errors (rename-file tmp dst t))
-               (osm--display-tile x y (osm--get-tile x y)))
-             (delete-file tmp)
-             (force-mode-line-update)
-             (setq osm--download-active (delq job osm--download-active))
+             (osm--download-filter output))))
+       :sentinel
+       (lambda (&rest _)
+         (when (buffer-live-p buffer)
+           (with-current-buffer buffer
+             (cl-decf osm--download-processes)
              (osm--download)))))
       (osm--download))))
 
@@ -950,9 +994,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--download-queue-info ()
   "Return queue info string."
-  (let ((n (length osm--download-queue)))
+  (let ((n (length osm--download-active)))
     (if (> n 0)
-        (format "[%s/%s]" (length osm--download-active) n))))
+        (format "[%s/%s]" n (+ n (length osm--download-queue))))))
 
 (defun osm--revert (&rest _)
   "Revert osm buffers."
@@ -1193,7 +1237,8 @@ Optionally place transient pin with ID and NAME."
     (when (and server (not (eq osm-server server)))
       (setq osm-server server
             osm--download-active nil
-            osm--download-queue nil))
+            osm--download-queue nil
+            osm--download-processes 0))
     (when (or (not (and osm--lon osm--lat)) lat)
       (setq osm--lat (or lat (nth 0 osm-home))
             osm--lon (or lon (nth 1 osm-home))
