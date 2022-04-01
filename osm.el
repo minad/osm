@@ -53,14 +53,12 @@
   "Curl command line options."
   :type 'string)
 
-(defcustom osm-download-batch 4
-  "Number of tiles to fetch as a batch.
-This reduces the overhead of https handshake, since the connection is
-kept alive."
-  :type 'integer)
-
 (defcustom osm-server-defaults
-  '(:min-zoom 2 :max-zoom 19 :max-connections 2 :subdomains ("a" "b" "c"))
+  '(:min-zoom 2
+    :max-zoom 19
+    :download-batch 4
+    :max-connections 2
+    :subdomains ("a" "b" "c"))
   "Default server properties."
   :type 'plist)
 
@@ -499,10 +497,11 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--download-command ()
   "Build download command."
   (let* ((count 0)
+         (batch (osm--server-property :download-batch))
          (subs (length (osm--server-property :subdomains)))
          (parallel (* subs (osm--server-property :max-connections)))
          args jobs job)
-    (while (and (< count osm-download-batch)
+    (while (and (< count batch)
                 (setq job (nth (* count parallel) osm--download-queue)))
       (pcase-let ((`(,x ,y . ,zoom) job))
         (setq args `(,(osm--tile-url x y zoom)
