@@ -49,7 +49,7 @@
   :prefix "osm-")
 
 (defcustom osm-curl-options
-  "--disable --fail --location --silent"
+  "--disable --fail --location --silent --max-time 30"
   "Curl command line options."
   :type 'string)
 
