@@ -515,7 +515,7 @@ Should be at least 7 days according to the server usage policies."
       (setq osm--download-queue (delq job osm--download-queue)))
     (setq osm--subdomain-index (mod (1+ osm--subdomain-index) subs))
     (cons `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
-            ,@(split-string-shell-command osm-curl-options) ,@(nreverse args))
+            ,@(split-string-and-unquote osm-curl-options) ,@(nreverse args))
           jobs)))
 
 (defun osm--download ()
