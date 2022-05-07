@@ -745,6 +745,8 @@ Should be at least 7 days according to the server usage policies."
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
+  (unless (display-graphic-p)
+    (warn "osm: Graphical display is required"))
   (dolist (type '(svg jpeg png))
     (unless (image-type-available-p type)
       (warn "osm: Support for %s images is missing" type)))
