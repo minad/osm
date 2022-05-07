@@ -53,7 +53,7 @@
   "Curl command line options."
   :type 'string)
 
-(defcustom osm-search-language "en-US"
+(defcustom osm-search-language "en"
   "Language used for search results."
   :type 'string)
 
