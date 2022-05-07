@@ -54,7 +54,10 @@
   :type 'string)
 
 (defcustom osm-search-language "en"
-  "Language used for search results."
+  "Language used for search results.
+Use RFC 1766 abbreviations, e.g.: `en' for English, `de' for German.
+A comma-separated specifies descending order of preference. See also
+`url-mime-language-string'."
   :type 'string)
 
 (defcustom osm-server-defaults
