@@ -53,6 +53,10 @@
   "Curl command line options."
   :type 'string)
 
+(defcustom osm-search-language "en-US"
+  "Language used for search results."
+  :type 'string)
+
 (defcustom osm-server-defaults
   '(:min-zoom 2
     :max-zoom 19
@@ -1371,8 +1375,8 @@ Optionally place transient pin with ID and NAME."
             (alist-get
              'display_name
              (osm--fetch-json
-              (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
-                      (min 18 (max 3 osm--zoom)) lat lon)))))))
+              (format "https://nominatim.openstreetmap.org/reverse?format=json&accept-language=%s&zoom=%s&lat=%s&lon=%s"
+                      osm-search-language (min 18 (max 3 osm--zoom)) lat lon)))))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1406,8 +1410,8 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or
                     (osm--fetch-json
-                     (concat "https://nominatim.openstreetmap.org/search?format=json&q="
-                             (url-encode-url search)))
+                     (format "https://nominatim.openstreetmap.org/search?format=json&accept-language=%s&q=%s"
+                             osm-search-language (url-encode-url search)))
                     (error "No results"))))
          (selected (or
                     (and (or lucky (not (cdr results))) (car results))
