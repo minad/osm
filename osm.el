@@ -37,6 +37,7 @@
 
 ;;; Code:
 
+(require 'compat)
 (require 'bookmark)
 (require 'dom)
 (eval-when-compile
