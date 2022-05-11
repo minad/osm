@@ -1397,6 +1397,7 @@ Optionally place transient pin with ID and NAME."
 
 (defun osm--fetch-json (url)
   "Get json from URL."
+  (osm--check-libraries)
   (json-parse-string
    (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
      (shell-command-to-string
@@ -1455,6 +1456,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
 (defun osm-gpx-show (file)
   "Show the tracks of gpx FILE in an `osm-mode' buffer."
   (interactive "fGPX file: ")
+  (osm--check-libraries)
   (let ((dom (with-temp-buffer
                (insert-file-contents file)
                (libxml-parse-xml-region (point-min) (point-max))))
