@@ -431,11 +431,11 @@ Should be at least 7 days according to the server usage policies."
   (setq y (* float-pi (- 1 (* 2 (/ y 256.0 (expt 2.0 zoom))))))
   (/ (* 180 (atan (/ (- (exp y) (exp (- y))) 2))) float-pi))
 
-(defun osm--lon-to-x (lon zoom)
+(defsubst osm--lon-to-x (lon zoom)
   "Convert LON/ZOOM to x coordinate in pixel."
   (floor (* 256 (expt 2.0 zoom) (osm--lon-to-normalized-x lon))))
 
-(defun osm--lat-to-y (lat zoom)
+(defsubst osm--lat-to-y (lat zoom)
   "Convert LAT/ZOOM to y coordinate in pixel."
   (floor (* 256 (expt 2.0 zoom) (osm--lat-to-normalized-y lat))))
 
@@ -810,11 +810,10 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--pin-inside-p (x y lat lon)
   "Return non-nil if pin at LAT/LON is inside tile X/Y."
-  (let ((p (osm--lon-to-x lon osm--zoom))
-        (q (osm--lat-to-y lat osm--zoom)))
-    (setq x (* x 256) y (* y 256))
-    (and (>= p (- x 32)) (< p (+ x 256 32))
-         (>= q y) (< q (+ y 256 64)))))
+  (let ((p (/ (osm--lon-to-x lon osm--zoom) 256.0))
+        (q (/ (osm--lat-to-y lat osm--zoom) 256.0)))
+    (and (>= p (- x 0.125)) (< p (+ x 1.125))
+         (>= q y) (< q (+ y 1.25)))))
 
 (defun osm--put-pin (pins id lat lon name)
   "Put pin at X/Y with NAME and ID in PINS hash table."
