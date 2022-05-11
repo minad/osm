@@ -1065,8 +1065,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq-local
      header-line-format
      (concat
-      (format #(" %7.2f°" 0 6 (face bold)) osm--lat)
-      (format #(" %7.2f°" 0 6 (face bold)) osm--lon)
+      (format (propertize " %7.2f° %7.2f°" 'face 'bold) osm--lat osm--lon)
       (propertize " " 'display '(space :align-to (- center 10)))
       (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
       (if (>= meter 1000) "km " "m ")
