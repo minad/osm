@@ -47,22 +47,6 @@
   (require 'cl-lib)
   (require 'subr-x))
 
-;; Check that Emacs is compiled with the necessary libraries.
-(let (req)
-  (unless (display-graphic-p)
-    (push "graphical display" req))
-  (dolist (type '(svg jpeg png))
-    (unless (image-type-available-p type)
-      (push (format "%s support" type) req)))
-  (unless (libxml-available-p)
-    (push "libxml" req))
-  ;; json-available-p is not available on Emacs 27
-  (unless (ignore-errors (equal [] (json-parse-string "[]")))
-    (push "libjansson" req))
-  (when req
-    (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
-           (string-join req ", "))))
-
 (defgroup osm nil
   "OpenStreetMap viewer."
   :group 'web
@@ -762,9 +746,27 @@ Should be at least 7 days according to the server usage policies."
                   (* 60 60 24 osm-max-age))
            (delete-file file)))))))
 
+(defun osm--check-libraries ()
+  "Check that Emacs is compiled with the necessary libraries."
+  (let (req)
+    (unless (display-graphic-p)
+      (push "graphical display" req))
+    (dolist (type '(svg jpeg png))
+      (unless (image-type-available-p type)
+        (push (format "%s support" type) req)))
+    (unless (libxml-available-p)
+      (push "libxml" req))
+    ;; json-available-p is not available on Emacs 27
+    (unless (ignore-errors (equal [] (json-parse-string "[]")))
+      (push "libjansson" req))
+    (when req
+      (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+             (string-join req ", ")))))
+
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
+  (osm--check-libraries)
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
