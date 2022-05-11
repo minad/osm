@@ -1063,7 +1063,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (cl-incf idx))
     (setq-local
      header-line-format
-     (concat
+     (list
       (format (propertize " %7.2f° %7.2f°" 'face 'bold) osm--lat osm--lon)
       (propertize " " 'display '(space :align-to (- center 10)))
       (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
