@@ -403,6 +403,15 @@ Should be at least 7 days according to the server usage policies."
          menu)))
     (nreverse menu)))
 
+(defsubst osm--lon-to-normalized-x (lon)
+  "Convert LON to normalized x coordinate."
+  (/ (+ lon 180.0) 360.0))
+
+(defsubst osm--lat-to-normalized-y (lat)
+  "Convert LAT to normalized y coordinate."
+  (setq lat (* lat (/ float-pi 180.0)))
+  (- 0.5 (/ (log (+ (tan lat) (/ 1.0 (cos lat)))) float-pi 2)))
+
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
   (let ((w (/ (frame-pixel-width) 256))
@@ -412,15 +421,6 @@ Should be at least 7 days according to the server usage policies."
           (osm--server-property :max-zoom)
           (min (logb (/ w (abs (- (osm--lon-to-normalized-x lon1) (osm--lon-to-normalized-x lon2)))))
                (logb (/ h (abs (- (osm--lat-to-normalized-y lat1) (osm--lat-to-normalized-y lat2))))))))))
-
-(defun osm--lon-to-normalized-x (lon)
-  "Convert LON to normalized x coordinate."
-  (/ (+ lon 180.0) 360.0))
-
-(defun osm--lat-to-normalized-y (lat)
-  "Convert LAT to normalized y coordinate."
-  (setq lat (* lat (/ float-pi 180.0)))
-  (- 0.5 (/ (log (+ (tan lat) (/ 1 (cos lat)))) float-pi 2)))
 
 (defun osm--x-to-lon (x zoom)
   "Return longitude in degrees for X/ZOOM."
