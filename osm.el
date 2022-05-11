@@ -1067,22 +1067,24 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (concat
       (format #(" %7.2f°" 0 6 (face bold)) osm--lat)
       (format #(" %7.2f°" 0 6 (face bold)) osm--lon)
-      #(" " 0 1 (display (space :align-to (- center 10))))
+      (propertize " " 'display '(space :align-to (- center 10)))
       (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
       (if (>= meter 1000) "km " "m ")
-      #(" " 0 1 (display (space :width (3)) face (:inverse-video t)))
+      (propertize " " 'face '(:inverse-video t)
+                  'display '(space :width (3)))
       (propertize " " 'face '(:strike-through t)
                   'display `(space :width (,(floor (/ meter meter-per-pixel)))))
-      #(" " 0 1 (display (space :width (3)) face (:inverse-video t)))
+      (propertize " " 'face '(:inverse-video t)
+                  'display '(space :width (3)))
       (propertize " " 'display `(space :align-to
                                        (- right ,(+ 5 3 3 2 (length server) 3) (,(+ 4 1 4 1 4 1 4)))))
       (format " Z%-2d " osm--zoom)
       (osm--header-button " + " #'osm-zoom-in)
-      #(" " 0 1 (display (space :width (1))))
+      (propertize " " 'display '(space :width (1)))
       (osm--header-button " - " #'osm-zoom-out)
-      #(" " 0 1 (display (space :width (1))))
+      (propertize " " 'display '(space :width (1)))
       (osm--header-button (format " %s " server) #'osm--server-menu)
-      #(" " 0 1 (display (space :width (1))))
+      (propertize " " 'display '(space :width (1)))
       (osm--header-button " ☰ " osm--menu)))))
 
 (defun osm--update ()
@@ -1139,7 +1141,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                         (if (listp copyright)
                             (string-join copyright " | ")
                           copyright)
-                        #(" " 0 1 (display (space :align-to right))))))
+                        (propertize " "
+                                    'display
+                                    '(space :align-to right)))))
       (add-face-text-property
        0 (length copyright)
        '(:inherit (header-line variable-pitch) :height 0.75)
