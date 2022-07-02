@@ -765,7 +765,7 @@ Should be at least 7 days according to the server usage policies."
 
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
-  :interactive nil
+  :interactive nil :abbrev-table nil :syntax-table nil
   (osm--check-libraries)
   (setq-local osm-server osm-server
               line-spacing nil
