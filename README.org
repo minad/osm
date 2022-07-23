@@ -15,7 +15,7 @@
 The map data is © [[https://www.openstreetmap.org/copyright][OpenStreetMap]] contributors, licensed under the [[https://opendatacommons.org/licenses/odbl/][ODbL]] The map
 rendering is © [[https://opentopomap.org/about][OpenTopoMap]], licensed under the [[https://creativecommons.org/licenses/by-sa/3.0/][CC-BY-SA.]]
 
-Osm.el is a tile-based map viewer, with a responsive moveable and zoomable
+Osm.el is a tile-based map viewer, with a responsive movable and zoomable
 display. The map can be controlled with the keyboard or with the mouse. The
 viewer fetches the map tiles in parallel from tile servers via the =curl= program.
 The package comes with a list of multiple preconfigured tile servers. You can
@@ -27,7 +27,7 @@ for locations by name and to open and display GPX tracks.
 
 * Features
 
-- Responsive, zoomable and moveable map display
+- Responsive, zoomable and movable map display
 - Display of tracks and POIs from GPX file
 - Parallel fetching of tiles with curl
 - Moving in large and small steps
@@ -91,7 +91,7 @@ buffers in Emacs. Furthermore you can open Org links in arbitary buffers with
 **** Elisp link examples
 
 Place the point behind the closing parenthesis and press ~C-x C-e~ to jump to the
-location. The Elisp links can be used in arbitary text files. Since they are
+location. The Elisp links can be used in arbitrary text files. Since they are
 Elisp s-expressions they can be easily manipulated programatically.
 
 #+begin_src emacs-lisp
