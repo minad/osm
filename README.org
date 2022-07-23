@@ -11,7 +11,7 @@
 #+html: <a href="http://elpa.gnu.org/devel/osm.html"><img alt="GNU-devel ELPA" src="https://elpa.gnu.org/devel/osm.svg"/></a>
 #+html: <a href="https://melpa.org/#/osm"><img alt="MELPA" src="https://melpa.org/packages/osm-badge.svg"/></a>
 #+html: <a href="https://stable.melpa.org/#/osm"><img alt="MELPA Stable" src="https://stable.melpa.org/packages/osm-badge.svg"/></a>
-#+html: <img src="https://github.com/minad/osm/blob/screenshots/osm.png?raw=true"/><p>The map data is © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, licensed under the <a href="https://opendatacommons.org/licenses/odbl/">ODbL</a> The map rendering is © <a href="https://opentopomap.org/about">OpenTopoMap</a>, licensed under the <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA.</a></p>
+#+html: <img src="https://github.com/minad/osm/blob/screenshots/osm.png?raw=true"/><p><i>The map data is © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, licensed under the <a href="https://opendatacommons.org/licenses/odbl/">ODbL</a> The map rendering is © <a href="https://opentopomap.org/about">OpenTopoMap</a>, licensed under the <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA.</a></i></p>
 
 Osm.el is a tile-based map viewer, with a responsive movable and zoomable
 display. The map can be controlled with the keyboard or with the mouse. The
