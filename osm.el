@@ -1296,7 +1296,7 @@ Optionally place transient pin with ID and NAME."
    (pcase-let ((`(,lat ,lon ,zoom)
                 (mapcar #'string-to-number
                         (split-string (read-string "Lat Lon (Zoom): ") nil t))))
-     (setq zoom (or zoom 11))
+     (setq zoom (or zoom osm--zoom 11))
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
