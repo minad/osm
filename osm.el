@@ -1327,6 +1327,7 @@ Optionally place transient pin with ID and NAME."
     (set-buffer (osm--goto (nth 0 coords) (nth 1 coords) (nth 2 coords)
                            (bookmark-prop-get bm 'server)
                            'osm-selected-bookmark (car bm)))))
+(put 'osm-bookmark-jump 'bookmark-handler-type "Osm")
 
 ;;;###autoload
 (defun osm-bookmark-delete (bm)
