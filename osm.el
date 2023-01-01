@@ -1138,8 +1138,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                         (if (listp copyright)
                             (string-join copyright " | ")
                           copyright)
-                        (propertize " " 'display '(space :align-to right))
-                        " ")))
+                        (propertize " " 'display '(space :align-to (+ 42 right))))))
       (add-face-text-property
        0 (length copyright)
        '(:inherit (header-line variable-pitch) :height 0.65)
