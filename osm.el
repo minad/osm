@@ -259,7 +259,7 @@ Should be at least 7 days according to the server usage policies."
     ["Clone" clone-buffer t]
     ["Revert" revert-buffer t]
     ["Customize" (customize-group 'osm) t])
-  "Menu for `osm-mode.")
+  "Menu for `osm-mode'.")
 
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
