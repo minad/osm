@@ -225,8 +225,8 @@ Should be at least 7 days according to the server usage policies."
   "Size of tile memory cache."
   :type '(choice (const nil) integer))
 
-(defun osm--menu-item (menu)
-  "Generate menu item from MENU."
+(defun osm--menu-item (menu &optional name)
+  "Generate menu item from MENU and optional NAME."
   `(menu-item
     ""
     nil :filter
@@ -234,9 +234,11 @@ Should be at least 7 days according to the server usage policies."
        (select-window
         (posn-window
          (event-start last-input-event)))
-       (easy-menu-filter-return (if (functionp menu)
-                                    (funcall menu)
-                                  menu)))))
+       (easy-menu-filter-return
+        (if (functionp menu)
+            (funcall menu)
+          menu)
+        name))))
 
 (defvar osm--menu
   '(["Home" osm-home t]
@@ -1047,7 +1049,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                               (lambda ()
                                 (interactive "@")
                                 (call-interactively action))
-                            (osm--menu-item action)))
+                            action))
                         map)
               'face '(:box (:line-width -2 :style released-button))
               'mouse-face '(:box (:line-width -2 :style pressed-button))))
@@ -1064,9 +1066,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq-local
      header-line-format
      (list
-      (osm--header-button " ☰ " osm--menu)
+      (osm--header-button " ☰ " (osm--menu-item osm--menu "Menu"))
       (propertize " " 'display '(space :width (1)))
-      (osm--header-button (format " %s " server) #'osm--server-menu)
+      (osm--header-button (format " %s " server)
+                          (osm--menu-item #'osm--server-menu "Server"))
       (propertize " " 'display '(space :width (1)))
       (osm--header-button " + " #'osm-zoom-in)
       (propertize " " 'display '(space :width (1)))
