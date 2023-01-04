@@ -95,11 +95,11 @@ location. The Elisp links can be used in arbitrary text files. Since they are
 Elisp s-expressions they can be easily manipulated programatically.
 
 #+begin_src emacs-lisp
-  (osm 41.869561 12.458496 6 opentopomap "Lazio, Italia")
+  (osm 41.869561 12.458496 6 'opentopomap "Lazio, Italia")
   (osm 51.489507 -0.144196 11 "London, Greater London, England, SW1A 2DX, United Kingdom")
-  (osm 55.686875 12.569733 12 cyclosm "København, Københavns Kommune, Region Hovedstaden, 1357, Danmark")
-  (osm 40.729568 -73.979187 12 stamen-watercolor "New York County, New York, United States")
-  (osm 27.961656 86.892242 13 opentopomap "Khumjung, Khumbupasanglahmu, सोलुखुम्बु, Province #1, Nepal")
+  (osm 55.686875 12.569733 12 'cyclosm "København, Københavns Kommune, Region Hovedstaden, 1357, Danmark")
+  (osm 40.729568 -73.979187 12 'stamen-watercolor "New York County, New York, United States")
+  (osm 27.961656 86.892242 13 'opentopomap "Khumjung, Khumbupasanglahmu, सोलुखुम्बु, Province #1, Nepal")
   (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 #+end_src
 

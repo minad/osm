@@ -1304,19 +1304,19 @@ Optionally place transient pin with ID and NAME."
   nil)
 
 ;;;###autoload
-(defmacro osm (&rest link)
-  "Go to LINK."
+(defun osm (&rest link)
+  "Go to LINK.
+When called interactively, call `osm-home'."
+  (interactive (list 'home))
   (pcase link
+    ('(home)
+     (osm-home))
     (`(,lat ,lon ,zoom . ,server)
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
-     `(progn
-        (osm--goto ,lat ,lon ,zoom ',server 'osm-link "Elisp Link")
-        '(osm ,lat ,lon ,zoom ,@(and server (list server)))))
+     (osm--goto lat lon zoom server 'osm-link "Elisp Link"))
     ((and `(,search) (guard (stringp search)))
-     `(progn
-        (osm-search ,search)
-        '(osm ,search)))
+     (osm-search search))
     (_ (error "Invalid osm link"))))
 
 ;;;###autoload
@@ -1568,7 +1568,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
                                  ""
-                               (format " %s" osm-server))
+                               (format " '%s" osm-server))
                              (if loc (format " %S" loc) ""))))
     (kill-new link)
     (message "Stored in the kill ring: %s" link)))
