@@ -40,14 +40,16 @@
   (save-match-data
     (cond
      ((string-match
-       "\\`\\(?:\\([^:]+\\):\\)?\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)\\'" link)
-      (osm--goto
-       (string-to-number (match-string 2 link))
-       (string-to-number (match-string 3 link))
-       (string-to-number (match-string 4 link))
-       (and (match-end 1) (intern (match-string 1 link)))
-       'osm-link
-       "Org Link"))
+       "\\`\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" link)
+      (let* ((lat (string-to-number (match-string 1 link)))
+             (lon (string-to-number (match-string 2 link)))
+             (args (url-parse-args (match-string 3 link) ""))
+             (zoom (cdr (assoc "z" args)))
+             (server (cdr (assoc "s" args))))
+        (osm--goto lat lon
+                   (and zoom (string-to-number zoom))
+                   (and server (intern-soft server))
+                   'osm-link "Org Link")))
      (t (osm-search link)))))
 
 (defun osm-ol-store ()
@@ -57,10 +59,8 @@
       (org-link-store-props
        :type "osm"
        :description desc
-       :link (format
-              "osm:%s%.6f,%.6f,%s"
-              (if server (format "%s:" server) "")
-              lat lon zoom)))))
+       :link (format "osm:%.6f,%.6f;z=%s%s"
+                     lat lon zoom (if server (format ";s=%s" server) ""))))))
 
 (provide 'osm-ol)
 ;;; osm-ol.el ends here
