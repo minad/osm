@@ -77,7 +77,9 @@ created at point with the mouse, see ~osm-bookmark-set-click~ and
 
 Click on a link or press ~RET~ to jump to the location. These links work in Org
 buffers in Emacs. Furthermore you can open Org links in arbitrary buffers with
-~org-open-at-point-global~. I recommend binding this command to a key, e.g., ~C-c o~.
+~org-open-at-point-global~. I recommend binding the command to a convenient key,
+e.g., ~C-c o~. The format of the links complies with the [[https://en.wikipedia.org/wiki/Geo_URI_scheme][geo URI scheme]] defined by
+[[https://datatracker.ietf.org/doc/html/rfc5870][RFC 5870]].
 
 #+begin_example
   [[geo:41.869560826994544,12.45849609375;z=6;s=opentopomap][Italia, 41.87° 12.46° OpenTopoMap]]
