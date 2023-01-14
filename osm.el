@@ -1201,15 +1201,21 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
-(defun osm--org-link-data ()
-  "Return Org link data."
+(defun osm--org-link-props ()
+  "Return Org link properties."
   (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Org Link"))
                (name (osm--location-name lat lon loc 2)))
-    (list lat lon osm--zoom
-          (and (not (eq osm-server (default-value 'osm-server))) osm-server)
+    (list :type "geo"
+          :description
           (if (eq osm-server (default-value 'osm-server))
-              (string-remove-suffix (concat " " (osm--server-property :name)) name)
-            name))))
+              (string-remove-suffix (concat " " (osm--server-property :name))
+                                    name)
+            name)
+          :link
+          (format "geo:%.6f,%.6f;z=%s%s"
+                  lat lon osm--zoom
+                  (if (eq osm-server (default-value 'osm-server)) ""
+                    (format ";s=%s" osm-server))))))
 
 (defun osm--rename-buffer ()
   "Rename current buffer."
@@ -1565,6 +1571,27 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                              (if loc (format " %S" loc) ""))))
     (kill-new link)
     (message "Stored in the kill ring: %s" link)))
+
+;;;###autoload
+(defun osm-browse-url (url &rest _)
+  "Open geo: URL with `osm-mode'."
+  (setq url (string-remove-prefix "geo:" url))
+  (cond
+   ((string-match
+     "\\`\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
+    (let* ((lat (string-to-number (match-string 1 url)))
+           (lon (string-to-number (match-string 2 url)))
+           (args (url-parse-args (match-string 3 url) ""))
+           (zoom (cdr (assoc "z" args)))
+           (server (cdr (assoc "s" args))))
+      (osm--goto lat lon
+                 (and zoom (string-to-number zoom))
+                 (and server (intern-soft server))
+                 'osm-link "Geo Link")))
+   (t (osm-search url))))
+
+;;;###autoload
+(add-to-list 'browse-url-default-handlers '("\\`geo:" . osm-browse-url))
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
