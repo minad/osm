@@ -1314,8 +1314,19 @@ When called interactively, call the function `osm-home'."
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
      (osm--goto lat lon zoom server 'osm-link "Elisp Link"))
-    ((and `(,search) (guard (stringp search)))
-     (osm-search search))
+    ((and `(,url . ,_) (guard (stringp url)))
+       (if (string-match
+            "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
+           (let* ((lat (string-to-number (match-string 1 url)))
+                  (lon (string-to-number (match-string 2 url)))
+                  (args (url-parse-args (match-string 3 url) ""))
+                  (zoom (cdr (assoc "z" args)))
+                  (server (cdr (assoc "s" args))))
+             (osm--goto lat lon
+                        (and zoom (string-to-number zoom))
+                        (and server (intern-soft server))
+                        'osm-link "Geo Link"))
+         (osm-search (string-remove-prefix "geo:" url))))
     (_ (error "Invalid osm link"))))
 
 ;;;###autoload
@@ -1573,25 +1584,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
     (message "Stored in the kill ring: %s" link)))
 
 ;;;###autoload
-(defun osm-browse-url (url &rest _)
-  "Open geo: URL with `osm-mode'."
-  (setq url (string-remove-prefix "geo:" url))
-  (cond
-   ((string-match
-     "\\`\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
-    (let* ((lat (string-to-number (match-string 1 url)))
-           (lon (string-to-number (match-string 2 url)))
-           (args (url-parse-args (match-string 3 url) ""))
-           (zoom (cdr (assoc "z" args)))
-           (server (cdr (assoc "s" args))))
-      (osm--goto lat lon
-                 (and zoom (string-to-number zoom))
-                 (and server (intern-soft server))
-                 'osm-link "Geo Link")))
-   (t (osm-search url))))
-
-;;;###autoload
-(add-to-list 'browse-url-default-handlers '("\\`geo:" . osm-browse-url))
+(add-to-list 'browse-url-default-handlers '("\\`geo:" . osm))
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
