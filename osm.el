@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.9
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "27.1") (compat "29.1.1.1"))
 ;; Homepage: https://github.com/minad/osm
 
 ;; This file is part of GNU Emacs.
@@ -27,12 +27,12 @@
 ;;; Commentary:
 
 ;; Osm.el is a tile-based map viewer, with a responsive moveable and
-;; zoomable display. The map can be controlled with the keyboard or with
-;; the mouse. The viewer fetches the map tiles in parallel from tile
-;; servers via the `curl' program. The package comes with a list of
-;; multiple preconfigured tile servers. You can bookmark your favorite
+;; zoomable display.  The map can be controlled with the keyboard or with
+;; the mouse.  The viewer fetches the map tiles in parallel from tile
+;; servers via the `curl' program.  The package comes with a list of
+;; multiple preconfigured tile servers.  You can bookmark your favorite
 ;; locations using regular Emacs bookmarks or create links from Org
-;; files to locations. Furthermore the package provides commands to
+;; files to locations.  Furthermore the package provides commands to
 ;; search for locations by name and to open and display GPX tracks.
 
 ;; osm.el requires Emacs 27 and depends on the external `curl' program.
@@ -41,6 +41,7 @@
 
 ;;; Code:
 
+(require 'compat)
 (require 'bookmark)
 (require 'dom)
 (eval-when-compile
@@ -60,7 +61,7 @@
 (defcustom osm-search-language "en"
   "Language used for search results.
 Use RFC 1766 abbreviations, e.g.: `en' for English, `de' for German.
-A comma-separated specifies descending order of preference. See also
+A comma-separated specifies descending order of preference.  See also
 `url-mime-language-string'."
   :type 'string)
 
@@ -263,64 +264,62 @@ Should be at least 7 days according to the server usage policies."
     ["Customize" (customize-group 'osm) t])
   "Menu for `osm-mode'.")
 
-(defvar osm-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map [menu-bar osm--menu] (osm--menu-item osm--menu))
-    (define-key map [osm-home] #'ignore)
-    (define-key map [osm-link] #'ignore)
-    (define-key map [osm-transient] #'ignore)
-    (define-key map [osm-selected-bookmark] #'ignore)
-    (define-key map [osm-selected-poi] #'ignore)
-    (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
-    (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
-    (define-key map [osm-bookmark mouse-3] #'osm-bookmark-select-click)
-    (define-key map [osm-poi mouse-1] #'osm-poi-click)
-    (define-key map [osm-poi mouse-2] #'osm-poi-click)
-    (define-key map [osm-poi mouse-3] #'osm-poi-click)
-    (define-key map [home] #'osm-home)
-    (define-key map "+" #'osm-zoom-in)
-    (define-key map "-" #'osm-zoom-out)
-    (define-key map " " #'osm-zoom-in)
-    (define-key map (kbd "S-SPC") #'osm-zoom-out)
-    (define-key map [mouse-1] #'osm-transient-click)
-    (define-key map [mouse-2] #'osm-org-link-click)
-    (define-key map [mouse-3] #'osm-bookmark-set-click)
-    (define-key map [down-mouse-1] #'osm-mouse-drag)
-    (define-key map [down-mouse-2] #'osm-mouse-drag)
-    (define-key map [down-mouse-3] #'osm-mouse-drag)
-    (define-key map [up] #'osm-up)
-    (define-key map [down] #'osm-down)
-    (define-key map [left] #'osm-left)
-    (define-key map [right] #'osm-right)
-    (define-key map [C-up] #'osm-up-up)
-    (define-key map [C-down] #'osm-down-down)
-    (define-key map [C-left] #'osm-left-left)
-    (define-key map [C-right] #'osm-right-right)
-    (define-key map [M-up] #'osm-up-up)
-    (define-key map [M-down] #'osm-down-down)
-    (define-key map [M-left] #'osm-left-left)
-    (define-key map [M-right] #'osm-right-right)
-    (define-key map "n" #'osm-bookmark-rename)
-    (define-key map "d" #'osm-bookmark-delete)
-    (define-key map "\d" #'osm-bookmark-delete)
-    (define-key map "c" #'osm-center)
-    (define-key map "o" #'clone-buffer)
-    (define-key map "h" #'osm-home)
-    (define-key map "t" #'osm-goto)
-    (define-key map "s" #'osm-search)
-    (define-key map "v" #'osm-server)
-    (define-key map "e" #'osm-elisp-link)
-    (define-key map "l" 'org-store-link)
-    (define-key map "b" #'osm-bookmark-set)
-    (define-key map "j" #'osm-bookmark-jump)
-    (define-key map "x" #'osm-gpx-show)
-    (define-key map "X" #'osm-gpx-hide)
-    (define-key map [remap scroll-down-command] #'osm-down)
-    (define-key map [remap scroll-up-command] #'osm-up)
-    (define-key map "<" nil)
-    (define-key map ">" nil)
-    map)
-  "Keymap used by `osm-mode'.")
+(defvar-keymap osm-mode-map
+  :doc "Keymap used by `osm-mode'."
+  "<menu-bar> <osm--menu>" (osm--menu-item osm--menu)
+  "<osm-home>" #'ignore
+  "<osm-link>" #'ignore
+  "<osm-transient>" #'ignore
+  "<osm-selected-bookmark>" #'ignore
+  "<osm-selected-poi>" #'ignore
+  "<osm-bookmark> <mouse-1>" #'osm-bookmark-select-click
+  "<osm-bookmark> <mouse-2>" #'osm-bookmark-select-click
+  "<osm-bookmark> <mouse-3>" #'osm-bookmark-select-click
+  "<osm-poi> <mouse-1>" #'osm-poi-click
+  "<osm-poi> <mouse-2>" #'osm-poi-click
+  "<osm-poi> <mouse-3>" #'osm-poi-click
+  "<home>" #'osm-home
+  "+" #'osm-zoom-in
+  "-" #'osm-zoom-out
+  "SPC" #'osm-zoom-in
+  "S-SPC" #'osm-zoom-out
+  "<mouse-1>" #'osm-transient-click
+  "<mouse-2>" #'osm-org-link-click
+  "<mouse-3>" #'osm-bookmark-set-click
+  "<down-mouse-1>" #'osm-mouse-drag
+  "<down-mouse-2>" #'osm-mouse-drag
+  "<down-mouse-3>" #'osm-mouse-drag
+  "<up>" #'osm-up
+  "<down>" #'osm-down
+  "<left>" #'osm-left
+  "<right>" #'osm-right
+  "C-<up>" #'osm-up-up
+  "C-<down>" #'osm-down-down
+  "C-<left>" #'osm-left-left
+  "C-<right>" #'osm-right-right
+  "M-<up>" #'osm-up-up
+  "M-<down>" #'osm-down-down
+  "M-<left>" #'osm-left-left
+  "M-<right>" #'osm-right-right
+  "n" #'osm-bookmark-rename
+  "d" #'osm-bookmark-delete
+  "DEL" #'osm-bookmark-delete
+  "c" #'osm-center
+  "o" #'clone-buffer
+  "h" #'osm-home
+  "t" #'osm-goto
+  "s" #'osm-search
+  "v" #'osm-server
+  "e" #'osm-elisp-link
+  "l" 'org-store-link
+  "b" #'osm-bookmark-set
+  "j" #'osm-bookmark-jump
+  "x" #'osm-gpx-show
+  "X" #'osm-gpx-hide
+  "<remap> <scroll-down-command>" #'osm-down
+  "<remap> <scroll-up-command>" #'osm-up
+  "<" nil
+  ">" nil)
 
 (defconst osm--placeholder
   '(:type svg :width 256 :height 256
@@ -1043,14 +1042,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--header-button (text action)
   "Format header line button with TEXT and ACTION."
   (propertize text
-              'keymap (let ((map (make-sparse-keymap)))
-                        (define-key map [header-line mouse-1]
-                          (if (commandp action)
-                              (lambda ()
-                                (interactive "@")
-                                (call-interactively action))
-                            action))
-                        map)
+              'keymap (define-keymap "<header-line> <mouse-1>"
+                        (if (commandp action)
+                            (lambda ()
+                              (interactive "@")
+                              (call-interactively action))
+                          action))
               'face '(:box (:line-width -2 :style released-button))
               'mouse-face '(:box (:line-width -2 :style pressed-button))))
 
@@ -1117,12 +1114,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
               'help-echo
               (format "Go to %s" url)
               'keymap
-              (let ((map (make-sparse-keymap)))
-                (define-key map [tab-line mouse-1]
-                  (lambda ()
-                    (interactive)
-                    (browse-url url)))
-                map)))
+              (define-keymap "<tab-line> <mouse-1>"
+                (lambda ()
+                  (interactive)
+                  (browse-url url)))))
 
 (defun osm--update-copyright ()
   "Update copyright info."
@@ -1138,9 +1133,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                           (match-string 2 str)))
                        (concat
                         " "
-                        (if (listp copyright)
-                            (string-join copyright " | ")
-                          copyright)
+                        (string-join (ensure-list copyright) " | ")
                         (propertize " " 'display '(space :align-to (+ 42 right))))))
       (add-face-text-property
        0 (length copyright)
@@ -1306,7 +1299,7 @@ Optionally place transient pin with ID and NAME."
 ;;;###autoload
 (defun osm (&rest link)
   "Go to LINK.
-When called interactively, call `osm-home'."
+When called interactively, call the function `osm-home'."
   (interactive (list 'home))
   (pcase link
     ('(home)
@@ -1510,7 +1503,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                (replace-regexp-in-string
                 "{\\(.*?\\)|.*?}"
                 (lambda (str) (match-string 1 str))
-                (if (listp copyright) (string-join copyright " | ") copyright))))
+                (string-join (ensure-list copyright) " | ") copyright)))
     (concat (propertize " " 'display ` (space :align-to (- right ,(length str) 2)))
             " "
             str)))
