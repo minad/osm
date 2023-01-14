@@ -1250,11 +1250,11 @@ Optionally place transient pin with ID and NAME."
          ;; Search for existing buffer
          (cl-loop
           for buf in (buffer-list) thereis
-          (and (eq (buffer-local-value 'major-mode buf) #'osm-mode)
-               (eq (buffer-local-value 'osm-server buf) def-server)
-               (eq (buffer-local-value 'osm--zoom buf) def-zoom)
-               (eq (buffer-local-value 'osm--lat buf) def-lat)
-               (eq (buffer-local-value 'osm--lon buf) def-lon)
+          (and (equal (buffer-local-value 'major-mode buf) #'osm-mode)
+               (equal (buffer-local-value 'osm-server buf) def-server)
+               (equal (buffer-local-value 'osm--zoom buf) def-zoom)
+               (equal (buffer-local-value 'osm--lat buf) def-lat)
+               (equal (buffer-local-value 'osm--lon buf) def-lon)
                buf)))
        (generate-new-buffer "*osm*"))
     (unless (eq major-mode #'osm-mode)
