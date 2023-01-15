@@ -33,7 +33,7 @@ for locations by name and to open and display GPX tracks.
 - Map scale indicator
 - Go to coordinate
 - Search for location by name
-- Org and Elisp link support
+- Org link, Geo url and Elisp link support
 - Bookmarked positions with pins
 - Multiple preconfigured tile servers
 
@@ -65,13 +65,19 @@ Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additi
       (require 'osm-ol)))
 #+end_src
 
-* Bookmarks, Org and Elisp links
+* Bookmarks, Org links, Geo urls and Elisp links
 
-To store a bookmark press the key ~b~, to store Org/Elisp links press the keys ~l~
-or ~e~ respectively. You can also use a custom binding, e.g., ~C-c l~. Then the link
-can be inserted into an Org buffer with ~C-c C-l~. Bookmarks and Org links can be
-created at point with the mouse, see ~osm-bookmark-set-click~ and
-~osm-org-link-click~.
+There exist multiple methods to store the current location.
+
+- ~b~: Create a bookmark of the current location.
+- ~l~: Store an Org link to the current location. The link can the be inserted
+  into an Org buffer with ~C-c C-l~.
+- ~u~: Save the geo url of the current location in the kill ring. The url can be
+  inserted in another buffer via ~C-y~.
+- ~C-u u~: Save an Elisp link to the current location in the kill ring.
+
+Bookmarks and Org links can be created at point with the mouse, see
+~osm-bookmark-set-click~ and ~osm-org-link-click~.
 
 **** Org link examples
 
@@ -134,7 +140,7 @@ Key bindings in =osm-mode= buffer:
 - ~x~: =osm-gpx-show= - Show tracks and POIs from GPX file
 - ~X~: =osm-gpx-hide= - Hide overlays from GPX file
 - ~l~: =org-store-link= - Store Org link
-- ~e~: =osm-elisp-link= - Store Elisp link in the kill ring
+- ~u~: =osm-save-url= - Save geo url in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~n~: =osm-bookmark-rename= - Rename selected bookmark
 - ~j~: =osm-bookmark-jump= - Jump to bookmark

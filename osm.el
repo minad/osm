@@ -249,7 +249,7 @@ Should be at least 7 days according to the server usage policies."
     ["Server" osm-server t]
     "--"
     ["Org Link" org-store-link t]
-    ["Elisp Link" osm-elisp-link t]
+    ["Geo Url" osm-save-url t]
     ("Bookmark"
      ["Set" osm-bookmark-set t]
      ["Jump" osm-bookmark-jump t]
@@ -310,7 +310,7 @@ Should be at least 7 days according to the server usage policies."
   "t" #'osm-goto
   "s" #'osm-search
   "v" #'osm-server
-  "e" #'osm-elisp-link
+  "u" #'osm-save-url
   "l" 'org-store-link
   "b" #'osm-bookmark-set
   "j" #'osm-bookmark-jump
@@ -1569,19 +1569,24 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                              (error "No server selected"))))))
   (osm--goto nil nil nil server nil nil))
 
-(defun osm-elisp-link ()
-  "Store coordinates as an Elisp link in the kill ring."
-  (interactive)
+(defun osm-save-url (&optional arg)
+  "Save coordinates as url in the kill ring.
+If prefix ARG is given, store url as Elisp expression."
+  (interactive "P")
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Elisp Link"))
-               (link (format "(osm %.6f %.6f %s%s%s)"
-                             lat lon osm--zoom
-                             (if (eq osm-server (default-value 'osm-server))
-                                 ""
-                               (format " '%s" osm-server))
-                             (if loc (format " %S" loc) ""))))
-    (kill-new link)
-    (message "Stored in the kill ring: %s" link)))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Link"))
+               (server (and (not (eq osm-server (default-value 'osm-server))) osm-server))
+               (url (if arg
+                         (format "(osm %.6f %.6f %s%s%s)"
+                                 lat lon osm--zoom
+                                 (if server (format " '%s" osm-server) "")
+                                 (if loc (format " %S" loc) ""))
+                       (format "geo:%.6f,%.6f;z=%s%s%s"
+                               lat lon osm--zoom
+                               (if server (format ";s=%s" osm-server) "")
+                               (if loc (format " (%s)" loc) "")))))
+    (kill-new url)
+    (message "Stored in the kill ring: %s" url)))
 
 ;;;###autoload
 (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm))
@@ -1589,7 +1594,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
-                   #'osm-elisp-link))
+                   #'osm-save-url))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-transient-click #'osm-org-link-click
                    #'osm-poi-click #'osm-bookmark-set-click #'osm-bookmark-select-click))
