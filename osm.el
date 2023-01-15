@@ -1586,7 +1586,7 @@ If prefix ARG is given, store url as Elisp expression."
                                (if server (format ";s=%s" osm-server) "")
                                (if loc (format " (%s)" loc) "")))))
     (kill-new url)
-    (message "Stored in the kill ring: %s" url)))
+    (message "Saved in the kill ring: %s" url)))
 
 ;;;###autoload
 (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm))
