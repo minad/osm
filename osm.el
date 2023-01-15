@@ -1515,12 +1515,12 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
 
 (defun osm--server-annotation (cand)
   "Annotation for server CAND."
-  (when-let* ((copyright (osm--server-property :copyright (get-text-property 0 'osm--server cand)))
-              (str
-               (replace-regexp-in-string
-                "{\\(.*?\\)|.*?}"
-                (lambda (str) (match-string 1 str))
-                (string-join (ensure-list copyright) " | ") copyright)))
+  (when-let ((copyright (osm--server-property :copyright (get-text-property 0 'osm--server cand)))
+             (str
+              (replace-regexp-in-string
+               "{\\(.*?\\)|.*?}"
+               (lambda (str) (match-string 1 str))
+               (string-join (ensure-list copyright) " | ") copyright)))
     (concat (propertize " " 'display ` (space :align-to (- right ,(length str) 2)))
             " "
             str)))
