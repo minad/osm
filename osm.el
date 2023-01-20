@@ -50,6 +50,8 @@
 
 (defgroup osm nil
   "OpenStreetMap viewer."
+  :link '(url-link "https://github.com/minad/osm")
+  :link '(info-link "(osm)")
   :group 'web
   :prefix "osm-")
 
