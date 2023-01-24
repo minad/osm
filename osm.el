@@ -760,9 +760,6 @@ Should be at least 7 days according to the server usage policies."
         (push (format "%s support" type) req)))
     (unless (libxml-available-p)
       (push "libxml" req))
-    ;; json-available-p is not available on Emacs 27
-    (unless (ignore-errors (equal [] (json-parse-string "[]")))
-      (push "libjansson" req))
     (when req
       (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
              (string-join req ", ")))))
@@ -1410,7 +1407,7 @@ When called interactively, call the function `osm-home'."
 (defun osm--fetch-json (url)
   "Get json from URL."
   (osm--check-libraries)
-  (json-parse-string
+  (compat-call json-parse-string
    (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
      (shell-command-to-string
       (concat
