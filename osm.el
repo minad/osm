@@ -1383,11 +1383,15 @@ When called interactively, call the function `osm-home'."
   (unwind-protect
       (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected-bookmark "New Bookmark"))
                    (def (osm--bookmark-name lat lon loc))
-                   (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
+                   (name
+                    (progn
+                      (setf (caddr osm--transient-pin) 'osm-transient)
+                      (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def)))
                    (bookmark-make-record-function
                     (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
-        (message "Stored bookmark: %s" name))
+        (message "Stored bookmark: %s" name)
+        (setf (caddr osm--transient-pin) 'osm-selected-bookmark))
     (osm--revert)))
 
 (defun osm--fetch-location-data (id name)
