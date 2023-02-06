@@ -492,7 +492,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--download-filter (output)
   "Filter function for the download process which receives OUTPUT."
   (while (string-match
-          "\\`\\([0-9]+\\) \\(.*?/\\([^/]+\\)/\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)\\..+\\)\n"
+          "\\`\\([0-9]+\\) \\(.*?/\\([^/]+\\)/\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)\\.[^\r\n]+\\)\r?\n"
           output)
     (let ((status (match-string 1 output))
           (file (match-string 2 output))
