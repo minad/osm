@@ -25,10 +25,11 @@
 
 (require 'ol)
 
+(declare-function osm "ext:osm")
 (declare-function osm--org-link-props "ext:osm")
 (org-link-set-parameters
  "geo"
- :follow (lambda (link _) (browse-url (concat "geo:" link)))
+ :follow (lambda (link _) (osm (concat "geo:" link)))
  :store (lambda ()
           (when (derived-mode-p 'osm-mode)
             (apply #'org-link-store-props (osm--org-link-props)))))
