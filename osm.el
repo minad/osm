@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.10
-;; Package-Requires: ((emacs "27.1") (compat "29.1.3.4"))
+;; Package-Requires: ((emacs "27.1") (compat "29.1.4.0"))
 ;; Homepage: https://github.com/minad/osm
 
 ;; This file is part of GNU Emacs.
@@ -184,7 +184,7 @@ A comma-separated specifies descending order of preference.  See also
 (defcustom osm-track-style
   "stroke:#00A;stroke-width:10;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
   "SVG style used to draw tracks."
-  :type'string)
+  :type 'string)
 
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
@@ -200,7 +200,7 @@ A comma-separated specifies descending order of preference.  See also
 
 (defcustom osm-large-step 256
   "Scroll step in pixel."
-  :type 'integer)
+  :type 'natnum)
 
 (defcustom osm-tile-border nil
   "Display tile borders.
@@ -209,7 +209,7 @@ Useful for debugging, set to value `debug'."
 
 (defcustom osm-small-step 16
   "Scroll step in pixel."
-  :type 'integer)
+  :type 'natnum)
 
 (defcustom osm-server 'default
   "Tile server name."
@@ -223,11 +223,11 @@ Useful for debugging, set to value `debug'."
 (defcustom osm-max-age 14
   "Maximum tile age in days.
 Should be at least 7 days according to the server usage policies."
-  :type '(choice (const nil) integer))
+  :type '(choice (const nil) natnum))
 
 (defcustom osm-max-tiles 256
   "Size of tile memory cache."
-  :type '(choice (const nil) integer))
+  :type '(choice (const nil) natnum))
 
 (defun osm--menu-item (menu &optional name)
   "Generate menu item from MENU and optional NAME."
