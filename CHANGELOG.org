@@ -2,6 +2,11 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- Ensure that mouse pointer is an arrow over the map.
+- Use =natnum= defcustom type.
+
 * Version 0.10 (2023-02-15)
 
 - Start of changelog.
