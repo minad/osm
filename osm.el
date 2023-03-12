@@ -1054,33 +1054,29 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ osm--lat (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
          (server (osm--server-property :name))
          (meter 1) (idx 0)
-         (factor '(2 2.5 2)))
+         (factor '(2 2.5 2))
+         (sep #(" " 0 1 (display (space :width (1))))))
     (while (and (< idx 20) (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 150))
       (setq meter (round (* meter (nth (mod idx 3) factor))))
       (cl-incf idx))
     (setq-local
      header-line-format
      (list
-      (osm--header-button " ☰ " (osm--menu-item osm--menu "Menu"))
-      (propertize " " 'display '(space :width (1)))
+      (osm--header-button " ☰ " (osm--menu-item osm--menu "Menu")) sep
       (osm--header-button (format " %s " server)
-                          (osm--menu-item #'osm--server-menu "Server"))
-      (propertize " " 'display '(space :width (1)))
-      (osm--header-button " + " #'osm-zoom-in)
-      (propertize " " 'display '(space :width (1)))
+                          (osm--menu-item #'osm--server-menu "Server")) sep
+      (osm--header-button " + " #'osm-zoom-in) sep
       (osm--header-button " - " #'osm-zoom-out)
       (format " Z%-2d " osm--zoom)
-      (propertize " " 'display '(space :align-to (- center 15)))
-      (format (propertize " %7.2f° %7.2f°" 'face 'bold) osm--lat osm--lon)
-      (propertize " " 'display '(space :align-to (- right 20)))
+      #(" " 0 1 (display (space :align-to (- center 15))))
+      (format #(" %7.2f° %7.2f°" 0 14 (face bold)) osm--lat osm--lon)
+      #(" " 0 1 (display (space :align-to (- right 20))))
       (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
       (if (>= meter 1000) "km " "m ")
-      (propertize " " 'face '(:inverse-video t)
-                  'display '(space :width (3)))
+      #(" " 0 1 (face (:inverse-video t) display (space :width (3))))
       (propertize " " 'face '(:strike-through t)
                   'display `(space :width (,(floor (/ meter meter-per-pixel)))))
-      (propertize " " 'face '(:inverse-video t)
-                  'display '(space :width (3)))))))
+      #(" " 0 1 (face (:inverse-video t) display (space :width (3))))))))
 
 (defun osm--update ()
   "Update map display."
@@ -1132,7 +1128,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                        (concat
                         " "
                         (string-join (ensure-list copyright) " | ")
-                        (propertize " " 'display '(space :align-to (+ 42 right))))))
+                        #(" " 0 1 (display (space :align-to (+ 42 right)))))))
       (add-face-text-property
        0 (length copyright)
        '(:inherit (header-line variable-pitch) :height 0.65)
@@ -1524,7 +1520,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                "{\\(.*?\\)|.*?}"
                (lambda (str) (match-string 1 str))
                (string-join (ensure-list copyright) " | ") copyright)))
-    (concat (propertize " " 'display ` (space :align-to (- right ,(length str) 2)))
+    (concat (propertize " " 'display `(space :align-to (- right ,(length str) 2)))
             " "
             str)))
 
