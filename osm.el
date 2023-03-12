@@ -1145,6 +1145,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (erase-buffer)
     (dotimes (_j osm--ny)
       (insert (make-string osm--nx ?\s) "\n"))
+    (put-text-property (point-min) (point-max) 'pointer 'arrow)
     (goto-char (point-min))
     (let ((tx (/ (osm--x0) 256))
           (ty (/ (osm--y0) 256)))
