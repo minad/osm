@@ -292,6 +292,9 @@ Should be at least 7 days according to the server usage policies."
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
+  "<drag-mouse-1>" #'ignore
+  "<drag-mouse-2>" #'ignore
+  "<drag-mouse-3>" #'ignore
   "<up>" #'osm-up
   "<down>" #'osm-down
   "<left>" #'osm-left
