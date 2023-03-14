@@ -923,7 +923,7 @@ TPIN is an optional transient pin."
                                  (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
-                              ,id (help-echo ,(truncate-string-to-width name 40 0 nil t) pointer hand))
+                              ,id (help-echo ,(truncate-string-to-width name 40 0 nil t)))
                             areas)
                       ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       (format "
