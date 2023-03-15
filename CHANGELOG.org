@@ -6,6 +6,7 @@
 
 - Ensure that mouse pointer is an arrow over the map.
 - Use =natnum= defcustom type.
+- Ignore mouse drags to avoid region marking.
 
 * Version 0.10 (2023-02-15)
 
