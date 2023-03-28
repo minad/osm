@@ -788,6 +788,8 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-down-function #'osm--zoom-in-wheel
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
+              mwheel-coalesce-scroll-events t
+              pixel-scroll-precision-mode nil
               bookmark-make-record-function #'osm--bookmark-record-default)
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
