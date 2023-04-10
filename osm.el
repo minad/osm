@@ -8,6 +8,7 @@
 ;; Version: 0.10
 ;; Package-Requires: ((emacs "27.1") (compat "29.1.4.0"))
 ;; Homepage: https://github.com/minad/osm
+;; Keywords: comm, multimedia
 
 ;; This file is part of GNU Emacs.
 
