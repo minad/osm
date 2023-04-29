@@ -245,32 +245,8 @@ Should be at least 7 days according to the server usage policies."
           menu)
         name))))
 
-(defvar osm--menu
-  '(["Home" osm-home t]
-    ["Center" osm-center t]
-    ["Go to" osm-goto t]
-    ["Search" osm-search t]
-    ["Server" osm-server t]
-    "--"
-    ["Org Link" org-store-link t]
-    ["Geo Url" osm-save-url t]
-    ("Bookmark"
-     ["Set" osm-bookmark-set t]
-     ["Jump" osm-bookmark-jump t]
-     ["Rename" osm-bookmark-rename t]
-     ["Delete" osm-bookmark-delete t])
-    "--"
-    ["Show GPX" osm-gpx-show t]
-    ["Hide GPX" osm-gpx-hide t]
-    "--"
-    ["Clone" clone-buffer t]
-    ["Revert" revert-buffer t]
-    ["Customize" (customize-group 'osm) t])
-  "Menu for `osm-mode'.")
-
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
-  "<menu-bar> <osm--menu>" (osm--menu-item osm--menu)
   "<osm-home>" #'ignore
   "<osm-link>" #'ignore
   "<osm-transient>" #'ignore
@@ -327,6 +303,32 @@ Should be at least 7 days according to the server usage policies."
   "<remap> <scroll-up-command>" #'osm-up
   "<" nil
   ">" nil)
+
+(easy-menu-define osm-mode-menu osm-mode-map
+  "Menu for `osm-mode'."
+  '("OSM"
+    ["Home" osm-home]
+    ["Center" osm-center]
+    ["Go to" osm-goto]
+    ["Search" osm-search]
+    ["Server" osm-server]
+    "--"
+    ["Org Link" org-store-link]
+    ["Geo Url" osm-save-url]
+    ("Bookmark"
+     ["Set" osm-bookmark-set]
+     ["Jump" osm-bookmark-jump]
+     ["Rename" osm-bookmark-rename]
+     ["Delete" osm-bookmark-delete])
+    "--"
+    ["Show GPX" osm-gpx-show]
+    ["Hide GPX" osm-gpx-hide]
+    "--"
+    ["Clone" clone-buffer]
+    ["Revert" revert-buffer]
+    "--"
+    ["Manual" (info "(osm)")]
+    ["Customize" (customize-group 'osm)]))
 
 (defconst osm--placeholder
   '(:type svg :width 256 :height 256
@@ -1070,7 +1072,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq-local
      header-line-format
      (list
-      (osm--header-button " ☰ " (osm--menu-item osm--menu "Menu")) sep
+      (osm--header-button " ☰ " (osm--menu-item osm-mode-menu "Menu")) sep
       (osm--header-button (format " %s " server)
                           (osm--menu-item #'osm--server-menu "Server")) sep
       (osm--header-button " + " #'osm-zoom-in) sep
