@@ -1598,7 +1598,8 @@ If prefix ARG is given, store url as Elisp expression."
     (message "Saved in the kill ring: %s" url)))
 
 ;;;###autoload
-(add-to-list 'browse-url-default-handlers '("\\`geo:" . osm))
+(when (>= emacs-major-version 28)
+  (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm)))
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
