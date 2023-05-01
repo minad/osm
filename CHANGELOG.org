@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 0.12 (2023-05-01)
 
 - Autoload bugfix for Emacs 27
 - Use =easy-menu-define= to make sure that the menu bar and the mode line both get
