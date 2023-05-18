@@ -245,8 +245,21 @@ Should be at least 7 days according to the server usage policies."
           menu)
         name))))
 
+(defvar-keymap osm-prefix-map
+  :doc "Global prefix map of OSM entry points."
+  "h" #'osm-home
+  "s" #'osm-search
+  "v" #'osm-server
+  "t" #'osm-goto
+  "x" #'osm-gpx-show
+  "j" #'osm-bookmark-jump)
+
+;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
+(defalias 'osm-prefix-map osm-prefix-map)
+
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
+  :parent (make-composed-keymap osm-prefix-map special-mode-map)
   "<osm-home>" #'ignore
   "<osm-link>" #'ignore
   "<osm-transient>" #'ignore
@@ -289,15 +302,9 @@ Should be at least 7 days according to the server usage policies."
   "DEL" #'osm-bookmark-delete
   "c" #'osm-center
   "o" #'clone-buffer
-  "h" #'osm-home
-  "t" #'osm-goto
-  "s" #'osm-search
-  "v" #'osm-server
   "u" #'osm-save-url
   "l" 'org-store-link
   "b" #'osm-bookmark-set
-  "j" #'osm-bookmark-jump
-  "x" #'osm-gpx-show
   "X" #'osm-gpx-hide
   "<remap> <scroll-down-command>" #'osm-down
   "<remap> <scroll-up-command>" #'osm-up

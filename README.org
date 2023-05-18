@@ -47,12 +47,7 @@ Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additi
 
 #+begin_src emacs-lisp
   (use-package osm
-    :bind (("C-c m h" . osm-home)
-           ("C-c m s" . osm-search)
-           ("C-c m v" . osm-server)
-           ("C-c m t" . osm-goto)
-           ("C-c m x" . osm-gpx-show)
-           ("C-c m j" . osm-bookmark-jump))
+    :bind ("C-c m" . osm-prefix-map) ;; Alternative: `osm-home'
 
     :custom
     ;; Take a look at the customization group `osm' for more options.
@@ -113,15 +108,15 @@ Elisp s-expressions they can be easily manipulated programatically.
 
 * Commands and Key Bindings
 
-Top-level commands:
-- =osm-home=: Open new map at home coordinates
-- =osm-search=: Search and jump to location
-- =osm-goto=: Go to coordinates
-- =osm-server=: Select server
-- =osm-bookmark-jump=: Jump to bookmark
-- =osm-gpx-show=: Show GPX file in map viewer
+Top-level commands in =osm-prefix-map=:
+- ~h~: =osm-home= - Open new map at home coordinates
+- ~s~: =osm-search= - Search and jump to location
+- ~t~: =osm-goto= - Go to coordinates
+- ~v~: =osm-server= - Select server
+- ~j~: =osm-bookmark-jump= - Jump to bookmark
+- ~x~: =osm-gpx-show= - Show GPX file in map viewer
 
-Key bindings in =osm-mode= buffer:
+Additional key bindings in =osm-mode= buffer:
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
@@ -132,18 +127,12 @@ Key bindings in =osm-mode= buffer:
 - ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-mouse-drag= - Drag the map with the mouse
 - ~d~, ~DEL~: =osm-bookmark-delete= - Delete selected bookmark
-- ~t~: =osm-goto= - Go to location
 - ~c~: =osm-center= - Center to currently marked pin
-- ~h~: =osm-home= - Go to home location
-- ~s~: =osm-search= - Search for location
-- ~v~: =osm-server= - Select tile server
-- ~x~: =osm-gpx-show= - Show tracks and POIs from GPX file
 - ~X~: =osm-gpx-hide= - Hide overlays from GPX file
 - ~l~: =org-store-link= - Store Org link
 - ~u~: =osm-save-url= - Save geo url in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
 - ~n~: =osm-bookmark-rename= - Rename selected bookmark
-- ~j~: =osm-bookmark-jump= - Jump to bookmark
 - ~q~: =quit-window= - Close buffer and window
 - ~o~: =clone-buffer= - Clone buffer
 
