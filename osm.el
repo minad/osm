@@ -164,7 +164,11 @@ A comma-separated specifies descending order of preference.  See also
      :group "Artistic"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
-  "List of tile servers."
+  "List of tile servers.
+The :url of each server should specify %x, %y and %z placeholders
+for the map coordinates.  It can optionally use an %s placeholder
+for the subdomain and a %k placeholder for an api-key, which will
+be retrieved via `auth-source-search'."
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-copyright t
@@ -480,8 +484,25 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
   (let ((url (osm--server-property :url))
-        (sub (osm--server-property :subdomains)))
+        (sub (osm--server-property :subdomains))
+        (key (osm--server-property :key)))
+    (when (and (string-search "%k" url) (not key))
+      (require 'auth-source)
+      (declare-function auth-source-search "auth-source")
+      (let ((host (string-join
+                   (last (split-string (cadr (split-string url "/" t)) "\\.") 2)
+                   ".")))
+        (setq key (plist-get
+                   (car (auth-source-search :require '(:user :host :secret)
+                                            :host host
+                                            :user "apikey"))
+                   :secret))
+        (unless key
+          (warn "No auth source secret found for apikey@%s" host)
+          (setq key ""))
+        (setf (plist-get (alist-get osm-server osm-server-list) :key) key)))
     (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
+                       (?k . ,(if (functionp key) (funcall key) key))
                        (?s . ,(nth (mod osm--subdomain-index (length sub)) sub))))))
 
 (defun osm--tile-file (x y zoom)

@@ -5,6 +5,7 @@
 * Development
 
 - Provide =osm-prefix-map=.
+- =osm-server-list=: Add support for an api-key placeholder =%k= in the server =:url=.
 
 * Version 0.12 (2023-05-01)
 
