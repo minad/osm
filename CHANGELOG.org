@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 0.13 (2023-07-02)
 
 - Provide =osm-prefix-map=.
 - =osm-server-list=: Add support for an api-key placeholder =%k= in the server =:url=.
