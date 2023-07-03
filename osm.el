@@ -1453,9 +1453,25 @@ When called interactively, call the function `osm-home'."
    :array-type 'list
    :object-type 'alist))
 
+(defun osm--search (needle)
+  "Globally search for NEEDLE and return the list of results."
+  (mapcar
+   (lambda (x)
+     (let ((lat (string-to-number (alist-get 'lat x)))
+           (lon (string-to-number (alist-get 'lon x))))
+       `(,(format "%s (%.6f° %.6f°)"
+                  (alist-get 'display_name x)
+                  lat lon)
+         ,lat ,lon
+         ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
+   (or
+    (osm--fetch-json
+     (format "https://nominatim.openstreetmap.org/search?format=json&accept-language=%s&q=%s"
+             osm-search-language (url-encode-url needle))))))
+
 ;;;###autoload
-(defun osm-search (search &optional lucky)
-  "Search for SEARCH and display the map.
+(defun osm-search (needle &optional lucky)
+  "Globally search for NEEDLE and display the map.
 If the prefix argument LUCKY is non-nil take the first result and jump there."
   (interactive
    (list (completing-read "Location: "
@@ -1463,25 +1479,12 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                           nil nil nil 'osm--search-history)
          current-prefix-arg))
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((results (mapcar
-                   (lambda (x)
-                     (let ((lat (string-to-number (alist-get 'lat x)))
-                           (lon (string-to-number (alist-get 'lon x))))
-                       `(,(format "%s (%.6f° %.6f°)"
-                                  (alist-get 'display_name x)
-                                  lat lon)
-                         ,lat ,lon
-                         ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
-                   (or
-                    (osm--fetch-json
-                     (format "https://nominatim.openstreetmap.org/search?format=json&accept-language=%s&q=%s"
-                             osm-search-language (url-encode-url search)))
-                    (error "No results"))))
+  (let* ((results (or (osm--search needle) (error "No results")))
          (selected (or
                     (and (or lucky (not (cdr results))) (car results))
                     (assoc
                      (completing-read
-                      (format "Matches for '%s': " search)
+                      (format "Matches for '%s': " needle)
                       (osm--sorted-table results)
                       nil t)
                      results)
