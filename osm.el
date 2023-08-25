@@ -822,7 +822,7 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--bookmark-record-default)
   (when (boundp 'mwheel-coalesce-scroll-events)
     (setq-local mwheel-coalesce-scroll-events t))
-  (when (bound-and-true-p pixel-scroll-precision-mode)
+  (when (boundp 'pixel-scroll-precision-mode)
     (setq-local pixel-scroll-precision-mode nil))
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
