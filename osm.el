@@ -882,6 +882,20 @@ Should be at least 7 days according to the server usage policies."
         (osm--put-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
     pins))
 
+(defun osm--imenu-goto (_name pos)
+  (osm--goto (aref pos 0) (aref pos 1) nil nil nil nil))
+
+(defun osm--imenu-index ()
+  (let (index)
+    (dolist (bm bookmark-alist)
+      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+        (let ((coords (bookmark-prop-get bm 'coordinates)))
+          (push `(,(car bm) . [,(car coords) ,(cadr coords)]) index))))
+    (dolist (file osm--gpx-files)
+      (dolist (pt (cddr file))
+        (push `(,(car pt) . [,(cadr pt) ,(cddr pt)]) index)))
+    (sort index (lambda (x y) (string< (car x) (car y))))))
+
 ;; TODO The Bresenham algorithm used here to add the line segments
 ;; to the tiles has the issue that lines which go along a tile
 ;; border may be drawn only partially. We can fix this by starting
