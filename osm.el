@@ -139,8 +139,9 @@ A comma-separated specifies descending order of preference.  See also
   "List of tile servers.
 The :url of each server should specify %x, %y and %z placeholders
 for the map coordinates.  It can optionally use an %s placeholder
-for the subdomain and a %k placeholder for an api-key, which will
-be retrieved via `auth-source-search'."
+for the subdomain and a %k placeholder for an apikey.  The apikey
+will be retrieved via `auth-source-search' with the :host set to
+the domain name and the :user to the string \"apikey\"."
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-copyright t
