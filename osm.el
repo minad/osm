@@ -80,22 +80,22 @@ A comma-separated specifies descending order of preference.  See also
 
 (defcustom osm-server-list
   '((default
-     :name "Mapnik"
-     :description "Standard Mapnik map provided by OpenStreetMap"
+     :name "Carto"
+     :description "Standard Carto map provided by OpenStreetMap"
      :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
-     :name "Mapnik(de)"
-     :description "Localized Mapnik map provided by OpenStreetMap Germany"
+     :name "Carto(de)"
+     :description "Localized Carto map provided by OpenStreetMap Germany"
      :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
     (fr
-     :name "Mapnik(fr)"
-     :description "Localized Mapnik map by OpenStreetMap France"
+     :name "Carto(fr)"
+     :description "Localized Carto map by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
