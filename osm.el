@@ -75,7 +75,8 @@ A comma-separated specifies descending order of preference.  See also
     :download-batch 4
     :max-connections 2
     :subdomains ("a" "b" "c"))
-  "Default server properties."
+  "Default server properties.
+See also `osm-server-list'."
   :type 'plist)
 
 (defcustom osm-server-list
@@ -149,6 +150,9 @@ Allowed keys:
   :download-batch  Number of tiles downloaded via a single connection
   :max-connections Maximum number of parallel connections
   :subdomains      Subdomains used for the %s placeholder
+
+See also `osm-server-defaults' for default values used for a
+server if the property is missing.
 
 The :url of each server should specify %x, %y, %z and %s placeholders
 for the map coordinates.  It can optionally use an %s placeholder
@@ -1621,7 +1625,8 @@ If prefix ARG is given, store url as Elisp expression."
                           &key name description group url max-connections
                           max-zoom min-zoom download-batch subdomains copyright)
   "Add SERVER with properties to `osm-server-list'.
-The properties are checked as keyword arguments."
+The properties are checked as keyword arguments.  See
+`osm-server-list' for documentation of the keywords."
   (declare (indent 1))
   (ignore name description group url max-connections max-zoom
           min-zoom download-batch subdomains copyright)
