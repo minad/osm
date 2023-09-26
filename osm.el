@@ -137,7 +137,20 @@ A comma-separated specifies descending order of preference.  See also
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
   "List of tile servers.
-The :url of each server should specify %x, %y and %z placeholders
+
+Allowed keys:
+  :name            Server name
+  :description     Server description
+  :copyright       Copyright information
+  :group           Name of server groups for related servers
+  :url             Url with placeholders
+  :min-zoom        Minimum zoom level
+  :max-zoom        Maximum zoom level
+  :download-batch  Number of tiles downloaded via a single connection
+  :max-connections Maximum number of parallel connections
+  :subdomains      Subdomains used for the %s placeholder
+
+The :url of each server should specify %x, %y, %z and %s placeholders
 for the map coordinates.  It can optionally use an %s placeholder
 for the subdomain and a %k placeholder for an apikey.  The apikey
 will be retrieved via `auth-source-search' with the :host set to
@@ -1602,6 +1615,23 @@ If prefix ARG is given, store url as Elisp expression."
                                (if loc (format " (%s)" loc) "")))))
     (kill-new url)
     (message "Saved in the kill ring: %s" url)))
+
+(cl-defun osm-add-server (server
+                          &rest props
+                          &key name description group url max-connections
+                          max-zoom min-zoom download-batch subdomains copyright)
+  "Add SERVER with properties to `osm-server-list'.
+The properties are checked as keyword arguments."
+  (declare (indent 1))
+  (ignore name description group url max-connections max-zoom
+          min-zoom download-batch subdomains copyright)
+  (dolist (sym '(:name :description :group :url))
+    (unless (stringp (plist-get props sym))
+      (error "Server property %s is required" sym)))
+  (unless (and server (symbolp server))
+    (error "Server id must be a symbol."))
+  (setf (alist-get server osm-server-list) props)
+  nil)
 
 ;;;###autoload
 (when (>= emacs-major-version 28)
