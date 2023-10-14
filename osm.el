@@ -1492,8 +1492,10 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                   (when (and (eq completing-read-function #'completing-read-default)
                              (not (bound-and-true-p vertico-mode))
                              (not (bound-and-true-p icomplete-mode)))
-                    ;; Show matches immediately for default completion.
-                    (minibuffer-completion-help)))
+                    (let ((message-log-max nil)
+                          (inhibit-message t))
+                      ;; Show matches immediately for default completion.
+                      (minibuffer-completion-help))))
               (completing-read
                (format "Matches for '%s': " needle)
                (osm--sorted-table results)
