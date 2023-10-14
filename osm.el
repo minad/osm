@@ -1466,21 +1466,40 @@ When called interactively, call the function `osm-home'."
   "Globally search for NEEDLE and display the map.
 If the prefix argument LUCKY is non-nil take the first result and jump there."
   (interactive
-   (list (completing-read "Location: "
-                          (osm--sorted-table osm--search-history)
-                          nil nil nil 'osm--search-history)
-         current-prefix-arg))
+   (list
+    (minibuffer-with-setup-hook
+        (lambda ()
+          (when (and (eq completing-read-function #'completing-read-default)
+                     (not (bound-and-true-p vertico-mode)))
+            ;; Override dreaded `minibuffer-complete-word' for default
+            ;; completion.  When will this keybinding finally get removed from
+            ;; default completion?
+            (use-local-map (make-composed-keymap
+                            (define-keymap "SPC" nil)
+                            (current-local-map)))))
+      (completing-read "Location: "
+                       (osm--sorted-table osm--search-history)
+                       nil nil nil 'osm--search-history))
+      current-prefix-arg))
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((results (or (osm--search needle) (error "No results")))
-         (selected (or
-                    (and (or lucky (not (cdr results))) (car results))
-                    (assoc
-                     (completing-read
-                      (format "Matches for '%s': " needle)
-                      (osm--sorted-table results)
-                      nil t)
-                     results)
-                    (error "No selection"))))
+  (let* ((results (or (osm--search needle) (error "No results for `%s'" needle)))
+         (selected
+          (or
+           (and (or lucky (not (cdr results))) (car results))
+           (assoc
+            (minibuffer-with-setup-hook
+                (lambda ()
+                  (when (and (eq completing-read-function #'completing-read-default)
+                             (not (bound-and-true-p vertico-mode))
+                             (not (bound-and-true-p icomplete-mode)))
+                    ;; Show matches immediately for default completion.
+                    (minibuffer-completion-help)))
+              (completing-read
+               (format "Matches for '%s': " needle)
+               (osm--sorted-table results)
+               nil t))
+            results)
+           (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
                nil 'osm-transient (car selected))))
