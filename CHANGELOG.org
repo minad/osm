@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 0.14 (2023-10-14)
 
 - Compatibility with =pixel-scroll-precision-mode=.
 - Update list of servers.
