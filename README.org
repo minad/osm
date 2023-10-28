@@ -72,17 +72,22 @@ Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additi
 
 * Bookmarks, Org links, Geo urls and Elisp links
 
-There exist multiple methods to store the current location.
+There exist multiple methods to store a location, such that you can return there
+afterwards.
 
-- ~b~: Create a bookmark of the current location.
-- ~l~: Store an Org link to the current location. The link can the be inserted
-  into an Org buffer with ~C-c C-l~.
+- ~b~: Create a bookmark of the current location. The bookmark is stored as an
+  Emacs bookmark in =bookmark-alist=. You can jump to the bookmark via the
+  completion commands =osm-bookmark-jump= or =bookmark-jump=.
+- ~l~: Store an Org link to the current location. The link can be inserted
+  subsequently into an Org buffer with ~C-c C-l~.
 - ~u~: Save the geo url of the current location in the kill ring. The url can be
-  inserted in another buffer via ~C-y~.
-- ~C-u u~: Save an Elisp link to the current location in the kill ring.
+  inserted in another buffer via ~C-y~. A geo url has the form
+  ~geo:27.96,86.89;z=13~.
+- ~C-u u~: Save an Elisp link to the current location in the kill ring. An Elisp
+  link has the form ~(osm 51.49 -0.14 11)~.
 
-Bookmarks and Org links can be created at point with the mouse, see
-~osm-bookmark-set-click~ and ~osm-org-link-click~.
+Bookmarks and Org links can be created at point by clicking with the mouse. See
+the docstrings of the commands ~osm-bookmark-set-click~ and ~osm-org-link-click~.
 
 **** Org link examples
 
