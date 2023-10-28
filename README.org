@@ -47,7 +47,7 @@ Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additi
 
 #+begin_src emacs-lisp
 (use-package osm
-  :bind ("C-c m" . osm-prefix-map) ;; Alternative: `osm-home'
+  :bind ("C-c m" . osm-prefix-map) ;; Alternatives: `osm-home' or `osm'
 
   :custom
   ;; Take a look at the customization group `osm' for more options.
@@ -121,7 +121,12 @@ Elisp s-expressions they can be easily manipulated programatically.
 
 * Commands and Key Bindings
 
-Top-level commands in =osm-prefix-map=:
+Top-level commands in =osm-prefix-map=. These bindings are available globally if
+you bind =osm-prefix-map= to a key like =C-c m=. For example, to search for a
+location press the key sequence =C-c m s=. Furthermore the key bindings are
+available in Osm buffers. There it is sufficient to press the key =s= only to
+initiate a search.
+
 - ~h~: =osm-home= - Open new map at home coordinates
 - ~s~: =osm-search= - Search and jump to location
 - ~t~: =osm-goto= - Go to coordinates
@@ -129,7 +134,8 @@ Top-level commands in =osm-prefix-map=:
 - ~j~: =osm-bookmark-jump= - Jump to bookmark
 - ~x~: =osm-gpx-show= - Show GPX file in map viewer
 
-Additional key bindings in =osm-mode= buffer:
+Some additional key bindings are available in Osm buffers:
+
 - ~<arrow>~: Small step scrolling
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
