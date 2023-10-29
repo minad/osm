@@ -55,13 +55,13 @@ Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additi
   (osm-copyright t)     ;; Display the copyright information
 
   :init
-  ;; Load Org link support
+  ;; Make sure that Org geo: link support is loaded
   (with-eval-after-load 'org
     (require 'osm-ol))
 
   :config
 
-  ;; Add custom servers
+  ;; Add custom servers, see also https://github.com/minad/osm/wiki
   ;; (osm-add-server 'myserver
   ;;   :name "My tile server"
   ;;   :group "Custom"
