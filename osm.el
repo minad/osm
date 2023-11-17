@@ -872,7 +872,7 @@ Should be at least 7 days according to the server usage policies."
         (osm--put-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
     pins))
 
-;; TODO The Bresenham algorithm used here to add the line segments to the tiles
+;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
 ;; has the issue that lines which go along a tile border may be drawn only
 ;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
 ;; width).
@@ -966,9 +966,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
                           (if (eval-when-compile (> emacs-major-version 27))
                               (file-name-nondirectory file)
-                            ;; NOTE: On Emacs 27, :base-uri and embedding by
-                            ;; file path is not supported. Use the less
-                            ;; efficient base64 encoding.
+                            ;; On Emacs 27, :base-uri and embedding by file path
+                            ;; is not supported. Use the less efficient base64
+                            ;; encoding.
                             (svg--image-data
                              file
                              (if (member (file-name-extension file) '("jpg" "jpeg"))
@@ -1481,7 +1481,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                        (osm--sorted-table osm--search-history)
                        nil nil nil 'osm--search-history))
       current-prefix-arg))
-  ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
+  ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
   (let* ((results (or (osm--search needle) (error "No results for `%s'" needle)))
          (selected
           (or
@@ -1642,26 +1642,38 @@ If prefix ARG is given, store url as Elisp expression."
     (message "Saved in the kill ring: %s" url)))
 
 (cl-defun osm-add-server (server
-                          &rest props
+                          &rest properties
                           &key name description group url max-connections
                           max-zoom min-zoom download-batch subdomains copyright)
-  "Add SERVER with properties to `osm-server-list'.
+  "Add SERVER with PROPERTIES to `osm-server-list'.
 The properties are checked as keyword arguments.  See
 `osm-server-list' for documentation of the keywords."
   (declare (indent 1))
   (ignore name description group url max-connections max-zoom
           min-zoom download-batch subdomains copyright)
   (dolist (sym '(:name :description :group :url))
-    (unless (stringp (plist-get props sym))
+    (unless (stringp (plist-get properties sym))
       (error "Server property %s is required" sym)))
   (unless (and server (symbolp server))
-    (error "Server id must be a symbol."))
-  (setf (alist-get server osm-server-list) props)
+    (error "Server id must be a symbol"))
+  (setf (alist-get server osm-server-list) properties)
   nil)
 
 ;;;###autoload
 (when (>= emacs-major-version 28)
   (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm)))
+
+;;;###autoload
+(eval-after-load 'ol
+  (lambda ()
+    (declare-function org-link-set-parameters "ol")
+    (declare-function osm--org-link-props "ext:osm")
+    (org-link-set-parameters
+     "geo"
+     :follow (lambda (link _) (osm (concat "geo:" link)))
+     :store (lambda ()
+              (when (derived-mode-p 'osm-mode)
+                (apply 'org-link-store-props (osm--org-link-props)))))))
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
