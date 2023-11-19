@@ -1443,14 +1443,14 @@ When called interactively, call the function `osm-home'."
 (defun osm--fetch-json (url)
   "Get json from URL."
   (osm--check-libraries)
-  (json-parse-string
-   (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
-     (shell-command-to-string
-      (concat
-       "curl " osm-curl-options " "
-       (shell-quote-argument url))))
-   :array-type 'list
-   :object-type 'alist))
+  (with-temp-buffer
+    (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
+           (status (apply #'call-process "curl" nil (current-buffer) nil
+                          `(,@(split-string-and-unquote osm-curl-options) ,url))))
+      (unless (eq status 0)
+        (error "Fetching %s exited with status %s" url status)))
+    (goto-char (point-min))
+    (json-parse-buffer :array-type 'list :object-type 'alist)))
 
 (defun osm--search (needle)
   "Globally search for NEEDLE and return the list of results."
