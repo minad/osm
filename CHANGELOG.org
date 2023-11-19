@@ -4,6 +4,7 @@
 
 * Development
 
+- =osm-search-server=: New customization option.
 - Automatically register Org geo links.
 
 * Version 0.14 (2023-10-14)

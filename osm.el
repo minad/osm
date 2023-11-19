@@ -69,6 +69,12 @@ A comma-separated specifies descending order of preference.  See also
 `url-mime-language-string'."
   :type 'string)
 
+(defcustom osm-search-server
+  "https://nominatim.openstreetmap.org"
+  "Server used to search for location names.
+The server must offer the nominatim.org API."
+  :type 'string)
+
 (defcustom osm-server-defaults
   '(:min-zoom 2
     :max-zoom 19
@@ -1430,8 +1436,9 @@ When called interactively, call the function `osm-home'."
             (alist-get
              'display_name
              (osm--fetch-json
-              (format "https://nominatim.openstreetmap.org/reverse?format=json&accept-language=%s&zoom=%s&lat=%s&lon=%s"
-                      osm-search-language (min 18 (max 3 osm--zoom)) lat lon)))))))
+              (format "%s/reverse?format=json&accept-language=%s&zoom=%s&lat=%s&lon=%s"
+                      osm-search-server osm-search-language
+                      (min 18 (max 3 osm--zoom)) lat lon)))))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1458,13 +1465,15 @@ When called interactively, call the function `osm-home'."
          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
    (or
     (osm--fetch-json
-     (format "https://nominatim.openstreetmap.org/search?format=json&accept-language=%s&q=%s"
-             osm-search-language (url-encode-url needle))))))
+     (format "%s/search?format=json&accept-language=%s&q=%s"
+             osm-search-server osm-search-language
+             (url-encode-url needle))))))
 
 ;;;###autoload
 (defun osm-search (needle &optional lucky)
-  "Globally search for NEEDLE and display the map.
-If the prefix argument LUCKY is non-nil take the first result and jump there."
+  "Globally search for NEEDLE on `osm-search-server' and display the map.
+If the prefix argument LUCKY is non-nil take the first result and jump there.
+See `osm-search-server' and `osm-search-language' for customization."
   (interactive
    (list
     (minibuffer-with-setup-hook
