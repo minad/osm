@@ -5,7 +5,8 @@
 * Development
 
 - =osm-search-server=: New customization option.
-- Automatically register Org geo links.
+- Automatically register Org geo links. =osm-ol.el= has been removed and should
+  not be required anymore from the =init.el=.
 
 * Version 0.14 (2023-10-14)
 
