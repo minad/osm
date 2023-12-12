@@ -1427,7 +1427,7 @@ When called interactively, call the function `osm-home'."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
     (osm--put-transient-pin id lat lon name)
-    (message "%s: Fetching name of %.6f %.6f..." name lat lon)
+    (message "%s: Fetching name of %.6f %.6f from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
@@ -1454,6 +1454,7 @@ When called interactively, call the function `osm-home'."
 
 (defun osm--search (needle)
   "Globally search for NEEDLE and return the list of results."
+  (message "Contacting %s" osm-search-server)
   (mapcar
    (lambda (x)
      (let ((lat (string-to-number (alist-get 'lat x)))
@@ -1463,11 +1464,10 @@ When called interactively, call the function `osm-home'."
                   lat lon)
          ,lat ,lon
          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
-   (or
-    (osm--fetch-json
-     (format "%s/search?format=json&accept-language=%s&q=%s"
-             osm-search-server osm-search-language
-             (url-encode-url needle))))))
+   (osm--fetch-json
+    (format "%s/search?format=json&accept-language=%s&q=%s"
+            osm-search-server osm-search-language
+            (url-encode-url needle)))))
 
 ;;;###autoload
 (defun osm-search (needle &optional lucky)
