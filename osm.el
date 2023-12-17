@@ -503,10 +503,10 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
-  (expand-file-name
-   (format "%s%s/%d-%d-%d.%s"
-           osm-tile-directory
-           (symbol-name osm-server)
+  (file-name-concat
+   (expand-file-name osm-tile-directory)
+   (symbol-name osm-server)
+   (format "%d-%d-%d.%s"
            zoom x y
            (file-name-extension
             (url-file-nondirectory
@@ -569,7 +569,8 @@ Should be at least 7 days according to the server usage policies."
                 (* (length (osm--server-property :subdomains))
                    (osm--server-property :max-connections)))
              osm--download-queue)
-    (pcase-let ((dir (concat osm-tile-directory (symbol-name osm-server)))
+    (pcase-let ((dir (file-name-concat (expand-file-name osm-tile-directory)
+                                       (symbol-name osm-server)))
                 (`(,command . ,jobs) (osm--download-command))
                 (buffer (current-buffer))
                 (output ""))
