@@ -4,7 +4,8 @@
 
 * Development
 
-- Delete empty tile cache directories.
+- ~osm--purge-tile-cache~: Delete empty tile cache directories.
+- ~osm-search~: Add message when contacting the server.
 
 * Version 1.0 (2023-12-01)
 
