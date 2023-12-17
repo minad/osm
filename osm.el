@@ -762,17 +762,16 @@ Should be at least 7 days according to the server usage policies."
     (run-with-idle-timer
      30 nil
      (lambda ()
-       (dolist (file
-                (ignore-errors
-                  (directory-files-recursively
-                   osm-tile-directory
-                   "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" nil)))
-         (when (> (float-time
-                   (time-since
-                    (file-attribute-modification-time
-                     (file-attributes file))))
-                  (* 60 60 24 osm-max-age))
-           (delete-file file)))))))
+       (dolist (dir (directory-files osm-tile-directory t "\\`[^.]+\\'" t))
+         (dolist (file (directory-files
+                        dir t "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" t))
+           (when (> (float-time (time-since
+                                 (file-attribute-modification-time
+                                  (file-attributes file))))
+                    (* 60 60 24 osm-max-age))
+             (delete-file file)))
+         (when (directory-empty-p dir)
+           (ignore-errors (delete-directory dir))))))))
 
 (defun osm--check-libraries ()
   "Check that Emacs is compiled with the necessary libraries."
