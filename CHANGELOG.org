@@ -2,6 +2,10 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- Delete empty tile cache directories.
+
 * Version 1.0 (2023-12-01)
 
 - =osm-search-server=: New customization option.
