@@ -472,6 +472,12 @@ Should be at least 7 days according to the server usage policies."
   "Return latitude in pixel of top left corner."
   (- (osm--y) osm--wy))
 
+(defun osm--event-to-lat-lon (event)
+  "Return latitude and longitude of EVENT."
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
+    (cons (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
+          (osm--x-to-lon (+ (osm--x0) x) osm--zoom))))
+
 (defun osm--server-property (prop &optional server)
   "Return server property PROP for SERVER."
   (or (plist-get (alist-get (or server osm-server) osm-server-list) prop)
@@ -1312,11 +1318,8 @@ Optionally place transient pin with ID and NAME."
 
 (defun osm--put-transient-pin-event (event &optional id name)
   "Set transient pin with ID and NAME at location of EVENT."
-  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--put-transient-pin id
-                            (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
-                            (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
-                            name)))
+  (pcase-let ((`(,lat . ,lon) (osm--event-to-lat-lon event)))
+    (osm--put-transient-pin id lat lon name)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
