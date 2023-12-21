@@ -115,6 +115,14 @@ Elisp s-expressions they can be easily manipulated programatically.
   (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 #+end_src
 
+* Distance measurement
+
+Osm provides a simple distance measurement utility. In order to measure a
+distance, place or select a pin by clicking with the left mouse button. Then
+create one or more additional way points by pressing shift and clicking the left
+mouse button. The length of the track will be shown in the echo area. You can
+select the way points of the track and delete them with ~d~ or ~DEL~.
+
 * Commands and Key Bindings
 
 Top-level commands in =osm-prefix-map=. These bindings are available globally if

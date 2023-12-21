@@ -701,8 +701,8 @@ Should be at least 7 days according to the server usage policies."
         (cl-incf len1 (osm--haversine (caar p) (cdar p)
                                       (caadr p) (cdadr p)))
         (pop p))
-      (message "Track length %.2fkm%s"
-               (+ len1 len2)
+      (message "%s way points, length %.2fkm%s"
+               (length osm--track) (+ len1 len2)
                (if (or (= len1 0) (= len2 0))
                    ""
                  (format ", (1) → %.2fkm → (%s) → %.2fkm → (%s)"
