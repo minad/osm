@@ -142,7 +142,7 @@ Some additional key bindings are available in Osm buffers:
 - ~S-<mouse-1>~: =osm-track-click= - Create track pin to measure distance
 - ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-mouse-drag= - Drag the map with the mouse
-- ~d~, ~DEL~: =osm-bookmark-delete= - Delete selected bookmark
+- ~d~, ~DEL~: =osm-delete= - Delete selected pin (bookmark or way point)
 - ~c~: =osm-center= - Center to currently marked pin
 - ~X~: =osm-gpx-hide= - Hide overlays from GPX file
 - ~l~: =org-store-link= - Store Org link

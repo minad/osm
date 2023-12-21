@@ -1499,7 +1499,7 @@ When called interactively, call the function `osm-home'."
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
 (defun osm-delete ()
-  "Delete selected pin."
+  "Delete selected pin (bookmark or way point)."
   (interactive)
   (pcase (caddr osm--transient-pin)
     ('osm-selected-bookmark (osm-bookmark-delete (cdddr osm--transient-pin)))
