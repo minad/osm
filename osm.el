@@ -661,12 +661,13 @@ Should be at least 7 days according to the server usage policies."
   (osm--put-transient-pin-event event 'osm-link "New Org Link")
   (call-interactively 'org-store-link))
 
-(defun osm--pin-at (type x y)
-  "Get pin of TYPE at X/Y."
-  (let ((x (+ (osm--x0) x))
-        (y (+ (osm--y0) y))
-        (min most-positive-fixnum)
-        found)
+(defun osm--pin-at (type event)
+  "Get pin of TYPE at EVENT."
+  (let* ((xy (posn-x-y (event-start event)))
+         (x (+ (osm--x0) (car xy)))
+         (y (+ (osm--y0) (cdr xy)))
+         (min most-positive-fixnum)
+         found)
     (dolist (pin (car (osm--get-overlays (/ x 256) (/ y 256))))
       (pcase-let ((`(,p ,q ,_lat ,_lon ,id . ,_) pin))
         (when (eq type id)
@@ -678,18 +679,16 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-bookmark-select-click (event)
   "Select bookmark at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
-    (when-let (pin (osm--pin-at 'osm-bookmark x y))
-      (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
-      (osm--update))))
+  (when-let (pin (osm--pin-at 'osm-bookmark event))
+    (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
+    (osm--update)))
 
 (defun osm-poi-click (event)
   "Select point of interest at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
-    (when-let (pin (osm--pin-at 'osm-poi x y))
-      (osm--put-transient-pin 'osm-selected-poi (car pin) (cadr pin) (cdddr pin))
-      (osm--update))))
+  (when-let (pin (osm--pin-at 'osm-poi event))
+    (osm--put-transient-pin 'osm-selected-poi (car pin) (cadr pin) (cdddr pin))
+    (osm--update)))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
