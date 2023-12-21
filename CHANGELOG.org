@@ -6,9 +6,11 @@
 
 - ~osm--purge-tile-cache~: Delete empty tile cache directories.
 - ~osm-search~: Add message when contacting the server.
-- ~osm-delete~: New command to delete track or bookmark pins.
+- ~osm-pin-delete~: New command to delete track or bookmark pins.
+- ~osm-pin-click~: New command to select pin.
 - ~osm-bookmark-click~: Unified command, replacing ~osm-bookmark-select-click~ and
   ~osm-bookmark-set-click~.
+- ~osm-bookmark-delete~: Add confirmation.
 - Rename ~osm-transient-click~ to ~osm-click~.
 - Add distance measurement for manual track. Press ~S-<mouse-1>~ (~osm-track-click~)
   to place the pins of the track.

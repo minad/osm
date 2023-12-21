@@ -173,6 +173,7 @@ the domain name and the :user to the string \"apikey\"."
 
 (defcustom osm-pin-colors
   '((osm-selected-bookmark . "#e20")
+    (osm-selected-home . "#e20")
     (osm-selected-poi . "#e20")
     (osm-selected-track . "#e20")
     (osm-bookmark . "#f80")
@@ -262,17 +263,20 @@ Should be at least 7 days according to the server usage policies."
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
-  "<osm-home>" #'ignore
   "<osm-link>" #'ignore
   "<osm-transient>" #'ignore
   "<osm-selected-bookmark>" #'ignore
   "<osm-selected-poi>" #'ignore
+  "<osm-selected-home>" #'ignore
   "<osm-bookmark> <mouse-1>" #'osm-bookmark-click
   "<osm-bookmark> <mouse-2>" #'osm-bookmark-click
   "<osm-bookmark> <mouse-3>" #'osm-bookmark-click
-  "<osm-poi> <mouse-1>" #'osm-poi-click
-  "<osm-poi> <mouse-2>" #'osm-poi-click
-  "<osm-poi> <mouse-3>" #'osm-poi-click
+  "<osm-home> <mouse-1>" #'osm-pin-click
+  "<osm-home> <mouse-2>" #'osm-pin-click
+  "<osm-home> <mouse-3>" #'osm-pin-click
+  "<osm-poi> <mouse-1>" #'osm-pin-click
+  "<osm-poi> <mouse-2>" #'osm-pin-click
+  "<osm-poi> <mouse-3>" #'osm-pin-click
   "<osm-track> <mouse-1>" #'osm-track-click
   "<osm-track> <mouse-2>" #'osm-track-click
   "<osm-track> <mouse-3>" #'osm-track-click
@@ -305,9 +309,9 @@ Should be at least 7 days according to the server usage policies."
   "M-<left>" #'osm-left-left
   "M-<right>" #'osm-right-right
   "n" #'osm-bookmark-rename
-  "d" #'osm-delete
-  "DEL" #'osm-delete
-  "<deletechar>" #'osm-delete
+  "d" #'osm-pin-delete
+  "DEL" #'osm-pin-delete
+  "<deletechar>" #'osm-pin-delete
   "c" #'osm-center
   "o" #'clone-buffer
   "u" #'osm-save-url
@@ -674,10 +678,12 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-track-click (event)
   "Put or select a track pin at location of the click EVENT."
   (interactive "@e")
-  (if-let (pin (osm--pin-at 'osm-track event))
+  (if-let (pin (osm--pin-at event 'osm-track))
       (progn
         (osm--put-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin))
         (osm--update))
+    (when (and (not osm--track) osm--transient-pin)
+      (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track))
     (osm--put-transient-pin-event event 'osm-selected-track
                                   (format "(%s)" (1+ (length osm--track))))
     (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track)
@@ -706,7 +712,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-bookmark-click (event)
   "Create or select bookmark at position of click EVENT."
   (interactive "@e")
-  (if-let (pin (osm--pin-at 'osm-bookmark event))
+  (if-let (pin (osm--pin-at event 'osm-bookmark))
       (progn
         (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
         (osm--update))
@@ -719,7 +725,7 @@ Should be at least 7 days according to the server usage policies."
   (osm--put-transient-pin-event event 'osm-link "New Org Link")
   (call-interactively 'org-store-link))
 
-(defun osm--pin-at (type event)
+(defun osm--pin-at (event &optional type)
   "Get pin of TYPE at EVENT."
   (let* ((xy (posn-x-y (event-start event)))
          (x (+ (osm--x0) (car xy)))
@@ -728,17 +734,20 @@ Should be at least 7 days according to the server usage policies."
          found)
     (dolist (pin (car (osm--get-overlays (/ x 256) (/ y 256))))
       (pcase-let ((`(,p ,q ,_lat ,_lon ,id . ,_) pin))
-        (when (eq type id)
+        (when (or (not type) (eq type id))
           (let ((d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
             (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
               (setq min d found pin))))))
     (cddr found)))
 
-(defun osm-poi-click (event)
-  "Select point of interest at position of click EVENT."
+(defun osm-pin-click (event)
+  "Select pin at position of click EVENT."
   (interactive "@e")
-  (when-let (pin (osm--pin-at 'osm-poi event))
-    (osm--put-transient-pin 'osm-selected-poi (car pin) (cadr pin) (cdddr pin))
+  (when-let (pin (osm--pin-at event))
+    (osm--put-transient-pin
+     (intern (concat "osm-selected-"
+                     (substring (symbol-name (caddr pin)) 4)))
+     (car pin) (cadr pin) (cdddr pin))
     (osm--update)))
 
 (defun osm-zoom-in (&optional n)
@@ -1432,9 +1441,10 @@ When called interactively, call the function `osm-home'."
 (defun osm-bookmark-delete (bm)
   "Delete osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
-  (bookmark-delete bm)
-  (setq osm--transient-pin nil)
-  (osm--revert))
+  (when (y-or-n-p (format "Delete bookmark `%s'? " bm))
+    (bookmark-delete bm)
+    (setq osm--transient-pin nil)
+    (osm--revert)))
 
 ;;;###autoload
 (defun osm-bookmark-rename (old-name)
@@ -1498,7 +1508,7 @@ When called interactively, call the function `osm-home'."
                       osm-search-server osm-search-language
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
-(defun osm-delete ()
+(defun osm-pin-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
   (pcase (caddr osm--transient-pin)
@@ -1766,7 +1776,7 @@ The properties are checked as keyword arguments.  See
                    #'osm-save-url))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-click #'osm-org-link-click
-                   #'osm-poi-click #'osm-bookmark-click #'osm-track-click))
+                   #'osm-pin-click #'osm-bookmark-click #'osm-track-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
