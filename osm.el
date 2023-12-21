@@ -178,7 +178,8 @@ the domain name and the :user to the string \"apikey\"."
     (osm-transient . "#08f")
     (osm-link "#f6f")
     (osm-poi . "#88f")
-    (osm-home . "#80f"))
+    (osm-home . "#80f")
+    (osm-track . "#00a"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
@@ -271,6 +272,9 @@ Should be at least 7 days according to the server usage policies."
   "<osm-poi> <mouse-1>" #'osm-poi-click
   "<osm-poi> <mouse-2>" #'osm-poi-click
   "<osm-poi> <mouse-3>" #'osm-poi-click
+  "<osm-track> <mouse-1>" #'osm-track-select-click
+  "<osm-track> <mouse-2>" #'osm-track-select-click
+  "<osm-track> <mouse-3>" #'osm-track-select-click
   "<home>" #'osm-home
   "+" #'osm-zoom-in
   "-" #'osm-zoom-out
@@ -279,6 +283,8 @@ Should be at least 7 days according to the server usage policies."
   "<mouse-1>" #'osm-transient-click
   "<mouse-2>" #'osm-org-link-click
   "<mouse-3>" #'osm-bookmark-set-click
+  "S-<down-mouse-1>" #'ignore
+  "S-<mouse-1>" #'osm-track-set-click
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
@@ -402,6 +408,11 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
+
+;; TODO: The track should better be buffer-local.
+;; The tile cache must be adapted to handle this.
+(defvar osm--track nil
+  "List of track coordinates.")
 
 (defun osm--server-menu ()
   "Generate server menu."
@@ -655,6 +666,14 @@ Should be at least 7 days according to the server usage policies."
   (osm--put-transient-pin-event event)
   (osm--update))
 
+(defun osm-track-set-click (event)
+  "Put a track pin at location of the click EVENT."
+  (interactive "@e")
+  (let ((loc (osm--event-to-lat-lon event)))
+    (push loc osm--track)
+    (message "Location %.6f° %.6f°" (car loc) (cdr loc))
+    (osm--revert)))
+
 (defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
@@ -881,55 +900,62 @@ Should be at least 7 days according to the server usage policies."
     (dolist (file osm--gpx-files)
       (dolist (pt (cddr file))
         (osm--put-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
+    (dolist (pt osm--track)
+      (osm--put-pin pins 'osm-track (car pt) (cdr pt) "Track"))
     pins))
 
-;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
-;; has the issue that lines which go along a tile border may be drawn only
-;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
-;; width).
 (defun osm--compute-tracks ()
   "Compute track hash table."
   (let ((tracks (make-hash-table :test #'equal)))
     (dolist (file osm--gpx-files)
       (dolist (seg (cadr file))
-        (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
-                        (osm--lat-to-y (caar seg) osm--zoom))))
-          (dolist (pt (cdr seg))
-            (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
-                   (py1 (osm--lat-to-y (car pt) osm--zoom))
-                   (pdx (- px1 (car p0)))
-                   (pdy (- py1 (cdr p0))))
-              ;; Ignore point if too close to last point
-              (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
-                (let* ((p1 (cons px1 py1))
-                       (seg (cons p0 p1))
-                       (x0 (/ (car p0) 256))
-                       (y0 (/ (cdr p0) 256))
-                       (x1 (/ px1 256))
-                       (y1 (/ py1 256))
-                       (sx (if (< x0 x1) 1 -1))
-                       (sy (if (< y0 y1) 1 -1))
-                       (dx (* sx (- x1 x0)))
-                       (dy (* sy (- y0 y1)))
-                       (err (+ dx dy)))
-                  ;; Bresenham
-                  (while
-                      (let ((ey (> (* err 2) dy))
-                            (ex (< (* err 2) dx)))
-                        (push seg (gethash (cons x0 y0) tracks))
-                        (unless (and (= x0 x1) (= y0 y1))
-                          (when (and ey ex)
-                            (push seg (gethash (cons x0 (+ y0 sy)) tracks))
-                            (push seg (gethash (cons (+ x0 sx) y0) tracks)))
-                          (when ey
-                            (cl-incf err dy)
-                            (cl-incf x0 sx))
-                          (when ex
-                            (cl-incf err dx)
-                            (cl-incf y0 sy))
-                          t)))
-                  (setq p0 p1))))))))
+        (osm--track-segment tracks seg)))
+    (osm--track-segment tracks osm--track)
     tracks))
+
+;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
+;; has the issue that lines which go along a tile border may be drawn only
+;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
+;; width).
+(defun osm--track-segment (tracks seg)
+  (when seg
+    (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
+                    (osm--lat-to-y (caar seg) osm--zoom))))
+      (dolist (pt (cdr seg))
+        (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
+               (py1 (osm--lat-to-y (car pt) osm--zoom))
+               (pdx (- px1 (car p0)))
+               (pdy (- py1 (cdr p0))))
+          ;; Ignore point if too close to last point
+          (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
+            (let* ((p1 (cons px1 py1))
+                   (seg (cons p0 p1))
+                   (x0 (/ (car p0) 256))
+                   (y0 (/ (cdr p0) 256))
+                   (x1 (/ px1 256))
+                   (y1 (/ py1 256))
+                   (sx (if (< x0 x1) 1 -1))
+                   (sy (if (< y0 y1) 1 -1))
+                   (dx (* sx (- x1 x0)))
+                   (dy (* sy (- y0 y1)))
+                   (err (+ dx dy)))
+              ;; Bresenham
+              (while
+                  (let ((ey (> (* err 2) dy))
+                        (ex (< (* err 2) dx)))
+                    (push seg (gethash (cons x0 y0) tracks))
+                    (unless (and (= x0 x1) (= y0 y1))
+                      (when (and ey ex)
+                        (push seg (gethash (cons x0 (+ y0 sy)) tracks))
+                        (push seg (gethash (cons (+ x0 sx) y0) tracks)))
+                      (when ey
+                        (cl-incf err dy)
+                        (cl-incf x0 sx))
+                      (when ex
+                        (cl-incf err dx)
+                        (cl-incf y0 sy))
+                      t)))
+              (setq p0 p1))))))))
 
 (defun osm--get-overlays (x y)
   "Compute overlays and return the overlays in tile X/Y."
