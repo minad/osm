@@ -172,18 +172,18 @@ the domain name and the :user to the string \"apikey\"."
   :type 'boolean)
 
 (defcustom osm-pin-colors
-  '((osm-selected-bookmark "#e20" "#600")
-    (osm-selected-poi "#e20" "#600")
-    (osm-bookmark "#f80" "#820")
-    (osm-transient "#08f" "#028")
-    (osm-link "#f6f" "#808")
-    (osm-poi "#88f" "#228")
-    (osm-home "#80f" "#208"))
+  '((osm-selected-bookmark . "#e20")
+    (osm-selected-poi . "#e20")
+    (osm-bookmark . "#f80")
+    (osm-transient . "#08f")
+    (osm-link "#f6f")
+    (osm-poi . "#88f")
+    (osm-home . "#80f"))
   "Colors of pins."
-  :type '(alist :key-type symbol :value-type (list string string)))
+  :type '(alist :key-type symbol :value-type string))
 
 (defcustom osm-track-style
-  "stroke:#00A;stroke-width:10;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
+  "stroke:#00a;stroke-width:10;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
   "SVG style used to draw tracks."
   :type 'string)
 
@@ -358,7 +358,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--tile-cache nil
   "Global tile memory cache.")
 
-(defvar osm--tile-cookie 0
+(defvar osm--tile-age 0
   "Tile cache cookie.")
 
 (defvar osm--gpx-files nil
@@ -957,20 +957,20 @@ TPIN is an optional transient pin."
                  (svg-pin
                   (lambda (pin)
                     (pcase-let* ((`(,p ,q ,_lat ,_lon ,id . ,name) pin)
-                                 (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
+                                 (bg (cdr (assq id osm-pin-colors))))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
                               ,id (help-echo ,(truncate-string-to-width name 40 0 nil t)))
                             areas)
                       ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       (format "
-<g fill='%s' stroke='%s' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
+<g fill='%s' stroke='#000' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" bg fg p q))))
+</g>" bg p q))))
                  (svg-text
                   (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
@@ -1025,13 +1025,13 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
             (tile (and osm--tile-cache (gethash key osm--tile-cache))))
        (if tile
-           (progn (setcar tile osm--tile-cookie) (cdr tile))
+           (progn (setcar tile osm--tile-age) (cdr tile))
          (setq tile (osm--draw-tile x y nil))
          (when tile
            (when osm-max-tiles
              (unless osm--tile-cache
                (setq osm--tile-cache (make-hash-table :test #'equal :size osm-max-tiles)))
-             (puthash key (cons osm--tile-cookie tile) osm--tile-cache))
+             (puthash key (cons osm--tile-age tile) osm--tile-cache))
            tile))))))
 
 (defun osm--display-tile (x y tile)
@@ -1215,7 +1215,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--purge-tile-cache ()
   "Purge old tiles from the tile cache."
-  (cl-incf osm--tile-cookie)
+  (cl-incf osm--tile-age)
   (when (and osm--tile-cache (> (hash-table-count osm--tile-cache) osm-max-tiles))
     (let (items)
       (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tile-cache)
