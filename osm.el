@@ -375,17 +375,17 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--track nil
   "List of track coordinates.")
 
-(defvar-local osm--download-subdomain 0
-  "Subdomain index to query the servers in a round-robin fashion.")
+(defvar osm--download-processes nil
+  "Globally active download processes.")
+
+(defvar osm--download-active nil
+  "Globally active download jobs.")
+
+(defvar osm--download-subdomain nil
+  "Subdomain indices to query the servers in a round-robin fashion.")
 
 (defvar-local osm--download-queue nil
-  "Download queue of tiles.")
-
-(defvar-local osm--download-active nil
-  "Active download jobs.")
-
-(defvar-local osm--download-processes 0
-  "Number of active download processes.")
+  "Buffer-local tile download queue.")
 
 (defvar-local osm--wx 0
   "Half window width in pixel.")
@@ -414,6 +414,14 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defvar-local osm--pin nil
   "Currently selected pin.")
+
+(defmacro osm--each (&rest body)
+  "Execute BODY in each `osm-mode' buffer."
+  (cl-with-gensyms (buf)
+    `(dolist (,buf (buffer-list))
+       (when (eq (buffer-local-value 'major-mode ,buf) #'osm-mode)
+         (with-current-buffer ,buf
+           ,@body)))))
 
 (defun osm--server-menu ()
   "Generate server menu."
@@ -509,9 +517,12 @@ Local per buffer since the overlays depend on the zoom level.")
           (warn "No auth source secret found for apikey@%s" host)
           (setq key ""))
         (setf (plist-get (alist-get osm-server osm-server-list) :key) key)))
-    (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
-                       (?k . ,(if (functionp key) (funcall key) key))
-                       (?s . ,(nth (mod osm--download-subdomain (length sub)) sub))))))
+    (format-spec
+     url `((?z . ,zoom) (?x . ,x) (?y . ,y)
+           (?k . ,(if (functionp key) (funcall key) key))
+           (?s . ,(nth (mod (alist-get osm-server osm--download-subdomain 0)
+                            (length sub))
+                       sub))))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
@@ -527,7 +538,7 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm--enqueue-download (x y)
   "Enqueue tile X/Y for download."
   (when (let ((n (expt 2 osm--zoom))) (and (>= x 0) (>= y 0) (< x n) (< y n)))
-    (let ((job `(,x ,y . ,osm--zoom)))
+    (let ((job (list osm-server osm--zoom x y)))
       (unless (or (member job osm--download-queue) (member job osm--download-active))
         (setq osm--download-queue (nconc osm--download-queue (list job)))))))
 
@@ -545,9 +556,10 @@ Local per buffer since the overlays depend on the zoom level.")
       (setq output (substring output (match-end 0)))
       (when (equal status "200")
         (ignore-errors (rename-file file (string-remove-suffix ".tmp" file) t))
-        (when (and (= osm--zoom zoom) (eq osm-server server))
-          (osm--display-tile x y (osm--get-tile x y))))
-      (setq osm--download-active (delete `(,x ,y . ,zoom) osm--download-active))
+        (osm--each
+          (when (and (= osm--zoom zoom) (eq osm-server server))
+            (osm--display-tile x y (osm--get-tile x y)))))
+      (cl-callf2 delete (list server zoom x y) osm--download-active)
       (delete-file file)))
   output)
 
@@ -560,56 +572,55 @@ Local per buffer since the overlays depend on the zoom level.")
          args jobs job)
     (while (and (< count batch)
                 (setq job (nth (* count parallel) osm--download-queue)))
-      (pcase-let ((`(,x ,y . ,zoom) job))
+      (pcase-let ((`(,_server ,zoom ,x ,y) job))
         (setq args `(,(osm--tile-url x y zoom)
                      ,(concat (osm--tile-file x y zoom) ".tmp")
                      "--output"
                      ,@args))
         (push job jobs)
+        (push job osm--download-active)
         (cl-incf count)))
-    (dolist (job jobs)
-      (push job osm--download-active)
-      (setq osm--download-queue (delq job osm--download-queue)))
-    (setq osm--download-subdomain (mod (1+ osm--download-subdomain) subs))
+    (osm--each
+      (dolist (job jobs)
+        (cl-callf2 delq job osm--download-queue)))
+    (cl-callf (lambda (s) (mod (1+ s) subs))
+        (alist-get osm-server osm--download-subdomain 0))
     (cons `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
             ,@(split-string-and-unquote osm-curl-options) ,@(nreverse args))
           jobs)))
 
 (defun osm--download ()
   "Download next tiles from the queue."
-  (when (and (< osm--download-processes
+  (when (and (< (length (alist-get osm-server osm--download-processes))
                 (* (length (osm--server-property :subdomains))
                    (osm--server-property :max-connections)))
              osm--download-queue)
-    (pcase-let ((dir (file-name-concat (expand-file-name osm-tile-directory)
+    (pcase-let ((`(,command . ,jobs) (osm--download-command))
+                (dir (file-name-concat (expand-file-name osm-tile-directory)
                                        (symbol-name osm-server)))
-                (`(,command . ,jobs) (osm--download-command))
-                (buffer (current-buffer))
-                (output ""))
-      (unless (file-exists-p dir)
-        (make-directory dir t))
-      (cl-incf osm--download-processes)
-      (make-process
-       :name "*osm curl*"
-       :connection-type 'pipe
-       :noquery t
-       :command command
-       :filter
-       (lambda (_proc out)
-         (when (buffer-live-p buffer)
-           (with-current-buffer buffer
-             (setq output (osm--download-filter (concat output out)))
-             (force-mode-line-update))))
-       :sentinel
-       (lambda (&rest _)
-         (when (buffer-live-p buffer)
-           (with-current-buffer buffer
-             (dolist (job jobs)
-               (setq osm--download-active (delq job osm--download-active)))
-             (cl-decf osm--download-processes)
-             (osm--download)
-             (force-mode-line-update)))))
-      (osm--download))))
+                (server osm-server))
+      (make-directory dir t)
+      (push
+       (make-process
+        :name "*osm curl*"
+        :connection-type 'pipe
+        :noquery t
+        :command command
+        :filter
+        (let ((output ""))
+          (lambda (_proc out)
+            (setq output (osm--download-filter (concat output out)))
+            (force-mode-line-update t)))
+        :sentinel
+        (lambda (proc _status)
+          (dolist (job jobs)
+            (cl-callf2 delq job osm--download-active))
+          (cl-callf2 delq proc (alist-get server osm--download-processes nil t))
+          (force-mode-line-update t)
+          (osm--download)))
+       (alist-get server osm--download-processes))
+       (force-mode-line-update t)
+       (osm--download))))
 
 (defun osm-mouse-drag (event)
   "Handle drag EVENT."
@@ -1098,19 +1109,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--download-queue-info ()
   "Return queue info string."
-  (if (> osm--download-processes 0)
-      (format "[%s/%s]" osm--download-processes
-              (+ (length osm--download-active)
-                 (length osm--download-queue)))))
+  (when osm--download-processes
+    (format "[%s/%s/%s]"
+            (length osm--download-processes)
+            (length osm--download-active)
+            (length osm--download-queue))))
 
 (defun osm--revert (&rest _)
   "Revert osm buffers."
   (setq osm--tile-cache nil)
-  (dolist (buf (buffer-list))
-    (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
-      (with-current-buffer buf
-        (setq osm--overlays nil)
-        (osm--update)))))
+  (osm--each
+    (setq osm--overlays nil)
+    (osm--update)))
 
 (defun osm--resize (&rest _)
   "Resize buffer."
@@ -1240,14 +1250,14 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
          (cl-loop with tx = (/ (osm--x0) 256)
                   with ty = (/ (osm--y0) 256)
                   for job in osm--download-queue
-                  for (x y . zoom) = job
+                  for (_server zoom x y) = job
                   if (and (= zoom osm--zoom)
                           (>= x tx) (< x (+ tx osm--nx))
                           (>= y ty) (< y (+ ty osm--ny)))
                   collect job)
          (let ((tx (/ (osm--x) 256))
                (ty (/ (osm--y) 256)))
-           (pcase-lambda (`(,x1 ,y1 . ,_z1) `(,x2 ,y2 . ,_z2))
+           (pcase-lambda (`(,_s1 ,_z1 ,x1 ,y1) `(,_s2 ,_z2 ,x2 ,y2))
              (setq x1 (- x1 tx) y1 (- y1 ty) x2 (- x2 tx) y2 (- y2 ty))
              (< (+ (* x1 x1) (* y1 y1)) (+ (* x2 x2) (* y2 y2)))))))
   (osm--download))
@@ -1337,10 +1347,8 @@ Optionally place pin with ID and NAME."
     (unless (eq major-mode #'osm-mode)
       (osm-mode))
     (when (and server (not (eq osm-server server)))
-      (setq osm-server server
-            osm--download-active nil
-            osm--download-queue nil
-            osm--download-processes 0))
+      (setq-local osm-server server
+                  osm--download-queue nil))
     (when (or (not (and osm--lon osm--lat)) lat)
       (setq osm--lat (or lat (nth 0 osm-home))
             osm--lon (or lon (nth 1 osm-home))
@@ -1494,8 +1502,8 @@ When called interactively, call the function `osm-home'."
   (cl-loop for idx from 0 for (lat . lon) in osm--track do
            (when (and (equal lat (car osm--pin))
                       (equal lon (cadr osm--pin)))
-             (setq osm--track (delq (nth idx osm--track) osm--track)
-                   osm--pin nil
+             (cl-callf2 delq (nth idx osm--track) osm--track)
+             (setq osm--pin nil
                    idx (min idx (1- (length osm--track))))
              (when-let (pin (nth idx osm--track))
                (osm--set-pin 'osm-track (car pin) (cdr pin)
