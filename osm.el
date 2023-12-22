@@ -203,8 +203,9 @@ the domain name and the :user to the string \"apikey\"."
   :type 'natnum)
 
 (defcustom osm-tile-border nil
-  "Display tile borders.
-Useful for debugging, set to value `debug'."
+  "Set to t to display thin tile borders.
+For debugging set the value to `debug', such that a border is
+shown around SVG tiles."
   :type '(choice boolean (const debug)))
 
 (defcustom osm-small-step 16
