@@ -363,7 +363,7 @@ Should be at least 7 days according to the server usage policies."
   "Global tile memory cache.")
 
 (defvar osm--tile-age 0
-  "Tile cache cookie.")
+  "Tile age, incremented on every update.")
 
 (defvar osm--gpx-files nil
   "Global list of loaded tracks.")
@@ -371,7 +371,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--track nil
   "List of track coordinates.")
 
-(defvar-local osm--subdomain-index 0
+(defvar-local osm--download-subdomain 0
   "Subdomain index to query the servers in a round-robin fashion.")
 
 (defvar-local osm--download-queue nil
@@ -404,7 +404,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--lon nil
   "Longitude coordinate.")
 
-(defvar-local osm--overlay-table nil
+(defvar-local osm--overlays nil
   "Overlay hash table.
 Local per buffer since the overlays depend on the zoom level.")
 
@@ -507,7 +507,7 @@ Local per buffer since the overlays depend on the zoom level.")
         (setf (plist-get (alist-get osm-server osm-server-list) :key) key)))
     (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
                        (?k . ,(if (functionp key) (funcall key) key))
-                       (?s . ,(nth (mod osm--subdomain-index (length sub)) sub))))))
+                       (?s . ,(nth (mod osm--download-subdomain (length sub)) sub))))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
@@ -566,7 +566,7 @@ Local per buffer since the overlays depend on the zoom level.")
     (dolist (job jobs)
       (push job osm--download-active)
       (setq osm--download-queue (delq job osm--download-queue)))
-    (setq osm--subdomain-index (mod (1+ osm--subdomain-index) subs))
+    (setq osm--download-subdomain (mod (1+ osm--download-subdomain) subs))
     (cons `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
             ,@(split-string-and-unquote osm-curl-options) ,@(nreverse args))
           jobs)))
@@ -968,14 +968,14 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm--get-overlays (x y)
   "Compute overlays and return the overlays in tile X/Y."
-  (unless (eq (car osm--overlay-table) osm--zoom)
+  (unless (eq (car osm--overlays) osm--zoom)
     ;; TODO: Do not compute overlays for the entire map, only for a reasonable
     ;; view port around the current center, depending on the size of the
     ;; window. Otherwise the spatial hash map for the tracks gets very large if
     ;; a line segment spans many tiles.
-    (setq osm--overlay-table (list osm--zoom (osm--compute-pins) (osm--compute-tracks))))
-  (let ((pins (gethash (cons x y) (cadr osm--overlay-table)))
-        (tracks (gethash (cons x y) (caddr osm--overlay-table))))
+    (setq osm--overlays (list osm--zoom (osm--compute-pins) (osm--compute-tracks))))
+  (let ((pins (gethash (cons x y) (cadr osm--overlays)))
+        (tracks (gethash (cons x y) (caddr osm--overlays))))
     (and (or pins tracks) (cons pins tracks))))
 
 (autoload 'svg--image-data "svg")
@@ -1102,10 +1102,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--revert (&rest _)
   "Revert osm buffers."
   (clear-image-cache t)
+  (setq osm--tile-cache nil)
   (dolist (buf (buffer-list))
     (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
       (with-current-buffer buf
-        (setq osm--tile-cache nil osm--overlay-table nil)
+        (setq osm--overlays nil)
         (osm--update)))))
 
 (defun osm--resize (&rest _)
@@ -1753,7 +1754,7 @@ The properties are checked as keyword arguments.  See
      "geo"
      :follow (lambda (link _) (osm (concat "geo:" link)))
      :store (lambda ()
-              (when (derived-mode-p 'osm-mode)
+              (when (eq major-mode 'osm-mode)
                 (apply 'org-link-store-props (osm--org-link-props)))))))
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
