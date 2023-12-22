@@ -226,7 +226,11 @@ Should be at least 7 days according to the server usage policies."
   :type '(choice (const nil) natnum))
 
 (defcustom osm-max-tiles 256
-  "Size of tile memory cache."
+  "Number of tiles to keep in the memory cache."
+  :type '(choice (const nil) natnum))
+
+(defcustom osm-max-cache 64
+  "Image cache size in megabytes."
   :type '(choice (const nil) natnum))
 
 (defun osm--menu-item (menu &optional name)
@@ -1101,7 +1105,6 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--revert (&rest _)
   "Revert osm buffers."
-  (clear-image-cache t)
   (setq osm--tile-cache nil)
   (dolist (buf (buffer-list))
     (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
@@ -1158,14 +1161,14 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--update ()
   "Update map display."
   (osm--barf-unless-osm)
+  (osm--purge-tile-cache)
+  (osm--purge-directory)
   (osm--rename-buffer)
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
   (osm--update-copyright)
-  (osm--process-download-queue)
-  (osm--purge-tile-cache)
-  (osm--purge-directory))
+  (osm--process-download-queue))
 
 (defun osm--update-sizes ()
   "Update window sizes."
@@ -1257,7 +1260,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tile-cache)
       (setq items (sort items #'car-less-than-car))
       (dotimes (_ (- (hash-table-count osm--tile-cache) osm-max-tiles))
-        (remhash (cdr (pop items)) osm--tile-cache)))))
+        (remhash (cdr (pop items)) osm--tile-cache))))
+  (when (and osm-max-cache (> (image-cache-size) (* 1024 1024 osm-max-cache)))
+    (clear-image-cache t)))
 
 (defun osm--bookmark-record-default ()
   "Make osm bookmark record."

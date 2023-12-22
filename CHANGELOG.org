@@ -14,6 +14,7 @@
 - Unify ~osm-bookmark-set~ and ~osm-bookmark-set-click~.
 - Add distance measurement for manual track. Press ~S-<mouse-1>~ (~osm-mouse-track~)
   to place the pins of the track.
+- Add ~osm-max-cache~ to keep image cache size in check.
 
 * Version 1.0 (2023-12-01)
 
