@@ -965,7 +965,7 @@ Should be at least 7 days according to the server usage policies."
           ;; Ignore point if too close to last point
           (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
             (let* ((p1 (cons px1 py1))
-                   (seg (cons p0 p1))
+                   (line (cons p0 p1))
                    (x0 (/ (car p0) 256))
                    (y0 (/ (cdr p0) 256))
                    (x1 (/ px1 256))
@@ -979,11 +979,11 @@ Should be at least 7 days according to the server usage policies."
               (while
                   (let ((ey (> (* err 2) dy))
                         (ex (< (* err 2) dx)))
-                    (push seg (gethash (cons x0 y0) tracks))
+                    (push line (gethash (cons x0 y0) tracks))
                     (unless (and (= x0 x1) (= y0 y1))
                       (when (and ey ex)
-                        (push seg (gethash (cons x0 (+ y0 sy)) tracks))
-                        (push seg (gethash (cons (+ x0 sx) y0) tracks)))
+                        (push line (gethash (cons x0 (+ y0 sy)) tracks))
+                        (push line (gethash (cons (+ x0 sx) y0) tracks)))
                       (when ey
                         (cl-incf err dy)
                         (cl-incf x0 sx))
