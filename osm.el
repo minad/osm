@@ -405,9 +405,10 @@ Should be at least 7 days according to the server usage policies."
   "Longitude coordinate.")
 
 (defvar-local osm--overlay-table nil
-  "Overlay hash table.")
+  "Overlay hash table.
+Local per buffer since the overlays depend on the zoom level.")
 
-(defvar-local osm--selected-pin nil
+(defvar-local osm--pin nil
   "Currently selected pin.")
 
 (defun osm--server-menu ()
@@ -644,10 +645,10 @@ Should be at least 7 days according to the server usage policies."
   "Center to location of selected pin."
   (interactive)
   (osm--barf-unless-osm)
-  (when osm--selected-pin
-    (setq osm--lat (car osm--selected-pin)
-          osm--lon (cadr osm--selected-pin))
-    (message "%s" (cdddr osm--selected-pin))
+  (when osm--pin
+    (setq osm--lat (car osm--pin)
+          osm--lon (cadr osm--pin))
+    (message "%s" (cdddr osm--pin))
     (osm--update)))
 
 (defun osm--haversine (lat1 lon1 lat2 lon2)
@@ -662,11 +663,11 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-mouse-track (event)
   "Set track pin at location of the click EVENT."
   (interactive "@e")
-  (when (and (not osm--track) osm--selected-pin)
-    (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track))
-  (osm--select-pin-event event 'osm-track
-                         (format "(%s)" (1+ (length osm--track))) 'quiet)
-  (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track)
+  (when (and (not osm--track) osm--pin)
+    (push (cons (car osm--pin) (cadr osm--pin)) osm--track))
+  (osm--set-pin-event event 'osm-track
+                      (format "(%s)" (1+ (length osm--track))) 'quiet)
+  (push (cons (car osm--pin) (cadr osm--pin)) osm--track)
   (osm--revert)
   (osm--track-length))
 
@@ -676,7 +677,7 @@ Should be at least 7 days according to the server usage policies."
     (let ((len1 0)
           (len2 0)
           (p osm--track)
-          (sel (cons (car osm--selected-pin) (cadr osm--selected-pin))))
+          (sel (cons (car osm--pin) (cadr osm--pin))))
       (while (and (cdr p) (not (equal (car p) sel)))
         (cl-incf len2 (osm--haversine (caar p) (cdar p)
                                       (caadr p) (cdadr p)))
@@ -711,7 +712,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-mouse-pin (event)
   "Create location pin at the click EVENT."
   (interactive "@e")
-  (osm--select-pin-event event)
+  (osm--set-pin-event event)
   (osm--update))
 
 (defun osm-mouse-select (event)
@@ -719,7 +720,7 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (when-let ((pin (osm--pin-at event)))
     (let ((track (eq (caddr pin) 'osm-track)))
-      (osm--select-pin (caddr pin) (car pin) (cadr pin) (cdddr pin) track)
+      (osm--set-pin (caddr pin) (car pin) (cadr pin) (cdddr pin) track)
       (when track (osm--track-length)))
     (osm--update)))
 
@@ -1049,7 +1050,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (pcase osm--selected-pin
+  (pcase osm--pin
     ((and `(,lat ,lon ,_ . ,name)
           (guard (osm--pin-inside-p x y lat lon)))
      (osm--draw-tile x y `(,(osm--lon-to-x lon osm--zoom)
@@ -1339,27 +1340,27 @@ Optionally place pin with ID and NAME."
             osm--lon (or lon (nth 1 osm-home))
             osm--zoom (or zoom (nth 2 osm-home)))
       (when id
-        (osm--select-pin id osm--lat osm--lon name)))
+        (osm--set-pin id osm--lat osm--lon name)))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--select-pin (id lat lon name &optional quiet)
-  "Set selection pin at LAT/LON with ID and NAME.
+(defun osm--set-pin (id lat lon name &optional quiet)
+  "Set pin at LAT/LON with ID and NAME.
 Print NAME if not QUIET."
-  (setq osm--selected-pin
+  (setq osm--pin
         `(,lat ,lon ,(or id 'osm-selected)
                . ,(or name (format "Location %.6f° %.6f°" lat lon))))
   (unless quiet
-    (message "%s" (cdddr osm--selected-pin))))
+    (message "%s" (cdddr osm--pin))))
 
-(defun osm--select-pin-event (event &optional id name quiet)
+(defun osm--set-pin-event (event &optional id name quiet)
   "Set selection pin with ID and NAME at location of EVENT.
 Print NAME if not QUIET."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--select-pin id
-                     (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
-                     (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
-                     name quiet)))
+    (osm--set-pin id
+                  (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
+                  (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
+                  name quiet)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1418,7 +1419,7 @@ When called interactively, call the function `osm-home'."
   (interactive (list (osm--bookmark-read)))
   (when (y-or-n-p (format "Delete bookmark `%s'? " bm))
     (bookmark-delete bm)
-    (setq osm--selected-pin nil)
+    (setq osm--pin nil)
     (osm--revert)))
 
 ;;;###autoload
@@ -1427,7 +1428,7 @@ When called interactively, call the function `osm-home'."
   (interactive (list (car (osm--bookmark-read))))
   (let ((new-name (read-from-minibuffer "New name: " old-name nil nil
                                         'bookmark-history old-name)))
-    (when osm--selected-pin (setf (cdddr osm--selected-pin) new-name))
+    (when osm--pin (setf (cdddr osm--pin) new-name))
     (bookmark-rename old-name new-name)
     (osm--revert)))
 
@@ -1435,8 +1436,8 @@ When called interactively, call the function `osm-home'."
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
   (or (assoc
-       (if (eq (caddr osm--selected-pin) 'osm-bookmark)
-           (cdddr osm--selected-pin)
+       (if (eq (caddr osm--pin) 'osm-bookmark)
+           (cdddr osm--pin)
          (completing-read
           "Bookmark: "
           (or (cl-loop for bm in bookmark-alist
@@ -1459,16 +1460,16 @@ When called interactively, call the function `osm-home'."
                     (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
         (message "Stored bookmark: %s" name)
-        (setf (caddr osm--selected-pin) 'osm-bookmark))
+        (setf (caddr osm--pin) 'osm-bookmark))
     (osm--revert)))
 
 (defun osm--fetch-location-data (name)
   "Fetch location info for NAME."
   (when (mouse-event-p last-input-event)
-    (osm--select-pin-event last-input-event 'osm-selected name))
-  (let ((lat (or (car osm--selected-pin) osm--lat))
-        (lon (or (cadr osm--selected-pin) osm--lon)))
-    (osm--select-pin 'osm-selected lat lon name 'quiet)
+    (osm--set-pin-event last-input-event 'osm-selected name))
+  (let ((lat (or (car osm--pin) osm--lat))
+        (lon (or (cadr osm--pin) osm--lon)))
+    (osm--set-pin 'osm-selected lat lon name 'quiet)
     (message "%s: Fetching name of %.6f %.6f from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
@@ -1485,15 +1486,15 @@ When called interactively, call the function `osm-home'."
 (defun osm--track-delete ()
   "Delete track pin."
   (cl-loop for idx from 0 for (lat . lon) in osm--track do
-           (when (and (equal lat (car osm--selected-pin))
-                      (equal lon (cadr osm--selected-pin)))
+           (when (and (equal lat (car osm--pin))
+                      (equal lon (cadr osm--pin)))
              (setq osm--track (delq (nth idx osm--track) osm--track)
-                   osm--selected-pin nil
+                   osm--pin nil
                    idx (min idx (1- (length osm--track))))
              (when-let (pin (nth idx osm--track))
-               (osm--select-pin 'osm-track (car pin) (cdr pin)
-                                (format "(%s)" (- (length osm--track) idx))
-                                'quiet))
+               (osm--set-pin 'osm-track (car pin) (cdr pin)
+                             (format "(%s)" (- (length osm--track) idx))
+                             'quiet))
              (osm--track-length)
              (osm--revert)
              (cl-return))))
@@ -1501,14 +1502,14 @@ When called interactively, call the function `osm-home'."
 (defun osm-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
-  (pcase (caddr osm--selected-pin)
+  (pcase (caddr osm--pin)
     ('nil nil)
     ('osm-bookmark
-     (osm-bookmark-delete (cdddr osm--selected-pin)))
+     (osm-bookmark-delete (cdddr osm--pin)))
     ('osm-track
      (osm--track-delete))
     (_
-     (setq osm--selected-pin nil)
+     (setq osm--pin nil)
      (osm--update))))
 
 (defun osm--fetch-json (url)
