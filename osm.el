@@ -1287,7 +1287,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--org-link-props ()
   "Return Org link properties."
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected "New Org Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Org Link"))
                (name (osm--location-name lat lon loc 2)))
     (list :type "geo"
           :description
@@ -1466,7 +1466,7 @@ When called interactively, call the function `osm-home'."
   (interactive)
   (osm--barf-unless-osm)
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected "New Bookmark"))
+      (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Bookmark"))
                    (def (osm--bookmark-name lat lon loc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
@@ -1476,11 +1476,11 @@ When called interactively, call the function `osm-home'."
         (setf (caddr osm--selected-pin) 'osm-bookmark))
     (osm--revert)))
 
-(defun osm--fetch-location-data (id name)
-  "Fetch location info for ID with NAME."
+(defun osm--fetch-location-data (name)
+  "Fetch location info for NAME."
   (let ((lat (or (car osm--selected-pin) osm--lat))
         (lon (or (cadr osm--selected-pin) osm--lon)))
-    (osm--select-pin id lat lon name 'quiet)
+    (osm--select-pin 'osm-selected lat lon name 'quiet)
     (message "%s: Fetching name of %.6f %.6f from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
@@ -1719,7 +1719,7 @@ See `osm-search-server' and `osm-search-language' for customization."
 If prefix ARG is given, store url as Elisp expression."
   (interactive "P")
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected "New Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Link"))
                (server (and (not (eq osm-server (default-value 'osm-server))) osm-server))
                (url (if arg
                         (format "(osm %.6f %.6f %s%s%s)"
