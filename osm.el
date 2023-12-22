@@ -267,9 +267,9 @@ Should be at least 7 days according to the server usage policies."
   "<osm-selected-bookmark>" #'ignore
   "<osm-selected-poi>" #'ignore
   "<osm-selected-home>" #'ignore
-  "<osm-bookmark> <mouse-1>" #'osm-bookmark-click
-  "<osm-bookmark> <mouse-2>" #'osm-bookmark-click
-  "<osm-bookmark> <mouse-3>" #'osm-bookmark-click
+  "<osm-bookmark> <mouse-1>" #'osm-pin-click
+  "<osm-bookmark> <mouse-2>" #'osm-pin-click
+  "<osm-bookmark> <mouse-3>" #'osm-pin-click
   "<osm-home> <mouse-1>" #'osm-pin-click
   "<osm-home> <mouse-2>" #'osm-pin-click
   "<osm-home> <mouse-3>" #'osm-pin-click
@@ -711,14 +711,10 @@ Should be at least 7 days according to the server usage policies."
                          (length osm--track)))))))
 
 (defun osm-bookmark-click (event)
-  "Create or select bookmark at position of click EVENT."
+  "Create bookmark at position of click EVENT."
   (interactive "@e")
-  (if-let (pin (osm--pin-at event 'osm-bookmark))
-      (progn
-        (osm--select-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
-        (osm--update))
-    (osm--select-pin-event event 'osm-selected-bookmark "New Bookmark")
-    (osm-bookmark-set)))
+  (osm--select-pin-event event 'osm-selected-bookmark "New Bookmark")
+  (osm-bookmark-set))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
