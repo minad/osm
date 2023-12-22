@@ -173,12 +173,8 @@ the domain name and the :user to the string \"apikey\"."
   :type 'boolean)
 
 (defcustom osm-pin-colors
-  '((osm-selected-bookmark . "#e20")
-    (osm-selected-home . "#e20")
-    (osm-selected-poi . "#e20")
-    (osm-selected-track . "#e20")
+  '((osm-selected . "#e20")
     (osm-bookmark . "#f80")
-    (osm-transient . "#e20")
     (osm-poi . "#88f")
     (osm-home . "#80f")
     (osm-track . "#00a"))
@@ -263,10 +259,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
-  "<osm-transient>" #'ignore
-  "<osm-selected-bookmark>" #'ignore
-  "<osm-selected-poi>" #'ignore
-  "<osm-selected-home>" #'ignore
+  "<osm-selected>" #'ignore
   "<osm-bookmark> <mouse-1>" #'osm-pin-click
   "<osm-bookmark> <mouse-2>" #'osm-pin-click
   "<osm-bookmark> <mouse-3>" #'osm-pin-click
@@ -677,11 +670,11 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (if-let (pin (osm--pin-at event 'osm-track))
       (progn
-        (osm--select-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin) 'quiet)
+        (osm--select-pin 'osm-track (car pin) (cadr pin) (cdddr pin) 'quiet)
         (osm--update))
     (when (and (not osm--track) osm--selected-pin)
       (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track))
-    (osm--select-pin-event event 'osm-selected-track
+    (osm--select-pin-event event 'osm-track
                            (format "(%s)" (1+ (length osm--track))) 'quiet)
     (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track)
     (osm--revert))
@@ -713,13 +706,13 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-bookmark-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
-  (osm--select-pin-event event 'osm-selected-bookmark "New Bookmark")
+  (osm--select-pin-event event 'osm-bookmark "New Bookmark")
   (osm-bookmark-set))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
   (interactive "@e")
-  (osm--select-pin-event event 'osm-transient "New Org Link")
+  (osm--select-pin-event event 'osm-selected "New Org Link")
   (call-interactively 'org-store-link))
 
 (defun osm--pin-at (event &optional type)
@@ -740,10 +733,8 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-pin-click (event)
   "Select pin at position of click EVENT."
   (interactive "@e")
-  (when-let ((pin (osm--pin-at event))
-             (id (intern-soft (concat "osm-selected-"
-                                      (substring (symbol-name (caddr pin)) 4)))))
-    (osm--select-pin id (car pin) (cadr pin) (cdddr pin))
+  (when-let ((pin (osm--pin-at event)))
+    (osm--select-pin (caddr pin) (car pin) (cadr pin) (cdddr pin))
     (osm--update)))
 
 (defun osm-zoom-in (&optional n)
@@ -1073,11 +1064,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (pcase osm--selected-pin
-    ((and `(,lat ,lon . ,_)
+    ((and `(,lat ,lon ,_ . ,name)
           (guard (osm--pin-inside-p x y lat lon)))
      (osm--draw-tile x y `(,(osm--lon-to-x lon osm--zoom)
                            ,(osm--lat-to-y lat osm--zoom)
-                           ,@osm--selected-pin)))
+                           ,lat ,lon osm-selected . ,name)))
     (_
      (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
             (tile (and osm--tile-cache (gethash key osm--tile-cache))))
@@ -1296,7 +1287,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--org-link-props ()
   "Return Org link properties."
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-transient "New Org Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected "New Org Link"))
                (name (osm--location-name lat lon loc 2)))
     (list :type "geo"
           :description
@@ -1370,7 +1361,7 @@ Optionally place pin with ID and NAME."
   "Set selection pin at LAT/LON with ID and NAME.
 Print NAME if not QUIET."
   (setq osm--selected-pin
-        `(,lat ,lon ,(or id 'osm-transient)
+        `(,lat ,lon ,(or id 'osm-selected)
                . ,(or name (format "Location %.6f° %.6f°" lat lon))))
   (unless quiet
     (message "%s" (cdddr osm--selected-pin))))
@@ -1395,7 +1386,7 @@ Print NAME if not QUIET."
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--goto lat lon zoom nil 'osm-transient nil)
+  (osm--goto lat lon zoom nil 'osm-selected nil)
   nil)
 
 ;;;###autoload
@@ -1409,7 +1400,7 @@ When called interactively, call the function `osm-home'."
     (`(,lat ,lon ,zoom . ,server)
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
-     (osm--goto lat lon zoom server 'osm-transient "Elisp Link"))
+     (osm--goto lat lon zoom server 'osm-selected "Elisp Link"))
     ((and `(,url . ,_) (guard (stringp url)))
      (if (string-match
           "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
@@ -1421,7 +1412,7 @@ When called interactively, call the function `osm-home'."
            (osm--goto lat lon
                       (and zoom (string-to-number zoom))
                       (and server (intern-soft server))
-                      'osm-transient "Geo Link"))
+                      'osm-selected "Geo Link"))
        (osm-search (string-remove-prefix "geo:" url))))
     (_ (error "Invalid osm link"))))
 
@@ -1432,7 +1423,7 @@ When called interactively, call the function `osm-home'."
   (let ((coords (bookmark-prop-get bm 'coordinates)))
     (set-buffer (osm--goto (nth 0 coords) (nth 1 coords) (nth 2 coords)
                            (bookmark-prop-get bm 'server)
-                           'osm-selected-bookmark (car bm)))))
+                           'osm-bookmark (car bm)))))
 (put 'osm-bookmark-jump 'bookmark-handler-type "Osm")
 
 ;;;###autoload
@@ -1458,7 +1449,7 @@ When called interactively, call the function `osm-home'."
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
   (or (assoc
-       (if (eq (caddr osm--selected-pin) 'osm-selected-bookmark)
+       (if (eq (caddr osm--selected-pin) 'osm-bookmark)
            (cdddr osm--selected-pin)
          (completing-read
           "Bookmark: "
@@ -1475,17 +1466,14 @@ When called interactively, call the function `osm-home'."
   (interactive)
   (osm--barf-unless-osm)
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected-bookmark "New Bookmark"))
+      (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected "New Bookmark"))
                    (def (osm--bookmark-name lat lon loc))
-                   (name
-                    (progn
-                      (setf (caddr osm--selected-pin) 'osm-transient)
-                      (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def)))
+                   (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
                     (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
         (message "Stored bookmark: %s" name)
-        (setf (caddr osm--selected-pin) 'osm-selected-bookmark))
+        (setf (caddr osm--selected-pin) 'osm-bookmark))
     (osm--revert)))
 
 (defun osm--fetch-location-data (id name)
@@ -1515,7 +1503,7 @@ When called interactively, call the function `osm-home'."
                    osm--selected-pin nil
                    idx (min idx (1- (length osm--track))))
              (when-let (pin (nth idx osm--track))
-               (osm--select-pin 'osm-selected-track (car pin) (cdr pin)
+               (osm--select-pin 'osm-track (car pin) (cdr pin)
                                 (format "(%s)" (- (length osm--track) idx))
                                 'quiet))
              (osm--track-length)
@@ -1527,9 +1515,9 @@ When called interactively, call the function `osm-home'."
   (interactive)
   (pcase (caddr osm--selected-pin)
     ('nil nil)
-    ('osm-selected-bookmark
+    ('osm-bookmark
      (osm-bookmark-delete (cdddr osm--selected-pin)))
-    ('osm-selected-track
+    ('osm-track
      (osm--track-delete))
     (_
      (setq osm--selected-pin nil)
@@ -1608,7 +1596,7 @@ See `osm-search-server' and `osm-search-language' for customization."
            (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
-               nil 'osm-transient (car selected))))
+               nil 'osm-selected (car selected))))
 
 (defun osm--sorted-table (coll)
   "Sorted completion table from COLL."
@@ -1731,7 +1719,7 @@ See `osm-search-server' and `osm-search-language' for customization."
 If prefix ARG is given, store url as Elisp expression."
   (interactive "P")
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-transient "New Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected "New Link"))
                (server (and (not (eq osm-server (default-value 'osm-server))) osm-server))
                (url (if arg
                         (format "(osm %.6f %.6f %s%s%s)"
