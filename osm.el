@@ -1111,7 +1111,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   "Return queue info string."
   (when osm--download-processes
     (format "[%s/%s/%s]"
-            (length osm--download-processes)
+            (cl-loop for (_ . p) in osm--download-processes sum (length p))
             (length osm--download-active)
             (length osm--download-queue))))
 
