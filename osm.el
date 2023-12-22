@@ -414,8 +414,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar-local osm--overlay-table nil
   "Overlay hash table.")
 
-(defvar-local osm--transient-pin nil
-  "Transient pin.")
+(defvar-local osm--selected-pin nil
+  "Currently selected pin.")
 
 (defun osm--server-menu ()
   "Generate server menu."
@@ -648,19 +648,19 @@ Should be at least 7 days according to the server usage policies."
       (osm-zoom-out))))
 
 (defun osm-center ()
-  "Center to location of transient pin."
+  "Center to location of selected pin."
   (interactive)
   (osm--barf-unless-osm)
-  (when osm--transient-pin
-    (setq osm--lat (car osm--transient-pin)
-          osm--lon (cadr osm--transient-pin))
-    (message "%s" (cdddr osm--transient-pin))
+  (when osm--selected-pin
+    (setq osm--lat (car osm--selected-pin)
+          osm--lon (cadr osm--selected-pin))
+    (message "%s" (cdddr osm--selected-pin))
     (osm--update)))
 
 (defun osm-click (event)
-  "Put a transient pin at location of the click EVENT."
+  "Selection pin at location of the click EVENT."
   (interactive "@e")
-  (osm--set-transient-pin-event event)
+  (osm--select-pin-event event)
   (osm--update))
 
 (defun osm--haversine (lat1 lon1 lat2 lon2)
@@ -677,13 +677,13 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (if-let (pin (osm--pin-at event 'osm-track))
       (progn
-        (osm--set-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin) 'quiet)
+        (osm--select-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin) 'quiet)
         (osm--update))
-    (when (and (not osm--track) osm--transient-pin)
-      (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track))
-    (osm--set-transient-pin-event event 'osm-selected-track
-                                  (format "(%s)" (1+ (length osm--track))) 'quiet)
-    (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track)
+    (when (and (not osm--track) osm--selected-pin)
+      (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track))
+    (osm--select-pin-event event 'osm-selected-track
+                           (format "(%s)" (1+ (length osm--track))) 'quiet)
+    (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track)
     (osm--revert))
   (osm--track-length))
 
@@ -693,7 +693,7 @@ Should be at least 7 days according to the server usage policies."
     (let ((len1 0)
           (len2 0)
           (p osm--track)
-          (sel (cons (car osm--transient-pin) (cadr osm--transient-pin))))
+          (sel (cons (car osm--selected-pin) (cadr osm--selected-pin))))
       (while (and (cdr p) (not (equal (car p) sel)))
         (cl-incf len2 (osm--haversine (caar p) (cdar p)
                                       (caadr p) (cdadr p)))
@@ -715,15 +715,15 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (if-let (pin (osm--pin-at event 'osm-bookmark))
       (progn
-        (osm--set-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
+        (osm--select-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
         (osm--update))
-    (osm--set-transient-pin-event event 'osm-selected-bookmark "New Bookmark")
+    (osm--select-pin-event event 'osm-selected-bookmark "New Bookmark")
     (osm-bookmark-set)))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
   (interactive "@e")
-  (osm--set-transient-pin-event event 'osm-transient "New Org Link")
+  (osm--select-pin-event event 'osm-transient "New Org Link")
   (call-interactively 'org-store-link))
 
 (defun osm--pin-at (event &optional type)
@@ -747,7 +747,7 @@ Should be at least 7 days according to the server usage policies."
   (when-let ((pin (osm--pin-at event))
              (id (intern-soft (concat "osm-selected-"
                                       (substring (symbol-name (caddr pin)) 4)))))
-    (osm--set-transient-pin id (car pin) (cadr pin) (cdddr pin))
+    (osm--select-pin id (car pin) (cadr pin) (cdddr pin))
     (osm--update)))
 
 (defun osm-zoom-in (&optional n)
@@ -1007,7 +1007,7 @@ Should be at least 7 days according to the server usage policies."
 (autoload 'svg--image-data "svg")
 (defun osm--draw-tile (x y tpin)
   "Make tile at X/Y from FILE.
-TPIN is an optional transient pin."
+TPIN is an optional pin."
   (let ((file (osm--tile-file x y osm--zoom))
         overlays)
     (when (file-exists-p file)
@@ -1076,12 +1076,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (pcase osm--transient-pin
+  (pcase osm--selected-pin
     ((and `(,lat ,lon . ,_)
           (guard (osm--pin-inside-p x y lat lon)))
      (osm--draw-tile x y `(,(osm--lon-to-x lon osm--zoom)
                            ,(osm--lat-to-y lat osm--zoom)
-                           ,@osm--transient-pin)))
+                           ,@osm--selected-pin)))
     (_
      (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
             (tile (and osm--tile-cache (gethash key osm--tile-cache))))
@@ -1334,7 +1334,7 @@ The coordinates are formatted with precision PREC."
 
 (defun osm--goto (lat lon zoom server id name)
   "Go to LAT/LON/ZOOM, change SERVER.
-Optionally place transient pin with ID and NAME."
+Optionally place pin with ID and NAME."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
   (with-current-buffer
@@ -1366,27 +1366,27 @@ Optionally place transient pin with ID and NAME."
             osm--lon (or lon (nth 1 osm-home))
             osm--zoom (or zoom (nth 2 osm-home)))
       (when id
-        (osm--set-transient-pin id osm--lat osm--lon name)))
+        (osm--select-pin id osm--lat osm--lon name)))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--set-transient-pin (id lat lon name &optional quiet)
-  "Set transient pin at LAT/LON with ID and NAME.
+(defun osm--select-pin (id lat lon name &optional quiet)
+  "Set selection pin at LAT/LON with ID and NAME.
 Print NAME if not QUIET."
-  (setq osm--transient-pin
+  (setq osm--selected-pin
         `(,lat ,lon ,(or id 'osm-transient)
                . ,(or name (format "Location %.6f° %.6f°" lat lon))))
   (unless quiet
-    (message "%s" (cdddr osm--transient-pin))))
+    (message "%s" (cdddr osm--selected-pin))))
 
-(defun osm--set-transient-pin-event (event &optional id name quiet)
-  "Set transient pin with ID and NAME at location of EVENT.
+(defun osm--select-pin-event (event &optional id name quiet)
+  "Set selection pin with ID and NAME at location of EVENT.
 Print NAME if not QUIET."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--set-transient-pin id
-                            (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
-                            (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
-                            name quiet)))
+    (osm--select-pin id
+                     (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
+                     (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
+                     name quiet)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1415,18 +1415,18 @@ When called interactively, call the function `osm-home'."
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
      (osm--goto lat lon zoom server 'osm-transient "Elisp Link"))
     ((and `(,url . ,_) (guard (stringp url)))
-       (if (string-match
-            "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
-           (let* ((lat (string-to-number (match-string 1 url)))
-                  (lon (string-to-number (match-string 2 url)))
-                  (args (url-parse-args (match-string 3 url) ""))
-                  (zoom (cdr (assoc "z" args)))
-                  (server (cdr (assoc "s" args))))
-             (osm--goto lat lon
-                        (and zoom (string-to-number zoom))
-                        (and server (intern-soft server))
-                        'osm-transient "Geo Link"))
-         (osm-search (string-remove-prefix "geo:" url))))
+     (if (string-match
+          "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
+         (let* ((lat (string-to-number (match-string 1 url)))
+                (lon (string-to-number (match-string 2 url)))
+                (args (url-parse-args (match-string 3 url) ""))
+                (zoom (cdr (assoc "z" args)))
+                (server (cdr (assoc "s" args))))
+           (osm--goto lat lon
+                      (and zoom (string-to-number zoom))
+                      (and server (intern-soft server))
+                      'osm-transient "Geo Link"))
+       (osm-search (string-remove-prefix "geo:" url))))
     (_ (error "Invalid osm link"))))
 
 ;;;###autoload
@@ -1445,7 +1445,7 @@ When called interactively, call the function `osm-home'."
   (interactive (list (osm--bookmark-read)))
   (when (y-or-n-p (format "Delete bookmark `%s'? " bm))
     (bookmark-delete bm)
-    (setq osm--transient-pin nil)
+    (setq osm--selected-pin nil)
     (osm--revert)))
 
 ;;;###autoload
@@ -1454,7 +1454,7 @@ When called interactively, call the function `osm-home'."
   (interactive (list (car (osm--bookmark-read))))
   (let ((new-name (read-from-minibuffer "New name: " old-name nil nil
                                         'bookmark-history old-name)))
-    (when osm--transient-pin (setf (cdddr osm--transient-pin) new-name))
+    (when osm--selected-pin (setf (cdddr osm--selected-pin) new-name))
     (bookmark-rename old-name new-name)
     (osm--revert)))
 
@@ -1462,8 +1462,8 @@ When called interactively, call the function `osm-home'."
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
   (or (assoc
-       (if (eq (caddr osm--transient-pin) 'osm-selected-bookmark)
-           (cdddr osm--transient-pin)
+       (if (eq (caddr osm--selected-pin) 'osm-selected-bookmark)
+           (cdddr osm--selected-pin)
          (completing-read
           "Bookmark: "
           (or (cl-loop for bm in bookmark-alist
@@ -1483,20 +1483,20 @@ When called interactively, call the function `osm-home'."
                    (def (osm--bookmark-name lat lon loc))
                    (name
                     (progn
-                      (setf (caddr osm--transient-pin) 'osm-transient)
+                      (setf (caddr osm--selected-pin) 'osm-transient)
                       (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def)))
                    (bookmark-make-record-function
                     (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
         (message "Stored bookmark: %s" name)
-        (setf (caddr osm--transient-pin) 'osm-selected-bookmark))
+        (setf (caddr osm--selected-pin) 'osm-selected-bookmark))
     (osm--revert)))
 
 (defun osm--fetch-location-data (id name)
   "Fetch location info for ID with NAME."
-  (let ((lat (or (car osm--transient-pin) osm--lat))
-        (lon (or (cadr osm--transient-pin) osm--lon)))
-    (osm--set-transient-pin id lat lon name 'quiet)
+  (let ((lat (or (car osm--selected-pin) osm--lat))
+        (lon (or (cadr osm--selected-pin) osm--lon)))
+    (osm--select-pin id lat lon name 'quiet)
     (message "%s: Fetching name of %.6f %.6f from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
@@ -1513,15 +1513,15 @@ When called interactively, call the function `osm-home'."
 (defun osm--track-delete ()
   "Delete track pin."
   (cl-loop for idx from 0 for (lat . lon) in osm--track do
-           (when (and (equal lat (car osm--transient-pin))
-                      (equal lon (cadr osm--transient-pin)))
+           (when (and (equal lat (car osm--selected-pin))
+                      (equal lon (cadr osm--selected-pin)))
              (setq osm--track (delq (nth idx osm--track) osm--track)
-                   osm--transient-pin nil
+                   osm--selected-pin nil
                    idx (min idx (1- (length osm--track))))
              (when-let (pin (nth idx osm--track))
-               (osm--set-transient-pin 'osm-selected-track (car pin) (cdr pin)
-                                       (format "(%s)" (- (length osm--track) idx))
-                                       'quiet))
+               (osm--select-pin 'osm-selected-track (car pin) (cdr pin)
+                                (format "(%s)" (- (length osm--track) idx))
+                                'quiet))
              (osm--track-length)
              (osm--revert)
              (cl-return))))
@@ -1529,14 +1529,14 @@ When called interactively, call the function `osm-home'."
 (defun osm-pin-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
-  (pcase (caddr osm--transient-pin)
+  (pcase (caddr osm--selected-pin)
     ('nil nil)
     ('osm-selected-bookmark
-     (osm-bookmark-delete (cdddr osm--transient-pin)))
+     (osm-bookmark-delete (cdddr osm--selected-pin)))
     ('osm-selected-track
      (osm--track-delete))
     (_
-     (setq osm--transient-pin nil)
+     (setq osm--selected-pin nil)
      (osm--update))))
 
 (defun osm--fetch-json (url)
@@ -1588,7 +1588,7 @@ See `osm-search-server' and `osm-search-language' for customization."
       (completing-read "Location: "
                        (osm--sorted-table osm--search-history)
                        nil nil nil 'osm--search-history))
-      current-prefix-arg))
+    current-prefix-arg))
   ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
   (let* ((results (or (osm--search needle) (error "No results for `%s'" needle)))
          (selected
@@ -1738,14 +1738,14 @@ If prefix ARG is given, store url as Elisp expression."
   (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-transient "New Link"))
                (server (and (not (eq osm-server (default-value 'osm-server))) osm-server))
                (url (if arg
-                         (format "(osm %.6f %.6f %s%s%s)"
-                                 lat lon osm--zoom
-                                 (if server (format " '%s" osm-server) "")
-                                 (if loc (format " %S" loc) ""))
-                       (format "geo:%.6f,%.6f;z=%s%s%s"
-                               lat lon osm--zoom
-                               (if server (format ";s=%s" osm-server) "")
-                               (if loc (format " (%s)" loc) "")))))
+                        (format "(osm %.6f %.6f %s%s%s)"
+                                lat lon osm--zoom
+                                (if server (format " '%s" osm-server) "")
+                                (if loc (format " %S" loc) ""))
+                      (format "geo:%.6f,%.6f;z=%s%s%s"
+                              lat lon osm--zoom
+                              (if server (format ";s=%s" osm-server) "")
+                              (if loc (format " (%s)" loc) "")))))
     (kill-new url)
     (message "Saved in the kill ring: %s" url)))
 
