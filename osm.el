@@ -678,14 +678,18 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (if-let (pin (osm--pin-at event 'osm-track))
       (progn
-        (osm--set-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin))
+        (osm--set-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin) 'quiet)
         (osm--update))
     (when (and (not osm--track) osm--transient-pin)
       (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track))
     (osm--set-transient-pin-event event 'osm-selected-track
-                                  (format "(%s)" (1+ (length osm--track))))
+                                  (format "(%s)" (1+ (length osm--track))) 'quiet)
     (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track)
     (osm--revert))
+  (osm--track-length))
+
+(defun osm--track-length ()
+  "Echo track length."
   (when (cdr osm--track)
     (let ((len1 0)
           (len2 0)
@@ -1367,20 +1371,23 @@ Optionally place transient pin with ID and NAME."
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--set-transient-pin (id lat lon name)
-  "Set transient pin at LAT/LON with ID and NAME."
+(defun osm--set-transient-pin (id lat lon name &optional quiet)
+  "Set transient pin at LAT/LON with ID and NAME.
+Print NAME if not QUIET."
   (setq osm--transient-pin
         `(,lat ,lon ,(or id 'osm-transient)
                . ,(or name (format "Location %.6f° %.6f°" lat lon))))
-  (message "%s" (cdddr osm--transient-pin)))
+  (unless quiet
+    (message "%s" (cdddr osm--transient-pin))))
 
-(defun osm--set-transient-pin-event (event &optional id name)
-  "Set transient pin with ID and NAME at location of EVENT."
+(defun osm--set-transient-pin-event (event &optional id name quiet)
+  "Set transient pin with ID and NAME at location of EVENT.
+Print NAME if not QUIET."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (osm--set-transient-pin id
                             (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
                             (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
-                            name)))
+                            name quiet)))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -1490,7 +1497,7 @@ When called interactively, call the function `osm-home'."
   "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
-    (osm--set-transient-pin id lat lon name)
+    (osm--set-transient-pin id lat lon name 'quiet)
     (message "%s: Fetching name of %.6f %.6f from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
@@ -1504,6 +1511,22 @@ When called interactively, call the function `osm-home'."
                       osm-search-server osm-search-language
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
+(defun osm--track-delete ()
+  "Delete track pin."
+  (cl-loop for idx from 0 for (lat . lon) in osm--track do
+           (when (and (equal lat (car osm--transient-pin))
+                      (equal lon (cadr osm--transient-pin)))
+             (setq osm--track (delq (nth idx osm--track) osm--track)
+                   osm--transient-pin nil
+                   idx (min idx (1- (length osm--track))))
+             (when-let (pin (nth idx osm--track))
+               (osm--set-transient-pin 'osm-selected-track (car pin) (cdr pin)
+                                       (format "(%s)" (- (length osm--track) idx))
+                                       'quiet))
+             (osm--track-length)
+             (osm--revert)
+             (cl-return))))
+
 (defun osm-pin-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
@@ -1512,17 +1535,7 @@ When called interactively, call the function `osm-home'."
     ('osm-selected-bookmark
      (osm-bookmark-delete (cdddr osm--transient-pin)))
     ('osm-selected-track
-     (cl-loop for idx from 0 for (lat . lon) in osm--track do
-              (when (and (equal lat (car osm--transient-pin))
-                         (equal lon (cadr osm--transient-pin)))
-                (setq osm--track (delq (nth idx osm--track) osm--track)
-                      osm--transient-pin nil
-                      idx (min idx (1- (length osm--track))))
-                (when-let (pin (nth idx osm--track))
-                  (osm--set-transient-pin 'osm-selected-track (car pin) (cdr pin)
-                                          (format "(%s)" (- (length osm--track) idx))))
-                (osm--revert)
-                (cl-return))))
+     (osm--track-delete))
     (_
      (setq osm--transient-pin nil)
      (osm--update))))
