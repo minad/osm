@@ -278,8 +278,8 @@ Should be at least 7 days according to the server usage policies."
   "SPC" #'osm-zoom-in
   "S-SPC" #'osm-zoom-out
   "<mouse-1>" #'osm-click
-  "<mouse-2>" #'osm-org-link-click
-  "<mouse-3>" #'osm-bookmark-click
+  "<mouse-2>" #'osm-org-link
+  "<mouse-3>" #'osm-bookmark-set
   "S-<down-mouse-1>" #'ignore
   "S-<mouse-1>" #'osm-track-click
   "<down-mouse-1>" #'osm-mouse-drag
@@ -703,13 +703,7 @@ Should be at least 7 days according to the server usage policies."
                          len1 (length (member sel osm--track)) len2
                          (length osm--track)))))))
 
-(defun osm-bookmark-click (event)
-  "Create bookmark at position of click EVENT."
-  (interactive "@e")
-  (osm--select-pin-event event 'osm-bookmark "New Bookmark")
-  (osm-bookmark-set))
-
-(defun osm-org-link-click (event)
+(defun osm-org-link (event)
   "Store link at position of click EVENT."
   (interactive "@e")
   (osm--select-pin-event event 'osm-selected "New Org Link")
@@ -1478,6 +1472,8 @@ When called interactively, call the function `osm-home'."
 
 (defun osm--fetch-location-data (name)
   "Fetch location info for NAME."
+  (when (mouse-event-p last-input-event)
+    (osm--select-pin-event last-input-event 'osm-selected name))
   (let ((lat (or (car osm--selected-pin) osm--lat))
         (lon (or (cadr osm--selected-pin) osm--lon)))
     (osm--select-pin 'osm-selected lat lon name 'quiet)
@@ -1772,8 +1768,8 @@ The properties are checked as keyword arguments.  See
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
                    #'osm-save-url))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-mouse-drag #'osm-click #'osm-org-link-click
-                   #'osm-pin-click #'osm-bookmark-click #'osm-track-click))
+(dolist (sym (list #'osm-mouse-drag #'osm-click #'osm-org-link
+                   #'osm-pin-click #'osm-track-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
