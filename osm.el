@@ -260,28 +260,28 @@ Should be at least 7 days according to the server usage policies."
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
   "<osm-selected>" #'ignore
-  "<osm-bookmark> <mouse-1>" #'osm-pin-click
-  "<osm-bookmark> <mouse-2>" #'osm-pin-click
-  "<osm-bookmark> <mouse-3>" #'osm-pin-click
-  "<osm-home> <mouse-1>" #'osm-pin-click
-  "<osm-home> <mouse-2>" #'osm-pin-click
-  "<osm-home> <mouse-3>" #'osm-pin-click
-  "<osm-poi> <mouse-1>" #'osm-pin-click
-  "<osm-poi> <mouse-2>" #'osm-pin-click
-  "<osm-poi> <mouse-3>" #'osm-pin-click
-  "<osm-track> <mouse-1>" #'osm-track-click
-  "<osm-track> <mouse-2>" #'osm-track-click
-  "<osm-track> <mouse-3>" #'osm-track-click
+  "<osm-bookmark> <mouse-1>" #'osm-mouse-select
+  "<osm-bookmark> <mouse-2>" #'osm-mouse-select
+  "<osm-bookmark> <mouse-3>" #'osm-mouse-select
+  "<osm-home> <mouse-1>" #'osm-mouse-select
+  "<osm-home> <mouse-2>" #'osm-mouse-select
+  "<osm-home> <mouse-3>" #'osm-mouse-select
+  "<osm-poi> <mouse-1>" #'osm-mouse-select
+  "<osm-poi> <mouse-2>" #'osm-mouse-select
+  "<osm-poi> <mouse-3>" #'osm-mouse-select
+  "<osm-track> <mouse-1>" #'osm-mouse-select
+  "<osm-track> <mouse-2>" #'osm-mouse-select
+  "<osm-track> <mouse-3>" #'osm-mouse-select
   "<home>" #'osm-home
   "+" #'osm-zoom-in
   "-" #'osm-zoom-out
   "SPC" #'osm-zoom-in
   "S-SPC" #'osm-zoom-out
-  "<mouse-1>" #'osm-click
-  "<mouse-2>" #'osm-org-link
+  "<mouse-1>" #'osm-mouse-pin
+  "<mouse-2>" 'org-store-link
   "<mouse-3>" #'osm-bookmark-set
   "S-<down-mouse-1>" #'ignore
-  "S-<mouse-1>" #'osm-track-click
+  "S-<mouse-1>" #'osm-mouse-track
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
@@ -301,9 +301,9 @@ Should be at least 7 days according to the server usage policies."
   "M-<left>" #'osm-left-left
   "M-<right>" #'osm-right-right
   "n" #'osm-bookmark-rename
-  "d" #'osm-pin-delete
-  "DEL" #'osm-pin-delete
-  "<deletechar>" #'osm-pin-delete
+  "d" #'osm-delete
+  "DEL" #'osm-delete
+  "<deletechar>" #'osm-delete
   "c" #'osm-center
   "o" #'clone-buffer
   "u" #'osm-save-url
@@ -650,12 +650,6 @@ Should be at least 7 days according to the server usage policies."
     (message "%s" (cdddr osm--selected-pin))
     (osm--update)))
 
-(defun osm-click (event)
-  "Selection pin at location of the click EVENT."
-  (interactive "@e")
-  (osm--select-pin-event event)
-  (osm--update))
-
 (defun osm--haversine (lat1 lon1 lat2 lon2)
   "Compute distance between LAT1/LON1 and LAT2/LON2 in km."
   ;; https://en.wikipedia.org/wiki/Haversine_formula
@@ -665,19 +659,15 @@ Should be at least 7 days according to the server usage policies."
          (h (+ (* x x) (* (cos (* rad lat1)) (cos (* rad lat2)) y y))))
     (* 2 6371 (atan (sqrt h) (sqrt (- 1 h))))))
 
-(defun osm-track-click (event)
-  "Put or select a track pin at location of the click EVENT."
+(defun osm-mouse-track (event)
+  "Set track pin at location of the click EVENT."
   (interactive "@e")
-  (if-let (pin (osm--pin-at event 'osm-track))
-      (progn
-        (osm--select-pin 'osm-track (car pin) (cadr pin) (cdddr pin) 'quiet)
-        (osm--update))
-    (when (and (not osm--track) osm--selected-pin)
-      (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track))
-    (osm--select-pin-event event 'osm-track
-                           (format "(%s)" (1+ (length osm--track))) 'quiet)
-    (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track)
-    (osm--revert))
+  (when (and (not osm--track) osm--selected-pin)
+    (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track))
+  (osm--select-pin-event event 'osm-track
+                         (format "(%s)" (1+ (length osm--track))) 'quiet)
+  (push (cons (car osm--selected-pin) (cadr osm--selected-pin)) osm--track)
+  (osm--revert)
   (osm--track-length))
 
 (defun osm--track-length ()
@@ -703,12 +693,6 @@ Should be at least 7 days according to the server usage policies."
                          len1 (length (member sel osm--track)) len2
                          (length osm--track)))))))
 
-(defun osm-org-link (event)
-  "Store link at position of click EVENT."
-  (interactive "@e")
-  (osm--select-pin-event event 'osm-selected "New Org Link")
-  (call-interactively 'org-store-link))
-
 (defun osm--pin-at (event &optional type)
   "Get pin of TYPE at EVENT."
   (let* ((xy (posn-x-y (event-start event)))
@@ -724,11 +708,19 @@ Should be at least 7 days according to the server usage policies."
               (setq min d found pin))))))
     (cddr found)))
 
-(defun osm-pin-click (event)
+(defun osm-mouse-pin (event)
+  "Create location pin at the click EVENT."
+  (interactive "@e")
+  (osm--select-pin-event event)
+  (osm--update))
+
+(defun osm-mouse-select (event)
   "Select pin at position of click EVENT."
   (interactive "@e")
   (when-let ((pin (osm--pin-at event)))
-    (osm--select-pin (caddr pin) (car pin) (cadr pin) (cdddr pin))
+    (let ((track (eq (caddr pin) 'osm-track)))
+      (osm--select-pin (caddr pin) (car pin) (cadr pin) (cdddr pin) track)
+      (when track (osm--track-length)))
     (osm--update)))
 
 (defun osm-zoom-in (&optional n)
@@ -888,7 +880,7 @@ Should be at least 7 days according to the server usage policies."
          (>= q y) (< q (+ y 1.25)))))
 
 (defun osm--add-pin (pins id lat lon name)
-  "Put pin at X/Y with NAME and ID in PINS hash table."
+  "Add pin at X/Y with NAME and ID in PINS hash table."
   (let* ((x (osm--lon-to-x lon osm--zoom))
          (y (osm--lat-to-y lat osm--zoom))
          (x0 (/ x 256))
@@ -1506,7 +1498,7 @@ When called interactively, call the function `osm-home'."
              (osm--revert)
              (cl-return))))
 
-(defun osm-pin-delete ()
+(defun osm-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
   (pcase (caddr osm--selected-pin)
@@ -1768,8 +1760,7 @@ The properties are checked as keyword arguments.  See
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
                    #'osm-save-url))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-mouse-drag #'osm-click #'osm-org-link
-                   #'osm-pin-click #'osm-track-click))
+(dolist (sym (list #'osm-mouse-drag #'osm-mouse-pin #'osm-mouse-select #'osm-mouse-track))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)

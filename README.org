@@ -83,7 +83,7 @@ afterwards.
   link has the form ~(osm 51.49 -0.14 11)~.
 
 Bookmarks and Org links can be created at point by clicking with the mouse. See
-the docstrings of the commands ~osm-bookmark-set~ and ~osm-org-link~.
+the docstrings of the commands ~osm-bookmark-set~ and ~org-link-store~.
 
 **** Org link examples
 
@@ -144,11 +144,10 @@ Some additional key bindings are available in Osm buffers:
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
 - ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
-- ~<mouse-1>~: =osm-click= - Place pin at point
-- ~<mouse-2>~: =osm-org-link= - Store point as Org link
+- ~<mouse-1>~: =osm-mouse-pin= - Place pin at point
+- ~<mouse-2>~: =org-link-store= - Store point as Org link
 - ~<mouse-3>~: =osm-bookmark-set= - Store point as bookmark
-- ~S-<mouse-1>~: =osm-track-click= - Create track pin to measure distance
-- ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
+- ~S-<mouse-1>~: =osm-mouse-track= - Create track pin to measure distance
 - ~<down-mouse-*>~: =osm-mouse-drag= - Drag the map with the mouse
 - ~d~, ~DEL~: =osm-delete= - Delete selected pin (bookmark or way point)
 - ~c~: =osm-center= - Center to currently marked pin
