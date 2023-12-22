@@ -264,7 +264,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
-  "<osm-selected>" #'ignore
+  "<osm-selected>" #'osm-mouse-select
   "<osm-bookmark> <mouse-1>" #'osm-mouse-select
   "<osm-bookmark> <mouse-2>" #'osm-mouse-select
   "<osm-bookmark> <mouse-3>" #'osm-mouse-select
