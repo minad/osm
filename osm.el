@@ -118,7 +118,7 @@ See also `osm-server-list'."
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
+     :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"))
