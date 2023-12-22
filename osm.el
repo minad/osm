@@ -951,8 +951,7 @@ Should be at least 7 days according to the server usage policies."
 
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
 ;; has the issue that lines which go along a tile border may be drawn only
-;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
-;; width).
+;; partially. Use a more precise algorithm instead.
 (defun osm--track-segment (tracks seg)
   (when seg
     (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
@@ -997,9 +996,9 @@ Should be at least 7 days according to the server usage policies."
   "Compute overlays and return the overlays in tile X/Y."
   (unless (eq (car osm--overlay-table) osm--zoom)
     ;; TODO: Do not compute overlays for the entire map, only for a reasonable
-    ;; viewport around the current center, maybe 10x the window size. Otherwise
-    ;; the spatial hash map for the tracks can get very large if a line segment
-    ;; spans many tiles.
+    ;; view port around the current center, depending on the size of the
+    ;; window. Otherwise the spatial hash map for the tracks gets very large if
+    ;; a line segment spans many tiles.
     (setq osm--overlay-table (list osm--zoom (osm--compute-pins) (osm--compute-tracks))))
   (let ((pins (gethash (cons x y) (cadr osm--overlay-table)))
         (tracks (gethash (cons x y) (caddr osm--overlay-table))))
