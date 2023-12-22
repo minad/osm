@@ -661,7 +661,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-click (event)
   "Put a transient pin at location of the click EVENT."
   (interactive "@e")
-  (osm--put-transient-pin-event event)
+  (osm--set-transient-pin-event event)
   (osm--update))
 
 (defun osm--haversine (lat1 lon1 lat2 lon2)
@@ -678,11 +678,11 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (if-let (pin (osm--pin-at event 'osm-track))
       (progn
-        (osm--put-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin))
+        (osm--set-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin))
         (osm--update))
     (when (and (not osm--track) osm--transient-pin)
       (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track))
-    (osm--put-transient-pin-event event 'osm-selected-track
+    (osm--set-transient-pin-event event 'osm-selected-track
                                   (format "(%s)" (1+ (length osm--track))))
     (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track)
     (osm--revert))
@@ -712,15 +712,15 @@ Should be at least 7 days according to the server usage policies."
   (interactive "@e")
   (if-let (pin (osm--pin-at event 'osm-bookmark))
       (progn
-        (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
+        (osm--set-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
         (osm--update))
-    (osm--put-transient-pin-event event 'osm-selected-bookmark "New Bookmark")
+    (osm--set-transient-pin-event event 'osm-selected-bookmark "New Bookmark")
     (osm-bookmark-set)))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
   (interactive "@e")
-  (osm--put-transient-pin-event event 'osm-transient "New Org Link")
+  (osm--set-transient-pin-event event 'osm-transient "New Org Link")
   (call-interactively 'org-store-link))
 
 (defun osm--pin-at (event &optional type)
@@ -744,7 +744,7 @@ Should be at least 7 days according to the server usage policies."
   (when-let ((pin (osm--pin-at event))
              (id (intern-soft (concat "osm-selected-"
                                       (substring (symbol-name (caddr pin)) 4)))))
-    (osm--put-transient-pin id (car pin) (cadr pin) (cdddr pin))
+    (osm--set-transient-pin id (car pin) (cadr pin) (cdddr pin))
     (osm--update)))
 
 (defun osm-zoom-in (&optional n)
@@ -903,7 +903,7 @@ Should be at least 7 days according to the server usage policies."
     (and (>= p (- x 0.125)) (< p (+ x 1.125))
          (>= q y) (< q (+ y 1.25)))))
 
-(defun osm--put-pin (pins id lat lon name)
+(defun osm--add-pin (pins id lat lon name)
   "Put pin at X/Y with NAME and ID in PINS hash table."
   (let* ((x (osm--lon-to-x lon osm--zoom))
          (y (osm--lat-to-y lat osm--zoom))
@@ -923,33 +923,24 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--compute-pins ()
   "Compute pin hash table."
   (let ((pins (make-hash-table :test #'equal)))
-    (osm--put-pin pins 'osm-home (car osm-home) (cadr osm-home) "Home")
+    (osm--add-pin pins 'osm-home (car osm-home) (cadr osm-home) "Home")
     (bookmark-maybe-load-default-file)
     (dolist (bm bookmark-alist)
       (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
         (let ((coord (bookmark-prop-get bm 'coordinates)))
-          (osm--put-pin pins 'osm-bookmark (car coord) (cadr coord) (car bm)))))
+          (osm--add-pin pins 'osm-bookmark (car coord) (cadr coord) (car bm)))))
     (dolist (file osm--gpx-files)
       (dolist (pt (cddr file))
-        (osm--put-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
+        (osm--add-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
     (cl-loop for pt in osm--track for idx from (length osm--track) downto 1 do
-             (osm--put-pin pins 'osm-track (car pt) (cdr pt)
+             (osm--add-pin pins 'osm-track (car pt) (cdr pt)
                            (format "(%s)" idx)))
     pins))
-
-(defun osm--compute-tracks ()
-  "Compute track hash table."
-  (let ((tracks (make-hash-table :test #'equal)))
-    (dolist (file osm--gpx-files)
-      (dolist (seg (cadr file))
-        (osm--track-segment tracks seg)))
-    (osm--track-segment tracks osm--track)
-    tracks))
 
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
 ;; has the issue that lines which go along a tile border may be drawn only
 ;; partially. Use a more precise algorithm instead.
-(defun osm--track-segment (tracks seg)
+(defun osm--add-track (tracks seg)
   (when seg
     (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
                     (osm--lat-to-y (caar seg) osm--zoom))))
@@ -988,6 +979,15 @@ Should be at least 7 days according to the server usage policies."
                         (cl-incf y0 sy))
                       t)))
               (setq p0 p1))))))))
+
+(defun osm--compute-tracks ()
+  "Compute track hash table."
+  (let ((tracks (make-hash-table :test #'equal)))
+    (dolist (file osm--gpx-files)
+      (dolist (seg (cadr file))
+        (osm--add-track tracks seg)))
+    (osm--add-track tracks osm--track)
+    tracks))
 
 (defun osm--get-overlays (x y)
   "Compute overlays and return the overlays in tile X/Y."
@@ -1363,21 +1363,21 @@ Optionally place transient pin with ID and NAME."
             osm--lon (or lon (nth 1 osm-home))
             osm--zoom (or zoom (nth 2 osm-home)))
       (when id
-        (osm--put-transient-pin id osm--lat osm--lon name)))
+        (osm--set-transient-pin id osm--lat osm--lon name)))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--put-transient-pin (id lat lon name)
+(defun osm--set-transient-pin (id lat lon name)
   "Set transient pin at LAT/LON with ID and NAME."
   (setq osm--transient-pin
         `(,lat ,lon ,(or id 'osm-transient)
                . ,(or name (format "Location %.6f° %.6f°" lat lon))))
   (message "%s" (cdddr osm--transient-pin)))
 
-(defun osm--put-transient-pin-event (event &optional id name)
+(defun osm--set-transient-pin-event (event &optional id name)
   "Set transient pin with ID and NAME at location of EVENT."
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
-    (osm--put-transient-pin id
+    (osm--set-transient-pin id
                             (osm--y-to-lat (+ (osm--y0) y) osm--zoom)
                             (osm--x-to-lon (+ (osm--x0) x) osm--zoom)
                             name)))
@@ -1490,7 +1490,7 @@ When called interactively, call the function `osm-home'."
   "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
-    (osm--put-transient-pin id lat lon name)
+    (osm--set-transient-pin id lat lon name)
     (message "%s: Fetching name of %.6f %.6f from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
@@ -1509,17 +1509,18 @@ When called interactively, call the function `osm-home'."
   (interactive)
   (pcase (caddr osm--transient-pin)
     ('nil nil)
-    ('osm-selected-bookmark (osm-bookmark-delete (cdddr osm--transient-pin)))
+    ('osm-selected-bookmark
+     (osm-bookmark-delete (cdddr osm--transient-pin)))
     ('osm-selected-track
      (cl-loop for idx from 0 for (lat . lon) in osm--track do
               (when (and (equal lat (car osm--transient-pin))
                          (equal lon (cadr osm--transient-pin)))
                 (setq osm--track (delq (nth idx osm--track) osm--track)
-                      idx (min idx (1- (length osm--track)))
-                      osm--transient-pin (when-let (pin (nth idx osm--track))
-                                           `(,(car pin) ,(cdr pin)
-                                             osm-selected-track
-                                             . ,(format "(%s)" (- (length osm--track) idx)))))
+                      osm--transient-pin nil
+                      idx (min idx (1- (length osm--track))))
+                (when-let (pin (nth idx osm--track))
+                  (osm--set-transient-pin 'osm-selected-track (car pin) (cdr pin)
+                                          (format "(%s)" (- (length osm--track) idx))))
                 (osm--revert)
                 (cl-return))))
     (_
