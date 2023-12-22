@@ -177,8 +177,7 @@ the domain name and the :user to the string \"apikey\"."
     (osm-selected-poi . "#e20")
     (osm-selected-track . "#e20")
     (osm-bookmark . "#f80")
-    (osm-transient . "#08f")
-    (osm-link "#f6f")
+    (osm-transient . "#e20")
     (osm-poi . "#88f")
     (osm-home . "#80f")
     (osm-track . "#00a"))
@@ -263,7 +262,6 @@ Should be at least 7 days according to the server usage policies."
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
-  "<osm-link>" #'ignore
   "<osm-transient>" #'ignore
   "<osm-selected-bookmark>" #'ignore
   "<osm-selected-poi>" #'ignore
@@ -722,7 +720,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
   (interactive "@e")
-  (osm--put-transient-pin-event event 'osm-link "New Org Link")
+  (osm--put-transient-pin-event event 'osm-transient "New Org Link")
   (call-interactively 'org-store-link))
 
 (defun osm--pin-at (event &optional type)
@@ -743,11 +741,10 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-pin-click (event)
   "Select pin at position of click EVENT."
   (interactive "@e")
-  (when-let (pin (osm--pin-at event))
-    (osm--put-transient-pin
-     (intern (concat "osm-selected-"
-                     (substring (symbol-name (caddr pin)) 4)))
-     (car pin) (cadr pin) (cdddr pin))
+  (when-let ((pin (osm--pin-at event))
+             (id (intern-soft (concat "osm-selected-"
+                                      (substring (symbol-name (caddr pin)) 4)))))
+    (osm--put-transient-pin id (car pin) (cadr pin) (cdddr pin))
     (osm--update)))
 
 (defun osm-zoom-in (&optional n)
@@ -1300,7 +1297,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--org-link-props ()
   "Return Org link properties."
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Org Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-transient "New Org Link"))
                (name (osm--location-name lat lon loc 2)))
     (list :type "geo"
           :description
@@ -1410,7 +1407,7 @@ When called interactively, call the function `osm-home'."
     (`(,lat ,lon ,zoom . ,server)
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
-     (osm--goto lat lon zoom server 'osm-link "Elisp Link"))
+     (osm--goto lat lon zoom server 'osm-transient "Elisp Link"))
     ((and `(,url . ,_) (guard (stringp url)))
        (if (string-match
             "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
@@ -1422,7 +1419,7 @@ When called interactively, call the function `osm-home'."
              (osm--goto lat lon
                         (and zoom (string-to-number zoom))
                         (and server (intern-soft server))
-                        'osm-link "Geo Link"))
+                        'osm-transient "Geo Link"))
          (osm-search (string-remove-prefix "geo:" url))))
     (_ (error "Invalid osm link"))))
 
@@ -1511,6 +1508,7 @@ When called interactively, call the function `osm-home'."
   "Delete selected pin (bookmark or way point)."
   (interactive)
   (pcase (caddr osm--transient-pin)
+    ('nil nil)
     ('osm-selected-bookmark (osm-bookmark-delete (cdddr osm--transient-pin)))
     ('osm-selected-track
      (cl-loop for idx from 0 for (lat . lon) in osm--track do
@@ -1523,7 +1521,10 @@ When called interactively, call the function `osm-home'."
                                              osm-selected-track
                                              . ,(format "(%s)" (- (length osm--track) idx)))))
                 (osm--revert)
-                (cl-return))))))
+                (cl-return))))
+    (_
+     (setq osm--transient-pin nil)
+     (osm--update))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1721,7 +1722,7 @@ See `osm-search-server' and `osm-search-language' for customization."
 If prefix ARG is given, store url as Elisp expression."
   (interactive "P")
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-transient "New Link"))
                (server (and (not (eq osm-server (default-value 'osm-server))) osm-server))
                (url (if arg
                          (format "(osm %.6f %.6f %s%s%s)"
