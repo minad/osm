@@ -374,6 +374,9 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--gpx-files nil
   "Global list of loaded tracks.")
 
+(defvar osm--track nil
+  "List of track coordinates.")
+
 (defvar-local osm--subdomain-index 0
   "Subdomain index to query the servers in a round-robin fashion.")
 
@@ -412,11 +415,6 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
-
-;; TODO: The track should better be buffer-local.
-;; The tile cache must be adapted to handle this.
-(defvar osm--track nil
-  "List of track coordinates.")
 
 (defun osm--server-menu ()
   "Generate server menu."
