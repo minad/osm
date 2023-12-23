@@ -1538,25 +1538,16 @@ When called interactively, call the function `osm-home'."
   (interactive)
   (pcase (caddr osm--pin)
     ('nil nil)
-    ('osm-bookmark
-     (osm-bookmark-delete (cadddr osm--pin)))
-    ('osm-track
-     (osm--track-delete))
-    (_
-     (setq osm--pin nil)
-     (osm--update))))
+    ('osm-bookmark (osm-bookmark-delete (cadddr osm--pin)))
+    ('osm-track (osm--track-delete))
+    (_ (setq osm--pin nil) (osm--update))))
 
 (defun osm-rename ()
   "Rename selected pin (bookmark or way point)."
   (interactive)
   (pcase (caddr osm--pin)
-    ('osm-bookmark
-     (osm-bookmark-rename (cadddr osm--pin)))
-    ('osm-track
-     (osm--track-rename))
-    (_
-     (setq osm--pin nil)
-     (osm--update))))
+    ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
+    ('osm-track (osm--track-rename))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
