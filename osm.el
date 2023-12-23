@@ -305,7 +305,7 @@ Should be at least 7 days according to the server usage policies."
   "M-<down>" #'osm-down-down
   "M-<left>" #'osm-left-left
   "M-<right>" #'osm-right-right
-  "n" #'osm-bookmark-rename
+  "n" #'osm-rename
   "d" #'osm-delete
   "DEL" #'osm-delete
   "<deletechar>" #'osm-delete
@@ -331,6 +331,7 @@ Should be at least 7 days according to the server usage policies."
     "--"
     ["Org Link" org-store-link]
     ["Geo Url" osm-save-url]
+    ["Elisp Link" (osm-save-url t)]
     ("Bookmark"
      ["Set" osm-bookmark-set]
      ["Jump" osm-bookmark-jump]
@@ -705,11 +706,11 @@ Local per buffer since the overlays depend on the zoom level.")
         (cl-incf len1 (osm--haversine (caar p) (cadar p)
                                       (caadr p) (cadadr p)))
         (pop p))
-      (message "%s way points, length %.2fkm%s"
+      (message "%s way points, length %.2fkm, %s"
                (length osm--track) (+ len1 len2)
                (if (or (= len1 0) (= len2 0))
-                   ""
-                 (format ", Start → %.2fkm → %s → %.2fkm → End"
+                   sel-name
+                 (format "%.2fkm → %s → %.2fkm"
                          len1 sel-name len2))))))
 
 (defun osm--pin-at (event &optional type)
@@ -1498,27 +1499,39 @@ When called interactively, call the function `osm-home'."
                       osm-search-server osm-search-language
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
+(defun osm--track-index ()
+  "Return index of selected track way point."
+  (cl-loop for idx from 0 for (lat lon _) in osm--track
+           if (and (equal lat (car osm--pin)) (equal lon (cadr osm--pin)))
+           return idx))
+
 (defun osm--track-delete ()
-  "Delete track pin."
-  (cl-loop for idx from 0 for (lat lon _) in osm--track do
-           (when (and (equal lat (car osm--pin))
-                      (equal lon (cadr osm--pin)))
-             ;; Delete pin
-             (cl-callf2 delq (nth idx osm--track) osm--track)
-             (setq osm--pin nil
-                   idx (min idx (1- (length osm--track))))
-             ;; Select next pin
-             (pcase (nth idx osm--track)
-               (`(,lat ,lon ,name)
-                (osm--set-pin 'osm-track lat lon name 'quiet)))
-             ;; Rename pins after deletion
-             (cl-loop for idx from (length osm--track) downto 1
-                      for pt in osm--track
-                      if (string-match-p "\\`WP[0-9]+\\'" (caddr pt)) do
-                      (setf (caddr pt) (format "WP%s" idx)))
-             (osm--track-length)
-             (osm--revert)
-             (cl-return))))
+  "Delete track way point"
+  (when-let ((idx (osm--track-index)))
+    ;; Delete pin
+    (cl-callf2 delq (nth idx osm--track) osm--track)
+    (setq osm--pin nil
+          idx (min idx (1- (length osm--track))))
+    ;; Select next pin
+    (pcase (nth idx osm--track)
+      (`(,lat ,lon ,name)
+       (osm--set-pin 'osm-track lat lon name 'quiet)))
+    ;; Rename pins after deletion
+    (cl-loop for idx from (length osm--track) downto 1
+             for pt in osm--track
+             if (string-match-p "\\`WP[0-9]+\\'" (caddr pt)) do
+             (setf (caddr pt) (format "WP%s" idx)))
+    (osm--track-length)
+    (osm--revert)))
+
+(defun osm--track-rename ()
+  "Rename track way point."
+  (when-let ((pt (nth (osm--track-index) osm--track))
+             (old-name (caddr pt))
+             (new-name (read-from-minibuffer "New name: " old-name nil nil nil old-name)))
+    (setf (caddr pt) new-name
+          (cadddr osm--pin) new-name)
+    (osm--revert)))
 
 (defun osm-delete ()
   "Delete selected pin (bookmark or way point)."
@@ -1529,6 +1542,18 @@ When called interactively, call the function `osm-home'."
      (osm-bookmark-delete (cadddr osm--pin)))
     ('osm-track
      (osm--track-delete))
+    (_
+     (setq osm--pin nil)
+     (osm--update))))
+
+(defun osm-rename ()
+  "Rename selected pin (bookmark or way point)."
+  (interactive)
+  (pcase (caddr osm--pin)
+    ('osm-bookmark
+     (osm-bookmark-rename (cadddr osm--pin)))
+    ('osm-track
+     (osm--track-rename))
     (_
      (setq osm--pin nil)
      (osm--update))))

@@ -2,6 +2,11 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- Store names for track way points.
+- Add =osm-rename= command to rename both bookmarks and track way points.
+
 * Version 1.1 (2023-12-23)
 
 - ~osm--purge-tile-cache~: Delete empty tile cache directories.
