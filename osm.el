@@ -679,36 +679,38 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm-mouse-track (event)
   "Set track pin at location of the click EVENT."
   (interactive "@e")
-  (when (and (not osm--track) osm--pin)
-    (push (cons (car osm--pin) (cadr osm--pin)) osm--track))
+  (pcase osm--pin
+    ((and (guard (not osm--track)) `(,lat ,lon ,_id ,_name))
+     (push (list lat lon "WP1") osm--track)))
   (osm--set-pin-event event 'osm-track
-                      (format "(%s)" (1+ (length osm--track))) 'quiet)
-  (push (cons (car osm--pin) (cadr osm--pin)) osm--track)
+                      (format "WP%s" (1+ (length osm--track))) 'quiet)
+  (pcase-let ((`(,lat ,lon ,_id ,name) osm--pin))
+    (push (list lat lon name) osm--track))
   (osm--revert)
   (osm--track-length))
 
 (defun osm--track-length ()
   "Echo track length."
   (when (cdr osm--track)
-    (let ((len1 0)
-          (len2 0)
-          (p osm--track)
-          (sel (cons (car osm--pin) (cadr osm--pin))))
-      (while (and (cdr p) (not (equal (car p) sel)))
-        (cl-incf len2 (osm--haversine (caar p) (cdar p)
-                                      (caadr p) (cdadr p)))
+    (pcase-let* ((len1 0)
+                 (len2 0)
+                 (p osm--track)
+                 (`(,sel-lat ,sel-lon ,_ ,sel-name) osm--pin))
+      (while (and (cdr p) (not (and (equal (caar p) sel-lat)
+                                    (equal (cadar p) sel-lon))))
+        (cl-incf len2 (osm--haversine (caar p) (cadar p)
+                                      (caadr p) (cadadr p)))
         (pop p))
       (while (cdr p)
-        (cl-incf len1 (osm--haversine (caar p) (cdar p)
-                                      (caadr p) (cdadr p)))
+        (cl-incf len1 (osm--haversine (caar p) (cadar p)
+                                      (caadr p) (cadadr p)))
         (pop p))
       (message "%s way points, length %.2fkm%s"
                (length osm--track) (+ len1 len2)
                (if (or (= len1 0) (= len2 0))
                    ""
-                 (format ", (1) → %.2fkm → (%s) → %.2fkm → (%s)"
-                         len1 (length (member sel osm--track)) len2
-                         (length osm--track)))))))
+                 (format ", Start → %.2fkm → %s → %.2fkm → End"
+                         len1 sel-name len2))))))
 
 (defun osm--pin-at (event &optional type)
   "Get pin of TYPE at EVENT."
@@ -925,9 +927,8 @@ Local per buffer since the overlays depend on the zoom level.")
     (dolist (file osm--gpx-files)
       (dolist (pt (cddr file))
         (osm--add-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
-    (cl-loop for pt in osm--track for idx from (length osm--track) downto 1 do
-             (osm--add-pin pins 'osm-track (car pt) (cdr pt)
-                           (format "(%s)" idx)))
+    (cl-loop for (lat lon name) in osm--track do
+             (osm--add-pin pins 'osm-track lat lon name))
     pins))
 
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
@@ -935,10 +936,11 @@ Local per buffer since the overlays depend on the zoom level.")
 ;; partially. Use a more precise algorithm instead.
 (defun osm--add-track (tracks seg)
   (when seg
-    (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
+    (let ((p0 (cons (osm--lon-to-x (or (car-safe (cdar seg)) (cdar seg)) osm--zoom)
                     (osm--lat-to-y (caar seg) osm--zoom))))
       (dolist (pt (cdr seg))
-        (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
+        (let* ((px1 (cdr pt))
+               (px1 (osm--lon-to-x (if (consp px1) (car px1) px1) osm--zoom))
                (py1 (osm--lat-to-y (car pt) osm--zoom))
                (pdx (- px1 (car p0)))
                (pdy (- py1 (cdr p0))))
@@ -1498,16 +1500,22 @@ When called interactively, call the function `osm-home'."
 
 (defun osm--track-delete ()
   "Delete track pin."
-  (cl-loop for idx from 0 for (lat . lon) in osm--track do
+  (cl-loop for idx from 0 for (lat lon _) in osm--track do
            (when (and (equal lat (car osm--pin))
                       (equal lon (cadr osm--pin)))
+             ;; Delete pin
              (cl-callf2 delq (nth idx osm--track) osm--track)
              (setq osm--pin nil
                    idx (min idx (1- (length osm--track))))
-             (when-let (pin (nth idx osm--track))
-               (osm--set-pin 'osm-track (car pin) (cdr pin)
-                             (format "(%s)" (- (length osm--track) idx))
-                             'quiet))
+             ;; Select next pin
+             (pcase (nth idx osm--track)
+               (`(,lat ,lon ,name)
+                (osm--set-pin 'osm-track lat lon name 'quiet)))
+             ;; Rename pins after deletion
+             (cl-loop for idx from (length osm--track) downto 1
+                      for pt in osm--track
+                      if (string-match-p "\\`WP[0-9]+\\'" (caddr pt)) do
+                      (setf (caddr pt) (format "WP%s" idx)))
              (osm--track-length)
              (osm--revert)
              (cl-return))))
