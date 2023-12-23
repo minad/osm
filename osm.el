@@ -661,11 +661,11 @@ Local per buffer since the overlays depend on the zoom level.")
   "Center to location of selected pin."
   (interactive)
   (osm--barf-unless-osm)
-  (when osm--pin
-    (setq osm--lat (car osm--pin)
-          osm--lon (cadr osm--pin))
-    (message "%s" (cdddr osm--pin))
-    (osm--update)))
+  (pcase osm--pin
+    (`(,lat ,lon ,_id ,name)
+     (setq osm--lat lat osm--lon lon)
+     (message "%s" name)
+     (osm--update))))
 
 (defun osm--haversine (lat1 lon1 lat2 lon2)
   "Compute distance between LAT1/LON1 and LAT2/LON2 in km."
@@ -1067,7 +1067,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (pcase osm--pin
-    ((and `(,lat ,lon ,_ . ,name)
+    ((and `(,lat ,lon ,_id ,name)
           (guard (osm--pin-inside-p x y lat lon)))
      (osm--draw-tile x y (list (osm--lon-to-x lon osm--zoom)
                                (osm--lat-to-y lat osm--zoom)
@@ -1362,11 +1362,9 @@ Optionally place pin with ID and NAME."
 (defun osm--set-pin (id lat lon name &optional quiet)
   "Set pin at LAT/LON with ID and NAME.
 Print NAME if not QUIET."
-  (setq osm--pin
-        `(,lat ,lon ,(or id 'osm-selected)
-               . ,(or name (format "Location %.6f° %.6f°" lat lon))))
-  (unless quiet
-    (message "%s" (cdddr osm--pin))))
+  (setq name (or name (format "Location %.6f° %.6f°" lat lon)))
+  (setq osm--pin (list lat lon (or id 'osm-selected) name))
+  (unless quiet (message "%s" name)))
 
 (defun osm--set-pin-event (event &optional id name quiet)
   "Set selection pin with ID and NAME at location of EVENT.
@@ -1443,7 +1441,7 @@ When called interactively, call the function `osm-home'."
   (interactive (list (car (osm--bookmark-read))))
   (let ((new-name (read-from-minibuffer "New name: " old-name nil nil
                                         'bookmark-history old-name)))
-    (when osm--pin (setf (cdddr osm--pin) new-name))
+    (when osm--pin (setf (cadddr osm--pin) new-name))
     (bookmark-rename old-name new-name)
     (osm--revert)))
 
@@ -1451,15 +1449,15 @@ When called interactively, call the function `osm-home'."
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
   (or (assoc
-       (if (eq (caddr osm--pin) 'osm-bookmark)
-           (cdddr osm--pin)
-         (completing-read
-          "Bookmark: "
-          (or (cl-loop for bm in bookmark-alist
-                       if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-                       collect (car bm))
-              (error "No bookmarks found"))
-          nil t nil 'bookmark-history))
+       (pcase osm--pin
+         (`(,_lat ,_lon osm-bookmark ,name) name)
+         (_ (completing-read
+             "Bookmark: "
+             (or (cl-loop for bm in bookmark-alist
+                          if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+                          collect (car bm))
+                 (error "No bookmarks found"))
+             nil t nil 'bookmark-history)))
        bookmark-alist)
       (error "No bookmark selected")))
 
@@ -1520,7 +1518,7 @@ When called interactively, call the function `osm-home'."
   (pcase (caddr osm--pin)
     ('nil nil)
     ('osm-bookmark
-     (osm-bookmark-delete (cdddr osm--pin)))
+     (osm-bookmark-delete (cadddr osm--pin)))
     ('osm-track
      (osm--track-delete))
     (_
