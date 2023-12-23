@@ -256,6 +256,7 @@ Should be at least 7 days according to the server usage policies."
   "v" #'osm-server
   "t" #'osm-goto
   "x" #'osm-gpx-show
+  "X" #'osm-gpx-hide
   "j" #'osm-bookmark-jump)
 
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
@@ -1536,6 +1537,7 @@ When called interactively, call the function `osm-home'."
 (defun osm-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
+  (osm--barf-unless-osm)
   (pcase (caddr osm--pin)
     ('nil nil)
     ('osm-bookmark (osm-bookmark-delete (cadddr osm--pin)))
@@ -1545,6 +1547,7 @@ When called interactively, call the function `osm-home'."
 (defun osm-rename ()
   "Rename selected pin (bookmark or way point)."
   (interactive)
+  (osm--barf-unless-osm)
   (pcase (caddr osm--pin)
     ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
     ('osm-track (osm--track-rename))))
@@ -1680,8 +1683,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                                       (or osm--gpx-files
                                           (error "No GPX files shown"))
                                       nil t nil 'file-name-history)))
-  (osm--barf-unless-osm)
-  (setq osm--gpx-files (assoc-delete-all file osm--gpx-files))
+  (cl-callf2 assoc-delete-all file osm--gpx-files)
   (osm--revert))
 
 (defun osm--server-annotation (cand)
@@ -1795,8 +1797,8 @@ The properties are checked as keyword arguments.  See
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
-                   #'osm-save-url))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set
+                   #'osm-save-url #'osm-rename #'osm-delete))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-mouse-pin #'osm-mouse-select #'osm-mouse-track))
   (put sym 'completion-predicate #'ignore))
