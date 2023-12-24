@@ -234,20 +234,17 @@ Should be at least 7 days according to the server usage policies."
   "Image cache size in megabytes."
   :type '(choice (const nil) natnum))
 
-(defun osm--menu-item (menu &optional name)
-  "Generate menu item from MENU and optional NAME."
+(defun osm--menu-item (menu)
+  "Generate menu item from MENU."
   `(menu-item
-    ""
-    nil :filter
+    "" nil :filter
     ,(lambda (&optional _)
        (select-window
         (posn-window
          (event-start last-input-event)))
-       (easy-menu-filter-return
-        (if (functionp menu)
-            (funcall menu)
-          menu)
-        name))))
+       (if (functionp menu)
+           (funcall menu)
+         menu))))
 
 (defvar-keymap osm-prefix-map
   :doc "Global prefix map of OSM entry points."
@@ -441,7 +438,7 @@ Local per buffer since the overlays depend on the zoom level.")
            :style toggle
            :selected (eq osm-server ',(car server))]
          menu)))
-    (nreverse menu)))
+    (easy-menu-create-menu "Server" (nreverse menu))))
 
 (defsubst osm--lon-to-normalized-x (lon)
   "Convert LON to normalized x coordinate."
@@ -891,7 +888,7 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm--barf-unless-osm ()
   "Barf if not an `osm-mode' buffer."
   (unless (eq major-mode #'osm-mode)
-    (error "Not an osm-mode buffer")))
+    (error "Not an `osm-mode' buffer")))
 
 (defun osm--pin-inside-p (x y lat lon)
   "Return non-nil if pin at LAT/LON is inside tile X/Y."
@@ -1157,9 +1154,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq-local
      header-line-format
      (list
-      (osm--header-button " ☰ " (osm--menu-item osm-mode-menu "Menu")) sep
+      (osm--header-button " ☰ " (osm--menu-item osm-mode-menu)) sep
       (osm--header-button (format " %s " server)
-                          (osm--menu-item #'osm--server-menu "Server")) sep
+                          (osm--menu-item #'osm--server-menu)) sep
       (osm--header-button " + " #'osm-zoom-in) sep
       (osm--header-button " - " #'osm-zoom-out)
       (format " Z%-2d " osm--zoom)
