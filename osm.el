@@ -230,10 +230,6 @@ Should be at least 7 days according to the server usage policies."
   "Number of tiles to keep in the memory cache."
   :type '(choice (const nil) natnum))
 
-(defcustom osm-max-cache 64
-  "Image cache size in megabytes."
-  :type '(choice (const nil) natnum))
-
 (defun osm--menu-item (menu)
   "Generate menu item from MENU."
   `(menu-item
@@ -1121,6 +1117,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--revert (&rest _)
   "Revert osm buffers."
+  (clear-image-cache t) ;; Make absolutely sure that the tiles are redrawn.
   (setq osm--tile-cache nil)
   (osm--each
     (setq osm--overlays nil)
@@ -1271,12 +1268,12 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (cl-incf osm--tile-age)
   (when (and osm--tile-cache (> (hash-table-count osm--tile-cache) osm-max-tiles))
     (let (items)
-      (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tile-cache)
+      (maphash (lambda (k v) (push (list (car v) (cdr v) k) items)) osm--tile-cache)
       (setq items (sort items #'car-less-than-car))
-      (dotimes (_ (- (hash-table-count osm--tile-cache) osm-max-tiles))
-        (remhash (cdr (pop items)) osm--tile-cache))))
-  (when (and osm-max-cache (> (image-cache-size) (* 1024 1024 osm-max-cache)))
-    (clear-image-cache t)))
+      (cl-loop repeat (- (hash-table-count osm--tile-cache) osm-max-tiles)
+               for (_age tile key) in items do
+               (image-flush tile t)
+               (remhash key osm--tile-cache)))))
 
 (defun osm--bookmark-record-default ()
   "Make osm bookmark record."

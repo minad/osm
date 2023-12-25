@@ -5,7 +5,8 @@
 * Development
 
 - Store names for track way points.
-- Add =osm-rename= command to rename both bookmarks and track way points.
+- Add ~osm-rename~ command to rename both bookmarks and track way points.
+- Remove ~osm-max-cache~ customization variable.
 
 * Version 1.1 (2023-12-23)
 
