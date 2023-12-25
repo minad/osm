@@ -141,7 +141,7 @@ initiate a search.
 Some additional key bindings are available in Osm buffers:
 
 - ~<arrow>~: Small step scrolling
-- ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
+- ~C-<arrow>~, ~M-<arrow>~, ~S-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
 - ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
 - ~<mouse-1>~: =osm-mouse-pin= - Place pin at point
