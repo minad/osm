@@ -299,6 +299,10 @@ Should be at least 7 days according to the server usage policies."
   "M-<down>" #'osm-down-down
   "M-<left>" #'osm-left-left
   "M-<right>" #'osm-right-right
+  "S-<up>" #'osm-up-up
+  "S-<down>" #'osm-down-down
+  "S-<left>" #'osm-left-left
+  "S-<right>" #'osm-right-right
   "n" #'osm-rename
   "d" #'osm-delete
   "DEL" #'osm-delete
