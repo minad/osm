@@ -248,9 +248,9 @@ Should be at least 7 days according to the server usage policies."
   "s" #'osm-search
   "v" #'osm-server
   "t" #'osm-goto
+  "j" #'osm-jump
   "x" #'osm-gpx-show
-  "X" #'osm-gpx-hide
-  "j" #'osm-bookmark-jump)
+  "X" #'osm-gpx-hide)
 
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
 (defalias 'osm-prefix-map osm-prefix-map)
@@ -321,11 +321,12 @@ Should be at least 7 days according to the server usage policies."
 (easy-menu-define osm-mode-menu osm-mode-map
   "Menu for `osm-mode'."
   '("OSM"
-    ["Home" osm-home]
+    ["Go home" osm-home]
     ["Center" osm-center]
-    ["Go to" osm-goto]
-    ["Search" osm-search]
-    ["Server" osm-server]
+    ["Go to coordinates" osm-goto]
+    ["Jump to pin" osm-jump]
+    ["Search by name" osm-search]
+    ["Change tile server" osm-server]
     "--"
     ["Org Link" org-store-link]
     ["Geo Url" osm-save-url]
@@ -336,11 +337,11 @@ Should be at least 7 days according to the server usage policies."
      ["Rename" osm-bookmark-rename]
      ["Delete" osm-bookmark-delete])
     "--"
-    ["Show GPX" osm-gpx-show]
-    ["Hide GPX" osm-gpx-hide]
+    ["Show GPX file" osm-gpx-show]
+    ["Hide GPX file" osm-gpx-hide]
     "--"
-    ["Clone" clone-buffer]
-    ["Revert" revert-buffer]
+    ["Clone buffer" clone-buffer]
+    ["Revert buffer" revert-buffer]
     "--"
     ["Manual" (info "(osm)")]
     ["Customize" (customize-group 'osm)]))
@@ -358,7 +359,13 @@ Should be at least 7 days according to the server usage policies."
   "Placeholder image for tiles.")
 
 (defvar osm--search-history nil
-  "Minibuffer search history used by `osm-search'.")
+  "Minibuffer history used by command `osm-search'.")
+
+(defvar osm--jump-history nil
+  "Minibuffer history used by command `osm-jump'.")
+
+(defvar osm--server-history nil
+  "Minibuffer history used by command `osm-server'.")
 
 (defvar osm--purge-directory 0
   "Last time the tile cache was cleaned.")
@@ -892,6 +899,22 @@ Local per buffer since the overlays depend on the zoom level.")
   (unless (eq major-mode #'osm-mode)
     (error "Not an `osm-mode' buffer")))
 
+(defun osm--each-pin (fun)
+  "Call FUN for each pin on the map."
+  (pcase osm-home
+    (`(,lat ,lon ,zoom)
+     (funcall fun 'osm-home lat lon zoom "Home")))
+  (bookmark-maybe-load-default-file)
+  (cl-loop for bm in bookmark-alist
+           if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump) do
+           (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
+             (funcall fun 'osm-bookmark lat lon zoom (car bm))))
+  (dolist (file osm--gpx-files)
+    (cl-loop for (lat lon name) in (cddr file) do
+             (funcall fun 'osm-poi lat lon 15 name)))
+  (cl-loop for (lat lon name) in osm--track do
+           (funcall fun 'osm-track lat lon 15 name)))
+
 (defun osm--pin-inside-p (x y lat lon)
   "Return non-nil if pin at LAT/LON is inside tile X/Y."
   (let ((p (/ (osm--lon-to-x lon osm--zoom) 256.0))
@@ -899,8 +922,8 @@ Local per buffer since the overlays depend on the zoom level.")
     (and (>= p (- x 0.125)) (< p (+ x 1.125))
          (>= q y) (< q (+ y 1.25)))))
 
-(defun osm--add-pin (pins id lat lon name)
-  "Add pin at X/Y with NAME and ID in PINS hash table."
+(defun osm--add-pin (pins id lat lon _zoom name)
+  "Add pin at LAT/LON with NAME and ID to the PINS hash table."
   (let* ((x (osm--lon-to-x lon osm--zoom))
          (y (osm--lat-to-y lat osm--zoom))
          (x0 (/ x 256))
@@ -916,26 +939,11 @@ Local per buffer since the overlays depend on the zoom level.")
         (unless (and (= x0 x1) (= y0 y1))
           (push pin (gethash (cons x1 y1) pins))))))))
 
-(defun osm--compute-pins ()
-  "Compute pin hash table."
-  (let ((pins (make-hash-table :test #'equal)))
-    (osm--add-pin pins 'osm-home (car osm-home) (cadr osm-home) "Home")
-    (bookmark-maybe-load-default-file)
-    (dolist (bm bookmark-alist)
-      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-        (let ((coord (bookmark-prop-get bm 'coordinates)))
-          (osm--add-pin pins 'osm-bookmark (car coord) (cadr coord) (car bm)))))
-    (dolist (file osm--gpx-files)
-      (dolist (pt (cddr file))
-        (osm--add-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
-    (cl-loop for (lat lon name) in osm--track do
-             (osm--add-pin pins 'osm-track lat lon name))
-    pins))
-
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
 ;; has the issue that lines which go along a tile border may be drawn only
 ;; partially. Use a more precise algorithm instead.
 (defun osm--add-track (tracks seg)
+  "Add track segment SEG to TRACKS hash table."
   (when seg
     (let ((p0 (cons (osm--lon-to-x (or (car-safe (cdar seg)) (cdar seg)) osm--zoom)
                     (osm--lat-to-y (caar seg) osm--zoom))))
@@ -976,15 +984,6 @@ Local per buffer since the overlays depend on the zoom level.")
                       t)))
               (setq p0 p1))))))))
 
-(defun osm--compute-tracks ()
-  "Compute track hash table."
-  (let ((tracks (make-hash-table :test #'equal)))
-    (dolist (file osm--gpx-files)
-      (dolist (seg (cadr file))
-        (osm--add-track tracks seg)))
-    (osm--add-track tracks osm--track)
-    tracks))
-
 (defun osm--get-overlays (x y)
   "Compute overlays and return the overlays in tile X/Y."
   (unless (eq (car osm--overlays) osm--zoom)
@@ -992,7 +991,14 @@ Local per buffer since the overlays depend on the zoom level.")
     ;; view port around the current center, depending on the size of the
     ;; window. Otherwise the spatial hash map for the tracks gets very large if
     ;; a line segment spans many tiles.
-    (setq osm--overlays (list osm--zoom (osm--compute-pins) (osm--compute-tracks))))
+    (let ((pins (make-hash-table :test #'equal))
+          (tracks (make-hash-table :test #'equal)))
+      (osm--each-pin (apply-partially #'osm--add-pin pins))
+      (dolist (file osm--gpx-files)
+        (dolist (seg (cadr file))
+          (osm--add-track tracks seg)))
+      (osm--add-track tracks osm--track)
+      (setq osm--overlays (list osm--zoom pins tracks))))
   (let ((pins (gethash (cons x y) (cadr osm--overlays)))
         (tracks (gethash (cons x y) (caddr osm--overlays))))
     (and (or pins tracks) (cons pins tracks))))
@@ -1109,7 +1115,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm-home ()
   "Go to home coordinates."
   (interactive)
-  (osm--goto (nth 0 osm-home) (nth 1 osm-home) (nth 2 osm-home) nil 'osm-home "Home"))
+  (pcase osm-home
+    (`(,lat ,lon ,zoom)
+     (osm--goto lat lon zoom nil 'osm-home "Home"))))
 
 (defun osm--download-queue-info ()
   "Return queue info string."
@@ -1424,8 +1432,8 @@ When called interactively, call the function `osm-home'."
 (defun osm-bookmark-jump (bm)
   "Jump to osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
-  (let ((coords (bookmark-prop-get bm 'coordinates)))
-    (set-buffer (osm--goto (nth 0 coords) (nth 1 coords) (nth 2 coords)
+  (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
+    (set-buffer (osm--goto lat lon zoom
                            (bookmark-prop-get bm 'server)
                            'osm-bookmark (car bm)))))
 (put 'osm-bookmark-jump 'bookmark-handler-type "Osm")
@@ -1507,7 +1515,7 @@ When called interactively, call the function `osm-home'."
            return idx))
 
 (defun osm--track-delete ()
-  "Delete track way point"
+  "Delete track way point."
   (when-let ((idx (osm--track-index)))
     ;; Delete pin
     (cl-callf2 delq (nth idx osm--track) osm--track)
@@ -1551,6 +1559,30 @@ When called interactively, call the function `osm-home'."
   (pcase (caddr osm--pin)
     ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
     ('osm-track (osm--track-rename))))
+
+;;;###autoload
+(defun osm-jump ()
+  "Jump to named pin."
+  (interactive)
+  (let (pins)
+    (osm--each-pin (lambda (id lat lon zoom name)
+                     (push (list name (capitalize (substring (symbol-name id) 4))
+                                 id lat lon zoom)
+                           pins)))
+    (pcase (assoc (completing-read
+                   "Jump: "
+                     (lambda (str pred action)
+                       (if (eq action 'metadata)
+                           `(metadata
+                             (group-function
+                              . ,(lambda (pin transform)
+                                   (if transform pin
+                                     (cadr (assoc pin pins))))))
+                         (complete-with-action action pins str pred)))
+                     nil t nil 'osm--jump-history)
+                  pins)
+      (`(,name ,_group ,id ,lat ,lon ,zoom) (osm--goto lat lon zoom nil id name))
+      (_ (user-error "No pin selected")))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1620,7 +1652,7 @@ See `osm-search-server' and `osm-search-language' for customization."
               (completing-read
                (format "Matches for '%s': " needle)
                (osm--sorted-table results)
-               nil t))
+               nil t nil t))
             results)
            (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
@@ -1671,7 +1703,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                     max-lat (max lat max-lat)
                     min-lon (min lon min-lon)
                     max-lon (max lon max-lon))
-              `(,(dom-text (dom-child-by-tag pt 'name)) ,lat . ,lon)))))
+              (list lat lon (dom-text (dom-child-by-tag pt 'name)))))))
     (osm--revert)
     (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
                (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
@@ -1732,7 +1764,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                               . ,(and osm-copyright #'osm--server-annotation))
                              (group-function . ,#'osm--server-group))
                          (complete-with-action action servers str pred)))
-                     nil t nil nil
+                     nil t nil 'osm--server-history
                      (format fmt
                              (osm--server-property :name)
                              (or (osm--server-property :description) "")))))
