@@ -135,7 +135,7 @@ initiate a search.
 - ~s~: =osm-search= - Search and jump to location
 - ~t~: =osm-goto= - Go to coordinates
 - ~v~: =osm-server= - Select server
-- ~j~: =osm-bookmark-jump= - Jump to bookmark
+- ~j~: =osm-jump= - Jump to pin (bookmark or POI)
 - ~x~: =osm-gpx-show= - Show GPX file in map viewer
 
 Some additional key bindings are available in Osm buffers:
