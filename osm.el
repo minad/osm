@@ -1495,7 +1495,7 @@ When called interactively, call the function `osm-home'."
   (let ((lat (or (car osm--pin) osm--lat))
         (lon (or (cadr osm--pin) osm--lon)))
     (osm--set-pin 'osm-selected lat lon name 'quiet)
-    (message "%s: Fetching name of %.2f %.2f from %s..." name lat lon osm-search-server)
+    (message "%s: Fetching name of %.2f° %.2f° from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
