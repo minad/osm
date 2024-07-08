@@ -1035,7 +1035,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
                   (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
-                          (if (eval-when-compile (> emacs-major-version 27))
+                          (static-if (> emacs-major-version 27)
                               (file-name-nondirectory file)
                             ;; On Emacs 27, :base-uri and embedding by file path
                             ;; is not supported. Use the less efficient base64
