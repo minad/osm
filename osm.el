@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 1.4
-;; Package-Requires: ((emacs "27.1") (compat "30"))
+;; Package-Requires: ((emacs "28.1") (compat "30"))
 ;; Homepage: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
 
@@ -37,7 +37,7 @@
 ;; distances, search for locations by name and to open and display GPX
 ;; tracks.
 
-;; osm.el requires Emacs 27 and depends on the external `curl' program.
+;; osm.el requires Emacs 28 and depends on the external `curl' program.
 ;; Emacs must be built with libxml, libjansson, librsvg, libjpeg and
 ;; libpng support.
 
@@ -631,6 +631,7 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm-mouse-drag (event)
   "Handle drag EVENT."
+  (declare (completion ignore))
   (interactive "@e")
   (pcase-let* ((`(,sx . ,sy) (posn-x-y (event-start event)))
                (win (selected-window))
@@ -665,7 +666,7 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm-center ()
   "Center to location of selected pin."
-  (interactive)
+  (interactive nil osm-mode)
   (osm--barf-unless-osm)
   (pcase osm--pin
     (`(,lat ,lon ,_id ,name)
@@ -684,6 +685,7 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm-mouse-track (event)
   "Set track pin at location of the click EVENT."
+  (declare (completion ignore))
   (interactive "@e")
   (pcase osm--pin
     ((and (guard (not osm--track)) `(,lat ,lon ,_id ,_name))
@@ -735,12 +737,14 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm-mouse-pin (event)
   "Create location pin at the click EVENT."
+  (declare (completion ignore))
   (interactive "@e")
   (osm--set-pin-event event)
   (osm--update))
 
 (defun osm-mouse-select (event)
   "Select pin at position of click EVENT."
+  (declare (completion ignore))
   (interactive "@e")
   (pcase (osm--pin-at event)
     (`(,lat ,lon ,id ,name)
@@ -750,7 +754,7 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
-  (interactive "p")
+  (interactive "p" osm-mode)
   (osm--barf-unless-osm)
   (setq osm--zoom (max (osm--server-property :min-zoom)
                        (min (osm--server-property :max-zoom)
@@ -759,7 +763,7 @@ Local per buffer since the overlays depend on the zoom level.")
 
 (defun osm-zoom-out (&optional n)
   "Zoom N times out of the map."
-  (interactive "p")
+  (interactive "p" osm-mode)
   (osm-zoom-in (- (or n 1))))
 
 (defun osm--move (dx dy)
@@ -769,47 +773,47 @@ Local per buffer since the overlays depend on the zoom level.")
         osm--lat (osm--y-to-lat (+ (osm--y) dy) osm--zoom)))
 
 (defun osm-right (&optional n)
-  "Move N small stepz to the right."
-  (interactive "p")
+  "Move N small steps to the right."
+  (interactive "p" osm-mode)
   (osm--move (* (or n 1) osm-small-step) 0)
   (osm--update))
 
 (defun osm-down (&optional n)
-  "Move N small stepz down."
-  (interactive "p")
+  "Move N small steps down."
+  (interactive "p" osm-mode)
   (osm--move 0 (* (or n 1) osm-small-step))
   (osm--update))
 
 (defun osm-up (&optional n)
-  "Move N small stepz up."
-  (interactive "p")
+  "Move N small steps up."
+  (interactive "p" osm-mode)
   (osm-down (- (or n 1))))
 
 (defun osm-left (&optional n)
-  "Move N small stepz to the left."
-  (interactive "p")
+  "Move N small steps to the left."
+  (interactive "p" osm-mode)
   (osm-right (- (or n 1))))
 
 (defun osm-right-right (&optional n)
-  "Move N large stepz to the right."
-  (interactive "p")
+  "Move N large steps to the right."
+  (interactive "p" osm-mode)
   (osm--move (* (or n 1) osm-large-step) 0)
   (osm--update))
 
 (defun osm-down-down (&optional n)
-  "Move N large stepz down."
-  (interactive "p")
+  "Move N large steps down."
+  (interactive "p" osm-mode)
   (osm--move 0 (* (or n 1) osm-large-step))
   (osm--update))
 
 (defun osm-up-up (&optional n)
-  "Move N large stepz up."
-  (interactive "p")
+  "Move N large steps up."
+  (interactive "p" osm-mode)
   (osm-down-down (- (or n 1))))
 
 (defun osm-left-left (&optional n)
-  "Move N large stepz to the left."
-  (interactive "p")
+  "Move N large steps to the left."
+  (interactive "p" osm-mode)
   (osm-right-right (- (or n 1))))
 
 (defun osm--purge-directory ()
@@ -841,8 +845,7 @@ Local per buffer since the overlays depend on the zoom level.")
         (push (format "%s support" type) req)))
     (unless (libxml-available-p)
       (push "libxml" req))
-    ;; json-available-p is not available on Emacs 27
-    (unless (ignore-errors (equal [] (json-parse-string "[]")))
+    (unless (json-available-p)
       (push "libjansson" req))
     (when req
       (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
@@ -1035,16 +1038,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
                   (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
-                          (static-if (> emacs-major-version 27)
-                              (file-name-nondirectory file)
-                            ;; On Emacs 27, :base-uri and embedding by file path
-                            ;; is not supported. Use the less efficient base64
-                            ;; encoding.
-                            (svg--image-data
-                             file
-                             (if (member (file-name-extension file) '("jpg" "jpeg"))
-                                 "image/jpeg" "image/png")
-                             nil))
+                          (file-name-nondirectory file)
                           "' height='256' width='256'/>"
                           (when-let (track (cdr overlays))
                             (format
@@ -1475,7 +1469,7 @@ When called interactively, call the function `osm-home'."
 
 (defun osm-bookmark-set ()
   "Create osm bookmark."
-  (interactive)
+  (interactive nil osm-mode)
   (osm--barf-unless-osm)
   (unwind-protect
       (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Bookmark"))
@@ -1544,7 +1538,7 @@ When called interactively, call the function `osm-home'."
 
 (defun osm-delete ()
   "Delete selected pin (bookmark or way point)."
-  (interactive)
+  (interactive nil osm-mode)
   (osm--barf-unless-osm)
   (pcase (caddr osm--pin)
     ('nil nil)
@@ -1554,7 +1548,7 @@ When called interactively, call the function `osm-home'."
 
 (defun osm-rename ()
   "Rename selected pin (bookmark or way point)."
-  (interactive)
+  (interactive nil osm-mode)
   (osm--barf-unless-osm)
   (pcase (caddr osm--pin)
     ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
@@ -1777,7 +1771,7 @@ See `osm-search-server' and `osm-search-language' for customization."
 (defun osm-save-url (&optional arg)
   "Save coordinates as url in the kill ring.
 If prefix ARG is given, store url as Elisp expression."
-  (interactive "P")
+  (interactive "P" osm-mode)
   (osm--barf-unless-osm)
   (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Link"))
                (server (and (not (eq osm-server (default-value 'osm-server))) osm-server))
@@ -1812,8 +1806,7 @@ The properties are checked as keyword arguments.  See
   nil)
 
 ;;;###autoload
-(when (>= emacs-major-version 28)
-  (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm)))
+(add-to-list 'browse-url-default-handlers '("\\`geo:" . osm))
 
 ;;;###autoload
 (eval-after-load 'ol
@@ -1826,14 +1819,6 @@ The properties are checked as keyword arguments.  See
      :store (lambda ()
               (when (eq major-mode 'osm-mode)
                 (apply 'org-link-store-props (osm--org-link-props)))))))
-
-(dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
-                   #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set
-                   #'osm-save-url #'osm-rename #'osm-delete))
-  (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-mouse-drag #'osm-mouse-pin #'osm-mouse-select #'osm-mouse-track))
-  (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
 ;;; osm.el ends here
