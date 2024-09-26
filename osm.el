@@ -7,7 +7,7 @@
 ;; Created: 2022
 ;; Version: 1.4
 ;; Package-Requires: ((emacs "28.1") (compat "30"))
-;; Homepage: https://github.com/minad/osm
+;; URL: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
 
 ;; This file is part of GNU Emacs.
@@ -53,7 +53,7 @@
 (defgroup osm nil
   "OpenStreetMap viewer."
   :link '(info-link :tag "Info Manual" "(osm)")
-  :link '(url-link :tag "Homepage" "https://github.com/minad/osm")
+  :link '(url-link :tag "Website" "https://github.com/minad/osm")
   :link '(emacs-library-link :tag "Library Source" "osm.el")
   :group 'web
   :prefix "osm-")
