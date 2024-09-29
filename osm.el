@@ -259,18 +259,10 @@ Should be at least 7 days according to the server usage policies."
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
   "<osm-selected>" #'osm-mouse-select
-  "<osm-bookmark> <mouse-1>" #'osm-mouse-select
-  "<osm-bookmark> <mouse-2>" #'osm-mouse-select
-  "<osm-bookmark> <mouse-3>" #'osm-mouse-select
-  "<osm-home> <mouse-1>" #'osm-mouse-select
-  "<osm-home> <mouse-2>" #'osm-mouse-select
-  "<osm-home> <mouse-3>" #'osm-mouse-select
-  "<osm-poi> <mouse-1>" #'osm-mouse-select
-  "<osm-poi> <mouse-2>" #'osm-mouse-select
-  "<osm-poi> <mouse-3>" #'osm-mouse-select
-  "<osm-track> <mouse-1>" #'osm-mouse-select
-  "<osm-track> <mouse-2>" #'osm-mouse-select
-  "<osm-track> <mouse-3>" #'osm-mouse-select
+  "<osm-bookmark>" #'osm-mouse-select
+  "<osm-home>" #'osm-mouse-select
+  "<osm-poi>" #'osm-mouse-select
+  "<osm-track>" #'osm-mouse-select
   "<home>" #'osm-home
   "+" #'osm-zoom-in
   "-" #'osm-zoom-out
@@ -746,11 +738,12 @@ Local per buffer since the overlays depend on the zoom level.")
   "Select pin at position of click EVENT."
   (declare (completion ignore))
   (interactive "@e")
-  (pcase (osm--pin-at event)
-    (`(,lat ,lon ,id ,name)
-     (osm--set-pin id lat lon name (eq id 'osm-track))
-     (when (eq id 'osm-track) (osm--track-length))
-     (osm--update))))
+  (when (memq (event-basic-type event) '(mouse-1 mouse-2 mouse-3))
+    (pcase (osm--pin-at event)
+      (`(,lat ,lon ,id ,name)
+       (osm--set-pin id lat lon name (eq id 'osm-track))
+       (when (eq id 'osm-track) (osm--track-length))
+       (osm--update)))))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
