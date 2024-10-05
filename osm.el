@@ -874,6 +874,7 @@ Local per buffer since the overlays depend on the zoom level.")
               revert-buffer-function #'osm--revert
               mode-line-process '(:eval (osm--download-queue-info))
               mode-line-position nil
+              default-directory (expand-file-name "~/")
               eldoc-documentation-functions nil
               mouse-wheel-progressive-speed nil
               mwheel-scroll-up-function #'osm--zoom-out-wheel
