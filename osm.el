@@ -54,6 +54,7 @@
   "OpenStreetMap viewer."
   :link '(info-link :tag "Info Manual" "(osm)")
   :link '(url-link :tag "Website" "https://github.com/minad/osm")
+  :link '(url-link :tag "Wiki" "https://github.com/minad/osm/wiki")
   :link '(emacs-library-link :tag "Library Source" "osm.el")
   :group 'web
   :prefix "osm-")
