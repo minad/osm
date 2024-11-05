@@ -5,6 +5,7 @@
 * Development
 
 - Require Emacs 28.1.
+- ~osm-server-list~: Add ~:ext~ server property.
 
 * Version 1.4 (2024-07-24)
 
