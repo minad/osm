@@ -152,6 +152,7 @@ Allowed keys:
   :copyright       Copyright information
   :group           Name of server groups for related servers
   :url             Url with placeholders
+  :ext             File name extension
   :min-zoom        Minimum zoom level
   :max-zoom        Maximum zoom level
   :download-batch  Number of tiles downloaded via a single connection
@@ -540,9 +541,10 @@ Local per buffer since the overlays depend on the zoom level.")
    (symbol-name osm-server)
    (format "%d-%d-%d.%s"
            zoom x y
-           (file-name-extension
-            (url-file-nondirectory
-             (osm--server-property :url))))))
+           (or (osm--server-property :ext)
+               (file-name-extension
+                (url-file-nondirectory
+                 (osm--server-property :url)))))))
 
 (defun osm--enqueue-download (x y)
   "Enqueue tile X/Y for download."
@@ -1796,7 +1798,7 @@ If prefix ARG is given, store url as Elisp expression."
 
 (cl-defun osm-add-server (server
                           &rest properties
-                          &key name description group url max-connections
+                          &key name description group url ext max-connections
                           max-zoom min-zoom download-batch subdomains copyright)
   "Add SERVER with PROPERTIES to `osm-server-list'.
 The properties are checked as keyword arguments.  See
