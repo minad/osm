@@ -44,7 +44,8 @@ The package is available on GNU ELPA and can be installed with =package-install=
 Note that Osm.el requires Emacs 28 and depends on the external =curl= program.
 Emacs must be built with =libxml=, =libjansson=, =librsvg=, =libjpeg= and =libpng=
 support. The following is an example configuration which relies on =use-package=.
-Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional configuration.
+Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional tile server configurations, e.g.,
+Google Maps.
 
 #+begin_src emacs-lisp
 (use-package osm
