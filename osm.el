@@ -1680,6 +1680,10 @@ See `osm-search-server' and `osm-search-language' for customization."
                (insert-file-contents file)
                (libxml-parse-xml-region (point-min) (point-max))))
         (min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+    (unless (eq 'gpx (dom-tag dom))
+      (setq dom (dom-child-by-tag dom 'gpx)))
+    (unless (and dom (eq 'gpx (dom-tag dom)))
+      (error "Not a GPX file"))
     (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
           (cons
            (cl-loop
