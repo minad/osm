@@ -1809,7 +1809,7 @@ If prefix ARG is given, store url as Elisp expression."
 The properties are checked as keyword arguments.  See
 `osm-server-list' for documentation of the keywords."
   (declare (indent 1))
-  (ignore name description group url max-connections max-zoom
+  (ignore name description group url ext max-connections max-zoom
           min-zoom download-batch subdomains copyright)
   (dolist (sym '(:name :description :group :url))
     (unless (stringp (plist-get properties sym))
