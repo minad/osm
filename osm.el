@@ -1626,8 +1626,7 @@ See `osm-search-server' and `osm-search-language' for customization."
    (list
     (minibuffer-with-setup-hook
         (lambda ()
-          (when (and (eq completing-read-function #'completing-read-default)
-                     (not (bound-and-true-p vertico-mode)))
+          (when (eq (keymap-local-lookup "SPC") #'minibuffer-complete-word)
             ;; Override dreaded `minibuffer-complete-word' for default
             ;; completion.  When will this keybinding finally get removed from
             ;; default completion?
