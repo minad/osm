@@ -1575,15 +1575,12 @@ When called interactively, call the function `osm-home'."
                            pins)))
     (pcase (assoc (completing-read
                    "Jump: "
-                     (lambda (str pred action)
-                       (if (eq action 'metadata)
-                           `(metadata
-                             (group-function
-                              . ,(lambda (pin transform)
-                                   (if transform pin
-                                     (cadr (assoc pin pins))))))
-                         (complete-with-action action pins str pred)))
-                     nil t nil 'osm--jump-history)
+                   (osm--table-with-metadata
+                    pins `((group-function
+                            . ,(lambda (pin transform)
+                                 (if transform pin
+                                   (cadr (assoc pin pins)))))))
+                   nil t nil 'osm--jump-history)
                   pins)
       (`(,name ,_group ,id ,lat ,lon ,zoom) (osm--goto lat lon zoom nil id name))
       (_ (user-error "No pin selected")))))
@@ -1634,7 +1631,9 @@ See `osm-search-server' and `osm-search-language' for customization."
                             (define-keymap "SPC" nil)
                             (current-local-map)))))
       (completing-read "Location: "
-                       (osm--sorted-table osm--search-history)
+                       (osm--table-with-metadata
+                        osm--search-history '((display-sort-function . identity)
+                                              (cycle-sort-function . identity)))
                        nil nil nil 'osm--search-history))
     current-prefix-arg))
   ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
@@ -1654,7 +1653,9 @@ See `osm-search-server' and `osm-search-language' for customization."
                       (minibuffer-completion-help))))
               (completing-read
                (format "Matches for '%s': " needle)
-               (osm--sorted-table results)
+               (osm--table-with-metadata
+                results '((display-sort-function . identity)
+                          (cycle-sort-function . identity)))
                nil t nil t))
             results)
            (error "No selection"))))
@@ -1662,13 +1663,13 @@ See `osm-search-server' and `osm-search-language' for customization."
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
                nil 'osm-selected (car selected))))
 
-(defun osm--sorted-table (coll)
-  "Sorted completion table from COLL."
-  (lambda (str pred action)
+;; TODO: Use `completion-table-with-metadata'
+(defun osm--table-with-metadata (table metadata)
+  "Return new completion TABLE with METADATA."
+  (lambda (string pred action)
     (if (eq action 'metadata)
-        '(metadata (display-sort-function . identity)
-                   (cycle-sort-function . identity))
-      (complete-with-action action coll str pred))))
+        `(metadata . ,metadata)
+      (complete-with-action action table string pred))))
 
 ;;;###autoload
 (defun osm-gpx-show (file)
@@ -1764,13 +1765,11 @@ See `osm-search-server' and `osm-search-language' for customization."
             osm-server-list))
           (selected (completing-read
                      "Server: "
-                     (lambda (str pred action)
-                       (if (eq action 'metadata)
-                           `(metadata
-                             (annotation-function
-                              . ,(and osm-copyright #'osm--server-annotation))
-                             (group-function . ,#'osm--server-group))
-                         (complete-with-action action servers str pred)))
+                     (osm--table-with-metadata
+                      servers
+                      `((annotation-function
+                         . ,(and osm-copyright #'osm--server-annotation))
+                        (group-function . ,#'osm--server-group)))
                      nil t nil 'osm--server-history
                      (format fmt
                              (osm--server-property :name)
