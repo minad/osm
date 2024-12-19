@@ -219,7 +219,9 @@ shown around SVG tiles."
   :type 'symbol)
 
 (defcustom osm-tile-directory
-  (expand-file-name "var/osm/" user-emacs-directory)
+  (expand-file-name (file-name-concat
+                     (or (getenv "XDG_CACHE_HOME") "~/.cache/")
+                     "emacs/osm/"))
   "Tile cache directory."
   :type 'string)
 
