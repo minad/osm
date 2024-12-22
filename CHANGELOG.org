@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 1.5 (2024-12-22)
 
 - Require Emacs 28.1.
 - ~osm-server-list~: Add ~:ext~ server property.
