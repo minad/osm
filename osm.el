@@ -890,7 +890,8 @@ Local per buffer since the overlays depend on the zoom level.")
               mwheel-scroll-down-function #'osm--zoom-in-wheel
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
-              bookmark-make-record-function #'osm--bookmark-record-default)
+              bookmark-make-record-function #'osm--bookmark-record-default
+              imenu-create-index-function #'osm--imenu-index)
   (when (boundp 'mwheel-coalesce-scroll-events)
     (setq-local mwheel-coalesce-scroll-events t))
   (when (boundp 'pixel-scroll-precision-mode)
@@ -1589,6 +1590,20 @@ When called interactively, call the function `osm-home'."
                   pins)
       (`(,name ,_group ,id ,lat ,lon ,zoom) (osm--goto lat lon zoom nil id name))
       (_ (user-error "No pin selected")))))
+
+(defun osm--imenu-index ()
+  "Create Imenu index."
+  (let (index)
+    (osm--each-pin
+     (lambda (id lat lon zoom name)
+       (push (list name (vector lat lon zoom) #'osm--imenu-goto)
+             (alist-get (capitalize (substring (symbol-name id) 4))
+                        index nil nil #'equal))))
+    (sort index (lambda (x y) (string< (car x) (car y))))))
+
+(defun osm--imenu-goto (_name pos)
+  "Goto Imenu POS."
+  (osm--goto (aref pos 0) (aref pos 1) (aref pos 2) nil nil nil))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
