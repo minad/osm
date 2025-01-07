@@ -177,9 +177,10 @@ the domain name and the :user to the string \"apikey\"."
 (defcustom osm-pin-colors
   '((osm-selected . "#e20")
     (osm-bookmark . "#f80")
-    (osm-poi . "#88f")
     (osm-home . "#80f")
-    (osm-track . "#00a"))
+    (osm-track . "#00e")
+    (osm-gpx-poi . "#88f")
+    (osm-gpx-track . "#88f"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
@@ -926,9 +927,9 @@ Local per buffer since the overlays depend on the zoom level.")
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
   (dolist (file osm--gpx-files)
     (when-let ((start (caaadr file)))
-      (funcall fun 'osm-track (car start) (cdr start) 10 (car file)))
+      (funcall fun 'osm-gpx-track (car start) (cdr start) 10 (car file)))
     (cl-loop for (lat lon name) in (cddr file) do
-             (funcall fun 'osm-poi lat lon 15 name)))
+             (funcall fun 'osm-gpx-poi lat lon 15 name)))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon 15 name)))
 
