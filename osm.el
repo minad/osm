@@ -925,6 +925,8 @@ Local per buffer since the overlays depend on the zoom level.")
            (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
   (dolist (file osm--gpx-files)
+    (when-let ((start (caaadr file)))
+      (funcall fun 'osm-track (car start) (cdr start) 10 (car file)))
     (cl-loop for (lat lon name) in (cddr file) do
              (funcall fun 'osm-poi lat lon 15 name)))
   (cl-loop for (lat lon name) in osm--track do
