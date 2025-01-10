@@ -283,6 +283,9 @@ Should be at least 7 days according to the server usage policies."
   "<mouse-3>" #'osm-bookmark-set
   "S-<down-mouse-1>" #'ignore
   "S-<mouse-1>" #'osm-mouse-track
+  ;; TODO An osm-mouse-drag like implementation for touchscreen events is
+  ;; needed. Also touchscreen-pinch for zooming.
+  "<touchscreen-begin>" #'ignore
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
