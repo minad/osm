@@ -901,7 +901,12 @@ Local per buffer since the overlays depend on the zoom level.")
     (setq-local pixel-scroll-precision-mode nil))
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
-  (add-hook 'window-size-change-functions #'osm--resize nil 'local))
+  (add-hook 'window-size-change-functions
+            (let ((buf (current-buffer)))
+              (lambda (_)
+                (with-current-buffer buf
+                  (osm--update))))
+            nil 'local))
 
 (defun osm--barf-write ()
   "Barf for write operation."
@@ -1146,11 +1151,6 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (setq osm--tile-cache nil)
   (osm--each
     (setq osm--overlays nil)
-    (osm--update)))
-
-(defun osm--resize (&rest _)
-  "Resize buffer."
-  (when (eq major-mode #'osm-mode)
     (osm--update)))
 
 (defun osm--header-button (text action)
