@@ -278,6 +278,7 @@ Should be at least 7 days according to the server usage policies."
   "-" #'osm-zoom-out
   "SPC" #'osm-zoom-in
   "S-SPC" #'osm-zoom-out
+  "<pinch>" #'osm-zoom-pinch
   "<mouse-1>" #'osm-mouse-pin
   "<mouse-2>" 'org-store-link
   "<mouse-3>" #'osm-bookmark-set
@@ -418,6 +419,9 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--zoom nil
   "Zoom level of the map.")
+
+(defvar-local osm--zoom-pinch nil
+  "Zoom level at the start of pinching.")
 
 (defvar-local osm--lat nil
   "Latitude coordinate.")
@@ -764,25 +768,40 @@ Local per buffer since the overlays depend on the zoom level.")
        (when (eq id 'osm-track) (osm--track-length))
        (osm--update)))))
 
-(defun osm-zoom-in (&optional n)
-  "Zoom N times into the map."
-  (interactive "p" osm-mode)
-  (osm--barf-unless-osm)
-  (setq osm--zoom (max (osm--server-property :min-zoom)
-                       (min (osm--server-property :max-zoom)
-                            (+ osm--zoom (or n 1)))))
-  (osm--update))
-
-(defun osm-zoom-out (&optional n)
-  "Zoom N times out of the map."
-  (interactive "p" osm-mode)
-  (osm-zoom-in (- (or n 1))))
+(defun osm-zoom-pinch (event)
+  "Zooming given the pinch EVENT."
+  (declare (completion ignore))
+  (interactive "e")
+  (pcase-let* ((`(,_ ,posn ,dx ,dy ,scale ,angle) event))
+    (with-selected-window (posn-window posn)
+      (when (or (not osm--zoom-pinch)
+                (and (eq 0 dx) (eq 0 dy) (eq 0 angle)))
+        (setq osm--zoom-pinch osm--zoom))
+      (osm--zoom (round (* osm--zoom-pinch scale)))
+      (osm--update))))
 
 (defun osm--move (dx dy)
   "Move by DX/DY."
   (osm--barf-unless-osm)
   (setq osm--lon (osm--x-to-lon (+ (osm--x) dx) osm--zoom)
         osm--lat (osm--y-to-lat (+ (osm--y) dy) osm--zoom)))
+
+(defun osm--zoom (n)
+  "Set zoom level to N."
+  (osm--barf-unless-osm)
+  (setq osm--zoom (max (osm--server-property :min-zoom)
+                       (min (osm--server-property :max-zoom) n))))
+
+(defun osm-zoom-in (&optional n)
+  "Zoom N times into the map."
+  (interactive "p" osm-mode)
+  (osm--zoom (+ osm--zoom (or n 1)))
+  (osm--update))
+
+(defun osm-zoom-out (&optional n)
+  "Zoom N times out of the map."
+  (interactive "p" osm-mode)
+  (osm-zoom-in (- (or n 1))))
 
 (defun osm-right (&optional n)
   "Move N small steps to the right."
