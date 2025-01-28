@@ -2,11 +2,15 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Version 1.6 (2025-01-28)
+
+- Mark gpx track start with a pin.
+- Add ~imenu~ support.
+
 * Version 1.5 (2024-12-22)
 
 - Require Emacs 28.1.
 - ~osm-server-list~: Add ~:ext~ server property.
-- Mark gpx track start with a pin.
 
 * Version 1.4 (2024-07-24)
 
