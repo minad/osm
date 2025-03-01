@@ -270,6 +270,7 @@ Should be at least 7 days according to the server usage policies."
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
 (defalias 'osm-prefix-map osm-prefix-map)
 
+;; TODO add support for touchscreen-pinch for zooming.
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
