@@ -657,7 +657,7 @@ Local per buffer since the overlays depend on the zoom level.")
     (setq track-mouse 'dragging)
     (set-transient-map map
                        (lambda () (eq (car-safe last-command-event)
-				      'mouse-movement))
+                                      'mouse-movement))
                        (lambda () (setq track-mouse nil)))))
 
 (defun osm--zoom-in-wheel (_n)
