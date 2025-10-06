@@ -901,6 +901,7 @@ Local per buffer since the overlays depend on the zoom level.")
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
   (add-hook 'window-size-change-functions
+            ;; TODO On Emacs 31 `window-size-change-functions' run in the current buffer
             (let ((buf (current-buffer)))
               (lambda (_)
                 (with-current-buffer buf
