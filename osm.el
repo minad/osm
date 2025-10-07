@@ -901,11 +901,13 @@ Local per buffer since the overlays depend on the zoom level.")
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
   (add-hook 'window-size-change-functions
-            ;; TODO On Emacs 31 `window-size-change-functions' run in the current buffer
-            (let ((buf (current-buffer)))
-              (lambda (_)
-                (with-current-buffer buf
-                  (osm--update))))
+            ;; On Emacs 31 `window-size-change-functions' run in current buffer
+            (static-if (>= emacs-major-version 31)
+                #'osm--update
+              (let ((buf (current-buffer)))
+                (lambda (_)
+                  (with-current-buffer buf
+                    (osm--update)))))
             nil 'local))
 
 (defun osm--barf-write ()
@@ -1194,7 +1196,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                   'display `(space :width (,(floor (/ meter meter-per-pixel)))))
       #(" " 0 1 (face (:inverse-video t) display (space :width (3))))))))
 
-(defun osm--update ()
+(defun osm--update (&optional _)
   "Update map display."
   (osm--barf-unless-osm)
   (osm--purge-tile-cache)
@@ -1665,21 +1667,13 @@ See `osm-search-server' and `osm-search-language' for customization."
           (or
            (and (or lucky (not (cdr results))) (car results))
            (assoc
-            (minibuffer-with-setup-hook
-                (lambda ()
-                  ;; TODO Use `eager-display' on Emacs 31
-                  (when (and (eq completing-read-function #'completing-read-default)
-                             (not (bound-and-true-p vertico-mode))
-                             (not (bound-and-true-p icomplete-mode)))
-                    (let ((message-log-max nil)
-                          (inhibit-message t))
-                      (minibuffer-completion-help))))
-              (completing-read
-               (format "Matches for '%s': " needle)
-               (osm--table-with-metadata
-                results '((display-sort-function . identity)
-                          (cycle-sort-function . identity)))
-               nil t nil t))
+            (completing-read
+             (format "Matches for '%s': " needle)
+             (osm--table-with-metadata
+              results '((display-sort-function . identity)
+                        (cycle-sort-function . identity)
+                        (eager-display . t))
+              nil t nil t))
             results)
            (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
