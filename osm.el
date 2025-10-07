@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 1.7
-;; Package-Requires: ((emacs "28.1") (compat "30"))
+;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
 
@@ -37,7 +37,7 @@
 ;; distances, search for locations by name and to open and display GPX
 ;; tracks.
 
-;; osm.el requires Emacs 28 and depends on the external `curl' program.
+;; osm.el requires Emacs 29 and depends on the external `curl' program.
 ;; Emacs must be built with libxml, libjansson, librsvg, libjpeg and
 ;; libpng support.
 

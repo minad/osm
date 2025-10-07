@@ -2,6 +2,11 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- Require Emacs 29.
+- Use =eager-display= for the default completion UI.
+
 * Version 1.7 (2025-04-04)
 
 - Fix touchscreen support.
