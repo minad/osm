@@ -1728,7 +1728,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                     max-lat (max lat max-lat)
                     min-lon (min lon min-lon)
                     max-lon (max lon max-lon))
-              (list lat lon (dom-text (dom-child-by-tag pt 'name)))))))
+              (list lat lon (dom-inner-text (dom-child-by-tag pt 'name)))))))
     (osm--revert)
     (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
                (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
