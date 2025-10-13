@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 1.8 (2025-10-13)
 
 - Require Emacs 29.
 - Use =eager-display= for the default completion UI.
