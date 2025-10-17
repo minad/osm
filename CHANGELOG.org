@@ -2,6 +2,10 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- Fix search bug introduced in 1.8.
+
 * Version 1.8 (2025-10-13)
 
 - Require Emacs 29.
