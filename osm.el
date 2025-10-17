@@ -1672,8 +1672,8 @@ See `osm-search-server' and `osm-search-language' for customization."
              (osm--table-with-metadata
               results '((display-sort-function . identity)
                         (cycle-sort-function . identity)
-                        (eager-display . t))
-              nil t nil t))
+                        (eager-display . t)))
+             nil t nil t)
             results)
            (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
