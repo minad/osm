@@ -893,7 +893,8 @@ Local per buffer since the overlays depend on the zoom level.")
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--bookmark-record-default
-              imenu-create-index-function #'osm--imenu-index)
+              imenu-create-index-function #'osm--imenu-index
+              mouse-shift-adjust-mode nil)
   (when (boundp 'mwheel-coalesce-scroll-events)
     (setq-local mwheel-coalesce-scroll-events t))
   (when (boundp 'pixel-scroll-precision-mode)
