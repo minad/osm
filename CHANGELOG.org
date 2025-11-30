@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 1.10 (2025-11-30)
 
 - Disable ~mouse-shift-adjust-mode~ locally.
 
