@@ -135,7 +135,7 @@ initiate a search.
 - ~h~: =osm-home= - Open new map at home coordinates
 - ~s~: =osm-search= - Search and jump to location
 - ~t~: =osm-goto= - Go to coordinates
-- ~u~: =osm-url= - Go to Geo URL or Google Maps URL.
+- ~u~: =osm-url= - Go to Geo URL, OpenStreetMap.org or Google Maps URL.
 - ~v~: =osm-server= - Select server
 - ~j~: =osm-jump= - Jump to pin (bookmark or POI)
 - ~x~: =osm-gpx-show= - Show GPX file in map viewer

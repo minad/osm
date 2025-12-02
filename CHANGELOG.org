@@ -4,7 +4,8 @@
 
 * Development
 
-- New command =osm-url= which handles Geo and Google Maps URLs.
+- New command =osm-url= which handles standard Geo, OpenStreetMap.org and Google
+  Maps URLs.
 - Register =osm-url= for both ~geo:~ and Google Maps URLs.
 
 * Version 1.10 (2025-11-30)
