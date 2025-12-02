@@ -1421,10 +1421,11 @@ Print NAME if not QUIET."
 
 ;;;###autoload
 (defun osm-url (url &rest _)
-  "Go to Geo or Google Maps URL.
+  "Go to standard Geo, OpenStreetMap or Google Maps URL.
 See also `osm-save-url'."
   (interactive "sGeo URL: ")
   (cond
+   ;; Standard Geo URL
    ((string-match
      "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
     (let* ((lat (string-to-number (match-string 1 url)))
@@ -1436,12 +1437,20 @@ See also `osm-save-url'."
                  (and zoom (string-to-number zoom))
                  (and server (intern-soft server))
                  'osm-selected "Geo Link")))
+   ;; Google Maps
    ((string-match "goo.*@\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)" url)
     (let ((lat (string-to-number (match-string 1 url)))
           (lon (string-to-number (match-string 2 url)))
           (zoom (string-to-number (match-string 3 url))))
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
-   ((string-match-p "\\`https?://.*\\(goo.*maps\\|maps.*goo\\)" url)
+   ;; OpenStreetMap.org
+   ((string-match "map=\\([0-9]+\\)/\\([0-9.-]+\\)/\\([0-9.-]+\\)" url)
+    (let ((lat (string-to-number (match-string 2 url)))
+          (lon (string-to-number (match-string 3 url)))
+          (zoom (string-to-number (match-string 1 url))))
+      (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
+   ;; Short URLs
+   ((string-match-p "\\`https?://.*\\(openstreetmap\\|osm\\|goo.*maps\\|maps.*goo\\)" url)
     (osm-url (string-remove-prefix "http" (osm--get-redirect url))))
    (t
     (user-error "Invalid URL"))))
@@ -1650,11 +1659,11 @@ When called interactively, call the function `osm-home'."
     (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
            (status (apply #'call-process "curl" nil (current-buffer) nil
                           `(,@(split-string-and-unquote osm-curl-options)
-                            "-I" "--no-location" ,url))))
+                            "-I" ,url))))
       (unless (eq status 0)
         (error "Fetching %s exited with status %s" url status)))
-    (goto-char (point-min))
-    (if (re-search-forward "location: \\([^\n]+\\)" nil t)
+    (goto-char (point-max))
+    (if (re-search-backward "^location: \\([^\n]+\\)" nil t)
         (match-string 1)
       (error "Invalid redirect %s" url))))
 
@@ -1874,6 +1883,7 @@ The properties are checked as keyword arguments.  See
 ;;;###autoload
 (progn
   (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm-url))
+  (add-to-list 'browse-url-default-handlers '("\\`https?://\\(osm\\.org\\|\\(www\\.\\)?openstreetmap\\.org\\)/\\(go/\\|/\\?#map)" . osm-url))
   (add-to-list 'browse-url-default-handlers '("\\`https?://.*\\(goo.*maps\\|maps.*goo\\)" . osm-url)))
 
 ;;;###autoload
