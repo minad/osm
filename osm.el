@@ -263,6 +263,7 @@ Should be at least 7 days according to the server usage policies."
   "s" #'osm-search
   "v" #'osm-server
   "t" #'osm-goto
+  "u" #'osm-url
   "j" #'osm-jump
   "x" #'osm-gpx-show
   "X" #'osm-gpx-hide)
@@ -332,12 +333,13 @@ Should be at least 7 days according to the server usage policies."
     ["Go home" osm-home]
     ["Center" osm-center]
     ["Go to coordinates" osm-goto]
+    ["Go to URL" osm-url]
     ["Jump to pin" osm-jump]
     ["Search by name" osm-search]
     ["Change tile server" osm-server]
     "--"
     ["Org Link" org-store-link]
-    ["Geo Url" osm-save-url]
+    ["Geo URL" osm-save-url]
     ["Elisp Link" (osm-save-url t)]
     ("Bookmark"
      ["Set" osm-bookmark-set]
@@ -1418,6 +1420,33 @@ Print NAME if not QUIET."
   nil)
 
 ;;;###autoload
+(defun osm-url (url &rest _)
+  "Go to Geo or Google Maps URL.
+See also `osm-save-url'."
+  (interactive "sGeo URL: ")
+  (cond
+   ((string-match
+     "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
+    (let* ((lat (string-to-number (match-string 1 url)))
+           (lon (string-to-number (match-string 2 url)))
+           (args (url-parse-args (match-string 3 url) ""))
+           (zoom (cdr (assoc "z" args)))
+           (server (cdr (assoc "s" args))))
+      (osm--goto lat lon
+                 (and zoom (string-to-number zoom))
+                 (and server (intern-soft server))
+                 'osm-selected "Geo Link")))
+   ((string-match "goo.*@\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)" url)
+    (let ((lat (string-to-number (match-string 1 url)))
+          (lon (string-to-number (match-string 2 url)))
+          (zoom (string-to-number (match-string 3 url))))
+      (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
+   ((string-match-p "\\`https?://.*\\(goo.*maps\\|maps.*goo\\)" url)
+    (osm-url (string-remove-prefix "http" (osm--get-redirect url))))
+   (t
+    (user-error "Invalid URL"))))
+
+;;;###autoload
 (defun osm (&rest link)
   "Go to LINK.
 When called interactively, call the function `osm-home'."
@@ -1429,24 +1458,15 @@ When called interactively, call the function `osm-home'."
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
      (osm--goto lat lon zoom server 'osm-selected "Elisp Link"))
-    ((and `(,url . ,_) (guard (stringp url)))
-     (if (string-match
-          "\\`geo:\\([0-9.-]+\\),\\([0-9.-]+\\)\\(?:,[0-9.-]+\\)?\\(;.+\\'\\|\\'\\)" url)
-         (let* ((lat (string-to-number (match-string 1 url)))
-                (lon (string-to-number (match-string 2 url)))
-                (args (url-parse-args (match-string 3 url) ""))
-                (zoom (cdr (assoc "z" args)))
-                (server (cdr (assoc "s" args))))
-           (osm--goto lat lon
-                      (and zoom (string-to-number zoom))
-                      (and server (intern-soft server))
-                      'osm-selected "Geo Link"))
-       (osm-search (string-remove-prefix "geo:" url))))
-    (_ (error "Invalid osm link"))))
+    ((and `(,str) (guard (stringp str)))
+     (if (string-match-p "\\`\\(geo:\\|https?://\\)" str)
+         (osm-url str)
+       (osm-search str)))
+    (_ (error "Invalid Osm link"))))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
-  "Jump to osm bookmark BM."
+  "Jump to Osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
   (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
     (set-buffer (osm--goto lat lon zoom
@@ -1456,7 +1476,7 @@ When called interactively, call the function `osm-home'."
 
 ;;;###autoload
 (defun osm-bookmark-delete (bm)
-  "Delete osm bookmark BM."
+  "Delete Osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
   (when (y-or-n-p (format "Delete bookmark `%s'? " bm))
     (bookmark-delete bm)
@@ -1465,7 +1485,7 @@ When called interactively, call the function `osm-home'."
 
 ;;;###autoload
 (defun osm-bookmark-rename (old-name)
-  "Rename osm bookmark OLD-NAME."
+  "Rename Osm bookmark OLD-NAME."
   (interactive (list (car (osm--bookmark-read))))
   (let ((new-name (read-from-minibuffer "New name: " old-name nil nil
                                         'bookmark-history old-name)))
@@ -1490,7 +1510,7 @@ When called interactively, call the function `osm-home'."
       (error "No bookmark selected")))
 
 (defun osm-bookmark-set ()
-  "Create osm bookmark."
+  "Create Osm bookmark."
   (interactive nil osm-mode)
   (osm--barf-unless-osm)
   (unwind-protect
@@ -1608,11 +1628,11 @@ When called interactively, call the function `osm-home'."
     (sort index (lambda (x y) (string< (car x) (car y))))))
 
 (defun osm--imenu-goto (_name pos)
-  "Goto Imenu POS."
+  "Go to Imenu POS."
   (osm--goto (aref pos 0) (aref pos 1) (aref pos 2) nil nil nil))
 
 (defun osm--fetch-json (url)
-  "Get json from URL."
+  "Get JSON from URL."
   (osm--check-libraries)
   (with-temp-buffer
     (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
@@ -1622,6 +1642,21 @@ When called interactively, call the function `osm-home'."
         (error "Fetching %s exited with status %s" url status)))
     (goto-char (point-min))
     (json-parse-buffer :array-type 'list :object-type 'alist)))
+
+(defun osm--get-redirect (url)
+  "Get redirect location from URL."
+  (osm--check-libraries)
+  (with-temp-buffer
+    (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
+           (status (apply #'call-process "curl" nil (current-buffer) nil
+                          `(,@(split-string-and-unquote osm-curl-options)
+                            "-I" "--no-location" ,url))))
+      (unless (eq status 0)
+        (error "Fetching %s exited with status %s" url status)))
+    (goto-char (point-min))
+    (if (re-search-forward "location: \\([^\n]+\\)" nil t)
+        (match-string 1)
+      (error "Invalid redirect %s" url))))
 
 (defun osm--search (needle)
   "Globally search for NEEDLE and return the list of results."
@@ -1800,8 +1835,8 @@ See `osm-search-server' and `osm-search-language' for customization."
   (osm--goto nil nil nil server nil nil))
 
 (defun osm-save-url (&optional arg)
-  "Save coordinates as url in the kill ring.
-If prefix ARG is given, store url as Elisp expression."
+  "Save coordinates as URL in the kill ring.
+If prefix ARG is given, store URL as Elisp expression."
   (interactive "P" osm-mode)
   (osm--barf-unless-osm)
   (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Link"))
@@ -1837,7 +1872,9 @@ The properties are checked as keyword arguments.  See
   nil)
 
 ;;;###autoload
-(add-to-list 'browse-url-default-handlers '("\\`geo:" . osm))
+(progn
+  (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm-url))
+  (add-to-list 'browse-url-default-handlers '("\\`https?://.*\\(goo.*maps\\|maps.*goo\\)" . osm-url)))
 
 ;;;###autoload
 (eval-after-load 'ol
