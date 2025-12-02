@@ -78,11 +78,11 @@ The server must offer the nominatim.org API."
   :type 'string)
 
 (defcustom osm-server-defaults
-  '(:min-zoom 2
-    :max-zoom 19
-    :download-batch 4
-    :max-connections 2
-    :subdomains ("a" "b" "c"))
+  '( :min-zoom 2
+     :max-zoom 19
+     :download-batch 4
+     :max-connections 2
+     :subdomains ("a" "b" "c"))
   "Default server properties.
 See also `osm-server-list'."
   :type 'plist)
