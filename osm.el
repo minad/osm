@@ -1884,7 +1884,7 @@ The properties are checked as keyword arguments.  See
 (progn
   (add-to-list 'browse-url-default-handlers '("\\`geo:" . osm-url))
   (add-to-list 'browse-url-default-handlers '("\\`https?://\\(www\\.\\)?\\(osm\\|openstreetmap\\)\\.org/\\(go/\\|\\??#map=\\)" . osm-url))
-  (add-to-list 'browse-url-default-handlers '("\\`https?://.*\\(goo.*maps\\|maps.*goo\\)" . osm-url)))
+  (add-to-list 'browse-url-default-handlers '("\\`https?://\\(maps\\.app\\.goo\\.gl/\\|.*goo.*/maps/@\\)" . osm-url)))
 
 ;;;###autoload
 (eval-after-load 'ol
