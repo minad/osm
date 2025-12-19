@@ -60,7 +60,7 @@
   :prefix "osm-")
 
 (defcustom osm-curl-options
-  "--user-agent emacs-osm/1.0 --disable --fail --location --silent --max-time 30"
+  "--disable --user-agent emacs-osm/1.0 --fail --location --silent --max-time 30"
   "Curl command line options."
   :type 'string)
 
@@ -603,7 +603,8 @@ Local per buffer since the overlays depend on the zoom level.")
         (cl-callf2 delq job osm--download-queue)))
     (cl-callf (lambda (s) (mod (1+ s) subs))
         (alist-get osm-server osm--download-subdomain 0))
-    (cons `("curl" "--write-out" "%{http_code} %{filename_effective}\n"
+    (cons `("curl" "--disable"
+            "--write-out" "%{http_code} %{filename_effective}\n"
             ,@(split-string-and-unquote osm-curl-options) ,@(nreverse args))
           jobs)))
 
