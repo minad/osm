@@ -60,7 +60,7 @@
   :prefix "osm-")
 
 (defcustom osm-curl-options
-  "--user-agent emacs-osm/1.0 --disable --fail --location --silent --max-time 30"
+  " --disable --user-agent emacs-osm/1.0 --fail --location --silent --max-time 30"
   "Curl command line options."
   :type 'string)
 
