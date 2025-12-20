@@ -265,8 +265,8 @@ Should be at least 7 days according to the server usage policies."
   "t" #'osm-goto
   "u" #'osm-url
   "j" #'osm-jump
-  "x" #'osm-gpx-show
-  "X" #'osm-gpx-hide)
+  "x" #'osm-track-show
+  "X" #'osm-track-hide)
 
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
 (defalias 'osm-prefix-map osm-prefix-map)
@@ -316,7 +316,7 @@ Should be at least 7 days according to the server usage policies."
   "u" #'osm-save-url
   "l" 'org-store-link
   "b" #'osm-bookmark-set
-  "X" #'osm-gpx-hide
+  "X" #'osm-track-hide
   "<remap> <scroll-down-command>" #'osm-down
   "<remap> <scroll-up-command>" #'osm-up
   "<" nil
@@ -347,8 +347,8 @@ Should be at least 7 days according to the server usage policies."
      ["Rename" osm-bookmark-rename]
      ["Delete" osm-bookmark-delete])
     "--"
-    ["Show GPX file" osm-gpx-show]
-    ["Hide GPX file" osm-gpx-hide]
+    ["Show GPX/TCX file" osm-track-show]
+    ["Hide GPX/TCX file" osm-track-hide]
     "--"
     ["Clone buffer" clone-buffer]
     ["Revert buffer" revert-buffer]
@@ -1734,60 +1734,99 @@ See `osm-search-server' and `osm-search-language' for customization."
       (complete-with-action action table string pred))))
 
 ;;;###autoload
-(defun osm-gpx-show (file)
-  "Show the tracks of gpx FILE in an `osm-mode' buffer."
-  (interactive "fGPX file: ")
-  (osm--check-libraries)
-  (let ((dom (with-temp-buffer
-               (insert-file-contents file)
-               (libxml-parse-xml-region (point-min) (point-max))))
-        (min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
-    (unless (eq 'gpx (dom-tag dom))
-      (setq dom (dom-child-by-tag dom 'gpx)))
-    (unless (and dom (eq 'gpx (dom-tag dom)))
-      (error "Not a GPX file"))
-    (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
-          (cons
-           (cl-loop
-            for trk in (dom-children dom)
-            if (eq (dom-tag trk) 'trk) nconc
-            (cl-loop
-             for seg in (dom-children trk)
-             if (eq (dom-tag seg) 'trkseg) collect
-             (cl-loop
-              for pt in (dom-children seg)
-              if (eq (dom-tag pt) 'trkpt) collect
-              (let ((lat (string-to-number (dom-attr pt 'lat)))
-                    (lon (string-to-number (dom-attr pt 'lon))))
-                (setq min-lat (min lat min-lat)
-                      max-lat (max lat max-lat)
-                      min-lon (min lon min-lon)
-                      max-lon (max lon max-lon))
-                (cons lat lon)))))
-           (cl-loop
-            for pt in (dom-children dom)
-            if (eq (dom-tag pt) 'wpt) collect
-            (let ((lat (string-to-number (dom-attr pt 'lat)))
-                  (lon (string-to-number (dom-attr pt 'lon))))
-              (setq min-lat (min lat min-lat)
-                    max-lat (max lat max-lat)
-                    min-lon (min lon min-lon)
-                    max-lon (max lon max-lon))
-              (list lat lon (with-no-warnings
-                              (dom-text (dom-child-by-tag pt 'name))))))))
-    (osm--revert)
-    (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
-               (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
-               nil nil nil)))
+(defun osm-track-show (file)
+  "Show the tracks of gpx/tcx FILE in an `osm-mode' buffer."
+  (interactive "fGPX/TCX file: ")
+  (let* ((dom (with-temp-buffer
+                (insert-file-contents file)
+                (libxml-parse-xml-region (point-min) (point-max))))
 
-(defun osm-gpx-hide (file)
-  "Show the tracks of gpx FILE in an `osm-mode' buffer."
-  (interactive (list (completing-read "GPX file: "
+         (track-data
+          (cond
+           ((not dom)
+            (error "Not an XML file"))
+
+           ((eq 'TrainingCenterDatabase (dom-tag dom))
+            (osm--tcx-data dom))
+
+           (t (osm--gpx-data dom)))))
+
+    (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
+          track-data)
+
+    (let ((min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+      (cl-loop
+       for seg in (car track-data) do
+       (cl-loop
+        for pt in seg do
+        (setq min-lat (min min-lat (car pt)))
+        (setq max-lat (max max-lat (car pt)))
+        (setq min-lon (min min-lon (cdr pt)))
+        (setq max-lon (max max-lon (cdr pt)))))
+
+      (osm--revert)
+      (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
+                 (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
+                 nil nil nil))))
+
+(defun osm--tcx-data (dom)
+  "Return points contained in tcx DOM."
+  (list
+   (cl-loop
+    with activities = (dom-child-by-tag dom 'Activities)
+    for activity in (dom-by-tag activities 'Activity) nconc
+    (cl-loop
+     for lap in (dom-by-tag activity 'Lap) nconc
+     (cl-loop
+      for track in (dom-by-tag lap 'Track) collect
+      (cl-loop
+       for pt in (dom-by-tag track 'Trackpoint)
+       for pos = (dom-child-by-tag pt 'Position)
+       if pos collect
+       (let ((lat (string-to-number (dom-text (dom-child-by-tag pos 'LatitudeDegrees))))
+             (lon (string-to-number (dom-text (dom-child-by-tag pos 'LongitudeDegrees)))))
+         (cons lat lon))))))))
+
+(defun osm--gpx-data (dom)
+  "Return points contained in gpx DOM."
+  (unless (eq 'gpx (dom-tag dom))
+    (setq dom (dom-child-by-tag dom 'gpx)))
+  (unless (and dom (eq 'gpx (dom-tag dom)))
+    (error "Not a GPX file"))
+  (cons
+   (cl-loop
+    for trk in (dom-children dom)
+    if (eq (dom-tag trk) 'trk) nconc
+    (cl-loop
+     for seg in (dom-children trk)
+     if (eq (dom-tag seg) 'trkseg) collect
+     (cl-loop
+      for pt in (dom-children seg)
+      if (eq (dom-tag pt) 'trkpt) collect
+      (let ((lat (string-to-number (dom-attr pt 'lat)))
+            (lon (string-to-number (dom-attr pt 'lon))))
+        (cons lat lon)))))
+   (cl-loop
+    for pt in (dom-children dom)
+    if (eq (dom-tag pt) 'wpt) collect
+    (let ((lat (string-to-number (dom-attr pt 'lat)))
+          (lon (string-to-number (dom-attr pt 'lon))))
+      (list lat lon (with-no-warnings
+                      (dom-text (dom-child-by-tag pt 'name))))))))
+
+(defun osm-track-hide (file)
+  "Hide the tracks of gpx FILE in an `osm-mode' buffer."
+  (interactive (list (completing-read "GPX/TCX file: "
                                       (or osm--gpx-files
-                                          (error "No GPX files shown"))
+                                          (error "No track files shown"))
                                       nil t nil 'file-name-history)))
   (cl-callf2 assoc-delete-all file osm--gpx-files)
   (osm--revert))
+
+;;;###autoload
+(defalias 'osm-gpx-show 'osm-track-show)
+(make-obsolete 'osm-gpx-show 'osm-track-show "1.12")
+(define-obsolete-function-alias 'osm-gpx-hide 'osm-track-show "1.12")
 
 (defun osm--server-annotation (cand)
   "Annotation for server CAND."
