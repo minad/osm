@@ -133,7 +133,7 @@ See also `osm-server-list'."
     (opvn
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
-     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
+     :url "http://tileserver.memomaps.de/tilegen/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
