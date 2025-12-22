@@ -5,6 +5,7 @@
 * Development
 
 - Server list updated.
+- Add =osm-route= command.
 - Add support for =webp= tiles.
 
 * Version 1.12 (2025-12-21)

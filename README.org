@@ -135,6 +135,7 @@ initiate a search.
 
 - ~h~: =osm-home= - Open new map at home coordinates
 - ~s~: =osm-search= - Search and jump to location
+- ~r~: =osm-route= - Search for a route between two locations
 - ~t~: =osm-goto= - Go to coordinates
 - ~u~: =osm-url= - Go to Geo URL, OpenStreetMap.org or Google Maps URL.
 - ~v~: =osm-server= - Select server
