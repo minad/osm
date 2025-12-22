@@ -824,7 +824,7 @@ Local per buffer since the overlays depend on the zoom level.")
      (lambda ()
        (dolist (dir (directory-files osm-tile-directory t "\\`[^.]+\\'" t))
          (dolist (file (directory-files
-                        dir t "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" t))
+                        dir t "\\.\\(?:png\\|jpe?g\\|webp\\)\\(?:\\.tmp\\)?\\'" t))
            (when (> (float-time (time-since
                                  (file-attribute-modification-time
                                   (file-attributes file))))
@@ -838,7 +838,7 @@ Local per buffer since the overlays depend on the zoom level.")
   (let (req)
     (unless (display-graphic-p)
       (push "graphical display" req))
-    (dolist (type '(svg jpeg png))
+    (dolist (type '(svg jpeg png webp))
       (unless (image-type-available-p type)
         (push (format "%s support" type) req)))
     (unless (libxml-available-p)
@@ -846,8 +846,8 @@ Local per buffer since the overlays depend on the zoom level.")
     (unless (json-available-p)
       (push "libjansson" req))
     (when req
-      (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
-             (string-join req ", ")))))
+      (warn "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+            (string-join req ", ")))))
 
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
@@ -1078,8 +1078,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                           "</svg>")))
             (list 'image :width 256 :height 256 :type 'svg :base-uri file :data svg-text :map areas))
         (list 'image :width 256 :height 256 :file file :type
-              (if (member (file-name-extension file) '("jpg" "jpeg"))
-                  'jpeg 'png))))))
+              (let ((ext (intern (file-name-extension file))))
+                (if (eq ext 'jpg) 'jpeg ext)))))))
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
