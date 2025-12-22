@@ -11,7 +11,7 @@
 #+html: <a href="https://elpa.gnu.org/devel/osm.html"><img alt="GNU-devel ELPA" src="https://elpa.gnu.org/devel/osm.svg"/></a>
 #+html: <a href="https://melpa.org/#/osm"><img alt="MELPA" src="https://melpa.org/packages/osm-badge.svg"/></a>
 #+html: <a href="https://stable.melpa.org/#/osm"><img alt="MELPA Stable" src="https://stable.melpa.org/packages/osm-badge.svg"/></a>
-#+html: <img src="https://github.com/minad/osm/blob/screenshots/osm.png?raw=true"/><p><i>The map data is © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, licensed under the <a href="https://opendatacommons.org/licenses/odbl/">ODbL</a> The map rendering is © <a href="https://opentopomap.org/about">OpenTopoMap</a>, licensed under the <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA.</a></i></p>
+#+html: <img src="https://github.com/minad/osm/blob/screenshots/osm.png?raw=true"/><p><i>The map data is © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, licensed under the <a href="https://opendatacommons.org/licenses/odbl/">ODbL</a></i></p>
 
 Osm.el is a tile-based map viewer, with a responsive movable and zoomable
 display. The map can be controlled with the keyboard or with the mouse. The
@@ -96,10 +96,10 @@ e.g., ~C-c o~. The format of the links complies with the [[https://en.wikipedia.
 [[https://datatracker.ietf.org/doc/html/rfc5870][RFC 5870]].
 
 #+begin_example
-  [[geo:41.869560826994544,12.45849609375;z=6;s=opentopomap][Italia, 41.87° 12.46° OpenTopoMap]]
+  [[geo:41.869560826994544,12.45849609375;z=6][Italia, 41.87° 12.46°]]
   [[geo:51.48950698022105,-0.144195556640625;z=11][London, England, 51.49° -0.14°]]
   [[geo:55.686875255964424,12.569732666015625;z=12;s=cyclosm][København, Danmark, 55.69° 12.57° CyclOSM]]
-  [[geo:27.961656050984658,86.89224243164062;z=13;s=opentopomap][Mount Everest, 27.96° 86.89° OpenTopoMap]]
+  [[geo:27.961656050984658,86.89224243164062;z=13][Mount Everest, 27.96° 86.89°]]
 #+end_example
 
 **** Elisp link examples
@@ -109,10 +109,10 @@ location. The Elisp links can be used in arbitrary text files. Since they are
 Elisp s-expressions they can be easily manipulated programatically.
 
 #+begin_src emacs-lisp
-  (osm 41.869561 12.458496 6 'opentopomap "Lazio, Italia")
+  (osm 41.869561 12.458496 6 "Lazio, Italia")
   (osm 51.489507 -0.144196 11 "London, Greater London, England, SW1A 2DX, United Kingdom")
   (osm 55.686875 12.569733 12 'cyclosm "København, Københavns Kommune, Region Hovedstaden, 1357, Danmark")
-  (osm 27.961656 86.892242 13 'opentopomap "Khumjung, Khumbupasanglahmu, सोलुखुम्बु, Province #1, Nepal")
+  (osm 27.961656 86.892242 13 "Khumjung, Khumbupasanglahmu, सोलुखुम्बु, Province #1, Nepal")
   (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 #+end_src
 
