@@ -88,55 +88,64 @@ See also `osm-server-list'."
   :type 'plist)
 
 (defcustom osm-server-list
-  '((default
-     :name "Carto"
-     :description "Standard Carto map provided by OpenStreetMap"
-     :url "https://tile.openstreetmap.org/%z/%x/%y.png"
-     :group "Standard"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
-    (de
-     :name "Carto(de)"
-     :description "Localized Carto map provided by OpenStreetMap Germany"
-     :url "https://tile.openstreetmap.de/%z/%x/%y.png"
-     :group "Standard"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
-    (fr
-     :name "Carto(fr)"
-     :description "Localized Carto map by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
-     :group "Standard"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
-    (humanitarian
-     :name "Humanitarian"
-     :description "Humanitarian map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
-     :group "Special Purpose"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"))
-    (cyclosm
-     :name "CyclOSM"
-     :description "Bicycle-oriented map provided by OpenStreetMap France"
-     :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
-     :group "Transportation"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"))
-    (openriverboatmap
-     :name "OpenRiverBoatMap"
-     :description "Waterways map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
-     :group "Transportation"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
-    (opvn
-     :name "ÖPNV" :max-zoom 18
-     :description "Base layer with public transport information"
-     :url "http://tileserver.memomaps.de/tilegen/%z/%x/%y.png"
-     :group "Transportation"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
+  (let ((copyright-fix "{Fix the map|https://www.openstreetmap.org/fixthemap}")
+        (copyright-data "Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"))
+    `((default
+       :name "Carto"
+       :description "Standard Carto map provided by OpenStreetMap"
+       :url "https://tile.openstreetmap.org/%z/%x/%y.png"
+       :group "Standard"
+       :copyright (,copyright-data
+                   "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"
+                   ,copyright-fix))
+      (de
+       :name "Carto(de)"
+       :description "Localized Carto map provided by OpenStreetMap Germany"
+       :url "https://tile.openstreetmap.de/%z/%x/%y.png"
+       :group "Standard"
+       :copyright (,copyright-data
+                   "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"
+                   ,copyright-fix))
+      (fr
+       :name "Carto(fr)"
+       :description "Localized Carto map by OpenStreetMap France"
+       :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
+       :group "Standard"
+       :copyright (,copyright-data
+                   "Map style © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"
+                   ,copyright-fix))
+      (humanitarian
+       :name "Humanitarian"
+       :description "Humanitarian map provided by OpenStreetMap France"
+       :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
+       :group "Special Purpose"
+       :copyright (,copyright-data
+                   "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"
+                   ,copyright-fix))
+      (cyclosm
+       :name "CyclOSM"
+       :description "Bicycle-oriented map provided by OpenStreetMap France"
+       :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
+       :group "Transportation"
+       :copyright (,copyright-data
+                   "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"
+                   ,copyright-fix))
+      (openriverboatmap
+       :name "OpenRiverBoatMap"
+       :description "Waterways map provided by OpenStreetMap France"
+       :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
+       :group "Transportation"
+       :copyright (,copyright-data
+                   "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"
+                   ,copyright-fix))
+      (opvn
+       :name "ÖPNV" :max-zoom 18
+       :description "Base layer with public transport information"
+       :url "http://tileserver.memomaps.de/tilegen/%z/%x/%y.png"
+       :group "Transportation"
+       :copyright (,copyright-data
+                   "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}"
+                   ,copyright-fix))))
   "List of tile servers.
 
 Allowed keys:
