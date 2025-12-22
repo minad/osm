@@ -849,6 +849,14 @@ Local per buffer since the overlays depend on the zoom level.")
          (when (directory-empty-p dir)
            (ignore-errors (delete-directory dir))))))))
 
+;; TODO: Use `completion-table-with-metadata'
+(defun osm--table-with-metadata (table metadata)
+  "Return new completion TABLE with METADATA."
+  (lambda (string pred action)
+    (if (eq action 'metadata)
+        `(metadata . ,metadata)
+      (complete-with-action action table string pred))))
+
 (defun osm--check-libraries ()
   "Check that Emacs is compiled with the necessary libraries."
   (let (req)
@@ -1732,14 +1740,6 @@ See `osm-search-server' and `osm-search-language' for customization."
     (osm--goto (cadr selected) (caddr selected)
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
                nil 'osm-selected (car selected))))
-
-;; TODO: Use `completion-table-with-metadata'
-(defun osm--table-with-metadata (table metadata)
-  "Return new completion TABLE with METADATA."
-  (lambda (string pred action)
-    (if (eq action 'metadata)
-        `(metadata . ,metadata)
-      (complete-with-action action table string pred))))
 
 ;;;###autoload
 (defun osm-gpx-show (file)
