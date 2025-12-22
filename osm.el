@@ -1668,7 +1668,7 @@ When called interactively, call the function `osm-home'."
         (match-string 1)
       (error "Invalid redirect %s" url))))
 
-(defun osm--search (needle)
+(defun osm--search-request (needle)
   "Globally search for NEEDLE and return the list of results."
   (message "Contacting %s" osm-search-server)
   (mapcar
@@ -1685,43 +1685,49 @@ When called interactively, call the function `osm-home'."
             osm-search-server osm-search-language
             (url-encode-url needle)))))
 
+(defun osm--search-read (prompt)
+  "Read location via `completing-read' with PROMPT."
+  (minibuffer-with-setup-hook
+      (lambda ()
+        (when (eq (keymap-local-lookup "SPC") #'minibuffer-complete-word)
+          ;; Override dreaded `minibuffer-complete-word' for default
+          ;; completion.  When will this keybinding finally get removed from
+          ;; default completion?
+          (use-local-map (make-composed-keymap
+                          (define-keymap "SPC" nil)
+                          (current-local-map)))))
+    (completing-read prompt
+                     (osm--table-with-metadata
+                      osm--search-history '((display-sort-function . identity)
+                                            (cycle-sort-function . identity)))
+                     nil nil nil 'osm--search-history)))
+
+(defun osm--search-select (needle lucky)
+  "Search for NEEDLE and return selected result.
+Take first result if LUCKY is non-nil."
+  (let ((results (or (osm--search-request needle)
+                     (error "No results for `%s'" needle))))
+    (or
+     (and (or lucky (not (cdr results))) (car results))
+     (assoc
+      (completing-read
+       (format "Matches for '%s': " needle)
+       (osm--table-with-metadata
+        results '((display-sort-function . identity)
+                  (cycle-sort-function . identity)
+                  (eager-display . t)))
+       nil t nil t)
+      results)
+     (error "No selection"))))
+
 ;;;###autoload
 (defun osm-search (needle &optional lucky)
   "Globally search for NEEDLE on `osm-search-server' and display the map.
 If the prefix argument LUCKY is non-nil take the first result and jump there.
 See `osm-search-server' and `osm-search-language' for customization."
-  (interactive
-   (list
-    (minibuffer-with-setup-hook
-        (lambda ()
-          (when (eq (keymap-local-lookup "SPC") #'minibuffer-complete-word)
-            ;; Override dreaded `minibuffer-complete-word' for default
-            ;; completion.  When will this keybinding finally get removed from
-            ;; default completion?
-            (use-local-map (make-composed-keymap
-                            (define-keymap "SPC" nil)
-                            (current-local-map)))))
-      (completing-read "Location: "
-                       (osm--table-with-metadata
-                        osm--search-history '((display-sort-function . identity)
-                                              (cycle-sort-function . identity)))
-                       nil nil nil 'osm--search-history))
-    current-prefix-arg))
-  ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((results (or (osm--search needle) (error "No results for `%s'" needle)))
-         (selected
-          (or
-           (and (or lucky (not (cdr results))) (car results))
-           (assoc
-            (completing-read
-             (format "Matches for '%s': " needle)
-             (osm--table-with-metadata
-              results '((display-sort-function . identity)
-                        (cycle-sort-function . identity)
-                        (eager-display . t)))
-             nil t nil t)
-            results)
-           (error "No selection"))))
+  (interactive (list (osm--search-read "Location: ") current-prefix-arg))
+  (let ((selected (osm--search-select needle lucky)))
+    ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
     (osm--goto (cadr selected) (caddr selected)
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
                nil 'osm-selected (car selected))))
