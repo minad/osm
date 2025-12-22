@@ -34,8 +34,8 @@
 ;; multiple preconfigured tile servers.  You can bookmark your favorite
 ;; locations using regular Emacs bookmarks or create links from Org files
 ;; to locations.  Furthermore the package provides commands to measure
-;; distances, search for locations by name and to open and display GPX
-;; tracks.
+;; distances, search for locations and routes by name and to open and
+;; display GPX tracks.
 
 ;; osm.el requires Emacs 29 and depends on the external `curl' program.
 ;; Emacs must be built with libxml, libjansson, librsvg, libjpeg, libpng
@@ -266,6 +266,7 @@ Should be at least 7 days according to the server usage policies."
   "t" #'osm-goto
   "u" #'osm-url
   "j" #'osm-jump
+  "r" #'osm-route
   "x" #'osm-gpx-show
   "X" #'osm-gpx-hide)
 
@@ -336,8 +337,10 @@ Should be at least 7 days according to the server usage policies."
     ["Go to coordinates" osm-goto]
     ["Go to URL" osm-url]
     ["Jump to pin" osm-jump]
-    ["Search by name" osm-search]
     ["Change tile server" osm-server]
+    "--"
+    ["Search by name" osm-search]
+    ["Plan route" osm-route]
     "--"
     ["Org Link" org-store-link]
     ["Geo URL" osm-save-url]
@@ -467,15 +470,39 @@ Local per buffer since the overlays depend on the zoom level.")
   (setq lat (* lat (/ float-pi 180.0)))
   (- 0.5 (/ (log (+ (tan lat) (/ 1.0 (cos lat)))) float-pi 2)))
 
-(defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
-  "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
-  (let ((w (/ (frame-pixel-width) 256))
-        (h (/ (frame-pixel-height) 256)))
+(defun osm--bb-to-zoom (bb)
+  "Zoom level from bounding box BB."
+  (pcase-let ((`(,min-lat ,max-lat ,min-lon ,max-lon) bb)
+              (w (/ (frame-pixel-width) 256))
+              (h (/ (frame-pixel-height) 256)))
     (max (osm--server-property :min-zoom)
          (min
           (osm--server-property :max-zoom)
-          (min (logb (/ w (abs (- (osm--lon-to-normalized-x lon1) (osm--lon-to-normalized-x lon2)))))
-               (logb (/ h (abs (- (osm--lat-to-normalized-y lat1) (osm--lat-to-normalized-y lat2))))))))))
+          (min (logb (/ w (abs (- (osm--lon-to-normalized-x min-lon)
+                                  (osm--lon-to-normalized-x max-lon)))))
+               (logb (/ h (abs (- (osm--lat-to-normalized-y min-lat)
+                                  (osm--lat-to-normalized-y max-lat))))))))))
+
+(defun osm--bb-center (bb)
+  "Center of bounding box BB."
+  (pcase-let ((`(,min-lat ,max-lat ,min-lon ,max-lon) bb))
+    (cons (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2))))
+
+(defun osm--bb-from-track (track waypoints)
+  "Compute bounding box from TRACK and WAYPOINTS."
+  (let ((min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+    (cl-loop for seg in track do
+             (cl-loop for (lat . lon) in seg do
+                      (setq min-lat (min lat min-lat)
+                            max-lat (max lat max-lat)
+                            min-lon (min lon min-lon)
+                            max-lon (max lon max-lon))))
+    (cl-loop for (lat lon . _) in waypoints do
+             (setq min-lat (min lat min-lat)
+                   max-lat (max lat max-lat)
+                   min-lon (min lon min-lon)
+                   max-lon (max lon max-lon)))
+    (list min-lat max-lat min-lon max-lon)))
 
 (defun osm--x-to-lon (x zoom)
   "Return longitude in degrees for X/ZOOM."
@@ -730,7 +757,7 @@ Local per buffer since the overlays depend on the zoom level.")
                (length osm--track) (+ len1 len2)
                (if (or (= len1 0) (= len2 0))
                    sel-name
-                 (format "%.2fkm → %s → %.2fkm"
+                 (format "%.2fkm ⟶ %s ⟶ %.2fkm"
                          len1 sel-name len2))))))
 
 (defun osm--pin-at (event &optional type)
@@ -1738,8 +1765,34 @@ See `osm-search-server' and `osm-search-language' for customization."
   (let ((selected (osm--search-select needle lucky)))
     ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
     (osm--goto (cadr selected) (caddr selected)
-               (apply #'osm--boundingbox-to-zoom (cdddr selected))
+               (osm--bb-to-zoom (cdddr selected))
                nil 'osm-selected (car selected))))
+
+;;;###autoload
+(defun osm-route ()
+  "Fetch a route between two locations."
+  (interactive)
+  (let* ((from (osm--search-select (osm--search-read "From: ") nil))
+         (to (osm--search-select (osm--search-read "To: ") nil))
+         (by (completing-read "By: " '("car" "bike" "foot") nil t nil t))
+         (data
+          (progn
+            ;; TODO make this configurable, use `format-spec' for url params
+            (message "Contacting routing.openstreetmap.de")
+            (osm--fetch-json
+             (format "https://routing.openstreetmap.de/routed-%s/route/v1/driving/%.6f,%.6f;%.6f,%.6f?steps=false&overview=full&alternatives=false&geometries=geojson"
+                     by (caddr from) (cadr from) (caddr to) (cadr to)))))
+         (route (car (alist-get 'routes data)))
+         (coords (or (alist-get 'coordinates (alist-get 'geometry route))
+                     (error "No route available")))
+         (waypoints (alist-get 'waypoints data)))
+    (osm--add-gpx
+     (format "By %s: %s ⟶ %s" by (car from) (car to))
+     (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
+     (mapcar (lambda (x)
+               (let ((l (alist-get 'location x)))
+                 (list (cadr l) (car l) (alist-get 'name x))))
+             waypoints))))
 
 ;;;###autoload
 (defun osm-gpx-show (file)
@@ -1748,45 +1801,40 @@ See `osm-search-server' and `osm-search-language' for customization."
   (osm--check-libraries)
   (let ((dom (with-temp-buffer
                (insert-file-contents file)
-               (libxml-parse-xml-region (point-min) (point-max))))
-        (min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+               (libxml-parse-xml-region (point-min) (point-max)))))
     (unless (eq 'gpx (dom-tag dom))
       (setq dom (dom-child-by-tag dom 'gpx)))
     (unless (and dom (eq 'gpx (dom-tag dom)))
       (error "Not a GPX file"))
-    (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
-          (cons
-           (cl-loop
-            for trk in (dom-children dom)
-            if (eq (dom-tag trk) 'trk) nconc
-            (cl-loop
-             for seg in (dom-children trk)
-             if (eq (dom-tag seg) 'trkseg) collect
-             (cl-loop
-              for pt in (dom-children seg)
-              if (eq (dom-tag pt) 'trkpt) collect
-              (let ((lat (string-to-number (dom-attr pt 'lat)))
-                    (lon (string-to-number (dom-attr pt 'lon))))
-                (setq min-lat (min lat min-lat)
-                      max-lat (max lat max-lat)
-                      min-lon (min lon min-lon)
-                      max-lon (max lon max-lon))
-                (cons lat lon)))))
-           (cl-loop
-            for pt in (dom-children dom)
-            if (eq (dom-tag pt) 'wpt) collect
-            (let ((lat (string-to-number (dom-attr pt 'lat)))
-                  (lon (string-to-number (dom-attr pt 'lon))))
-              (setq min-lat (min lat min-lat)
-                    max-lat (max lat max-lat)
-                    min-lon (min lon min-lon)
-                    max-lon (max lon max-lon))
-              (list lat lon (with-no-warnings
-                              (dom-text (dom-child-by-tag pt 'name))))))))
+    (osm--add-gpx
+     (abbreviate-file-name file)
+     (cl-loop
+      for trk in (dom-children dom)
+      if (eq (dom-tag trk) 'trk) nconc
+      (cl-loop
+       for seg in (dom-children trk)
+       if (eq (dom-tag seg) 'trkseg) collect
+       (cl-loop
+        for pt in (dom-children seg)
+        if (eq (dom-tag pt) 'trkpt) collect
+        (cons (string-to-number (dom-attr pt 'lat))
+              (string-to-number (dom-attr pt 'lon))))))
+     (cl-loop
+      for pt in (dom-children dom)
+      if (eq (dom-tag pt) 'wpt) collect
+      (list (string-to-number (dom-attr pt 'lat))
+            (string-to-number (dom-attr pt 'lon))
+            (with-no-warnings
+              (dom-text (dom-child-by-tag pt 'name))))))))
+
+(defun osm--add-gpx (name track waypoints)
+  "Add GPX track with NAME consisting of TRACK and WAYPOINTS."
+  (let* ((bb (osm--bb-from-track track waypoints))
+         (center (osm--bb-center bb)))
+    (setf (alist-get name osm--gpx-files nil nil #'equal)
+          (cons track waypoints))
     (osm--revert)
-    (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
-               (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
-               nil nil nil)))
+    (osm--goto (car center) (cdr center) (osm--bb-to-zoom bb) nil nil nil)))
 
 (defun osm-gpx-hide (file)
   "Show the tracks of gpx FILE in an `osm-mode' buffer."
