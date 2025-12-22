@@ -185,7 +185,7 @@ the domain name and the :user to the string \"apikey\"."
   :type '(alist :key-type symbol :value-type string))
 
 (defcustom osm-track-style
-  "stroke:#00a;stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
+  "stroke:#f0f;stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.5;"
   "SVG style used to draw tracks."
   :type 'string)
 
