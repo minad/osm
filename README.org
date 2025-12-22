@@ -34,7 +34,8 @@ for locations by name and to open and display GPX tracks.
 - Distance measurement
 - Go to coordinate
 - Search for location by name
-- Org link, Geo url and Elisp link support
+- Save Geo URL, Org link or Elisp link
+- Open Geo, Google Maps or OpenStreetMap URLs
 - Bookmarked positions with pins
 - Multiple preconfigured tile servers
 
