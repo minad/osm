@@ -4,11 +4,14 @@
 
 * Development
 
-- Server list updated.
-- Add =osm-route= command.
-- Add support for =webp= tiles.
-- Renamed =osm-gpx-hide= to =osm-hide=.
-- Renamed =osm-gpx-open= to =osm-open=.
+- Add =osm-route= command to plan routes via the OSRM routing service.
+- Renamed =osm-gpx-hide= to generic =osm-hide=, since the command can also hide
+  routes.
+- Renamed =osm-gpx-open= to generic =osm-open= in preparation of support for other file
+  formats.
+- =osm-delete= can hide routes or files if a corresponding pin has been selected.
+- Server list updated: URLs updated and unmaintained servers removed.
+- Add support for tiles in the =webp= image format.
 
 * Version 1.12 (2025-12-21)
 
