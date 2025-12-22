@@ -91,14 +91,14 @@ See also `osm-server-list'."
   '((default
      :name "Carto"
      :description "Standard Carto map provided by OpenStreetMap"
-     :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
+     :url "https://tile.openstreetmap.org/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
      :name "Carto(de)"
      :description "Localized Carto map provided by OpenStreetMap Germany"
-     :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
+     :url "https://tile.openstreetmap.de/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
@@ -115,21 +115,24 @@ See also `osm-server-list'."
      :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
      :group "Special Purpose"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
+                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"
+                 "Hosting: {OpenStreetMap France|https://openstreetmap.fr/}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
      :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"))
+                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"
+                 "Hosting: {OpenStreetMap France|https://openstreetmap.fr/}"))
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
+                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"
+                 "Hosting: {OpenStreetMap France|https://openstreetmap.fr/}"))
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
