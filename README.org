@@ -42,11 +42,11 @@ for locations by name and to open and display GPX tracks.
 
 The package is available on GNU ELPA and can be installed with =package-install=.
 Note that Osm.el requires Emacs 29 and depends on the external =curl= program.
-Emacs must be built with =libxml=, =librsvg=, =libjpeg= and =libpng= support. Emacs 30
-comes with a native JSON parser, while on Emacs 29, =libjansson= is needed. The
-following is an example configuration which relies on =use-package=. Please take a
-look at the [[https://github.com/minad/osm/wiki][wiki]] for additional tile server configurations, e.g., Google Maps
-for satellite and aerial maps.
+Emacs must be built with =libxml=, =librsvg=, =libjpeg=, =libpng= and =libwebp= support.
+Emacs 30 comes with a native JSON parser, while on Emacs 29, =libjansson= is
+needed. The following is an example configuration which relies on =use-package=.
+Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional tile server configurations, e.g.,
+Google Maps for satellite and aerial maps.
 
 #+begin_src emacs-lisp
 (use-package osm

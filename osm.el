@@ -38,8 +38,8 @@
 ;; tracks.
 
 ;; osm.el requires Emacs 29 and depends on the external `curl' program.
-;; Emacs must be built with libxml, libjansson, librsvg, libjpeg and
-;; libpng support.
+;; Emacs must be built with libxml, libjansson, librsvg, libjpeg, libpng
+;; and libwebp support.
 
 ;;; Code:
 
