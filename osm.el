@@ -80,7 +80,7 @@ The server must offer the nominatim.org API."
 (defcustom osm-server-defaults
   '( :min-zoom 2
      :max-zoom 19
-     :download-batch 4
+     :download-batch 8
      :max-connections 2
      :subdomains ("a" "b" "c"))
   "Default server properties.
