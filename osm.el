@@ -129,7 +129,14 @@ See also `osm-server-list'."
      :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}")))
+                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
+    (opvn
+     :name "ÖPNV" :max-zoom 18
+     :description "Base layer with public transport information"
+     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
+     :group "Transportation"
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
   "List of tile servers.
 
 Allowed keys:
