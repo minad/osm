@@ -115,24 +115,21 @@ See also `osm-server-list'."
      :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
      :group "Special Purpose"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"
-                 "Hosting: {OpenStreetMap France|https://openstreetmap.fr/}"))
+                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
      :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"
-                 "Hosting: {OpenStreetMap France|https://openstreetmap.fr/}"))
+                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"))
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"
-                 "Hosting: {OpenStreetMap France|https://openstreetmap.fr/}"))
+                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
