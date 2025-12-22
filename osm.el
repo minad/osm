@@ -130,14 +130,6 @@ See also `osm-server-list'."
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
-    (opentopomap
-     :name "OpenTopoMap"
-     :description "Topographical map provided by OpenTopoMap"
-     :url "https://%s.tile.opentopomap.org/%z/%x/%y.png"
-     :group "Topographical"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
-                 "Elevation data: {SRTM|https://www2.jpl.nasa.gov/srtm/}"))
     (opvn
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
