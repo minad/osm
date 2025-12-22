@@ -180,8 +180,8 @@ the domain name and the :user to the string \"apikey\"."
     (osm-bookmark . "#f80")
     (osm-home . "#80f")
     (osm-track . "#00e")
-    (osm-gpx-poi . "#88f")
-    (osm-gpx-track . "#88f"))
+    (osm-file-poi . "#88f")
+    (osm-file-track . "#88f"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
@@ -267,8 +267,7 @@ Should be at least 7 days according to the server usage policies."
   "u" #'osm-url
   "j" #'osm-jump
   "r" #'osm-route
-  "x" #'osm-gpx-show
-  "X" #'osm-gpx-hide)
+  "f" #'osm-open)
 
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
 (defalias 'osm-prefix-map osm-prefix-map)
@@ -318,7 +317,8 @@ Should be at least 7 days according to the server usage policies."
   "u" #'osm-save-url
   "l" 'org-store-link
   "b" #'osm-bookmark-set
-  "X" #'osm-gpx-hide
+  "F" #'osm-hide
+  "R" #'osm-hide
   "<remap> <scroll-down-command>" #'osm-down
   "<remap> <scroll-up-command>" #'osm-up
   "<" nil
@@ -342,17 +342,17 @@ Should be at least 7 days according to the server usage policies."
     ["Search by name" osm-search]
     ["Plan route" osm-route]
     "--"
-    ["Org Link" org-store-link]
+    ["Org link" org-store-link]
     ["Geo URL" osm-save-url]
-    ["Elisp Link" (osm-save-url t)]
+    ["Elisp link" (osm-save-url t)]
     ("Bookmark"
      ["Set" osm-bookmark-set]
      ["Jump" osm-bookmark-jump]
      ["Rename" osm-bookmark-rename]
      ["Delete" osm-bookmark-delete])
     "--"
-    ["Show GPX file" osm-gpx-show]
-    ["Hide GPX file" osm-gpx-hide]
+    ["Open geometry file" osm-open]
+    ["Hide file or route" osm-hide]
     "--"
     ["Clone buffer" clone-buffer]
     ["Revert buffer" revert-buffer]
@@ -390,7 +390,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--tile-age 0
   "Tile age, incremented on every update.")
 
-(defvar osm--gpx-files nil
+(defvar osm--files nil
   "Global list of loaded tracks.")
 
 (defvar osm--track nil
@@ -975,11 +975,11 @@ Local per buffer since the overlays depend on the zoom level.")
            if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump) do
            (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
-  (dolist (file osm--gpx-files)
+  (dolist (file osm--files)
     (when-let ((start (caaadr file)))
-      (funcall fun 'osm-gpx-track (car start) (cdr start) 10 (car file)))
+      (funcall fun 'osm-file-track (car start) (cdr start) 10 (car file)))
     (cl-loop for (lat lon name) in (cddr file) do
-             (funcall fun 'osm-gpx-poi lat lon 15 name)))
+             (funcall fun 'osm-file-poi lat lon 15 name)))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon 15 name)))
 
@@ -1062,7 +1062,7 @@ Local per buffer since the overlays depend on the zoom level.")
     (let ((pins (make-hash-table :test #'equal))
           (tracks (make-hash-table :test #'equal)))
       (osm--each-pin (apply-partially #'osm--add-pin pins))
-      (dolist (file osm--gpx-files)
+      (dolist (file osm--files)
         (dolist (seg (cadr file))
           (osm--add-track tracks seg)))
       (osm--add-track tracks osm--track)
@@ -1772,8 +1772,8 @@ See `osm-search-server' and `osm-search-language' for customization."
 (defun osm-route ()
   "Fetch a route between two locations."
   (interactive)
-  (let* ((from (osm--search-select (osm--search-read "From: ") nil))
-         (to (osm--search-select (osm--search-read "To: ") nil))
+  (let* ((from (osm--search-select (osm--search-read "Route from: ") nil))
+         (to (osm--search-select (osm--search-read "Route to: ") nil))
          (by (completing-read "By: " '("car" "bike" "foot") nil t nil t))
          (data
           (progn
@@ -1786,7 +1786,7 @@ See `osm-search-server' and `osm-search-language' for customization."
          (coords (or (alist-get 'coordinates (alist-get 'geometry route))
                      (error "No route available")))
          (waypoints (alist-get 'waypoints data)))
-    (osm--add-gpx
+    (osm--add-file
      (format "By %s: %s ⟶ %s" by (car from) (car to))
      (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
      (mapcar (lambda (x)
@@ -1795,8 +1795,8 @@ See `osm-search-server' and `osm-search-language' for customization."
              waypoints))))
 
 ;;;###autoload
-(defun osm-gpx-show (file)
-  "Show the tracks of gpx FILE in an `osm-mode' buffer."
+(defun osm-open (file)
+  "Show the tracks of GPX FILE in an `osm-mode' buffer."
   (interactive "fGPX file: ")
   (osm--check-libraries)
   (let ((dom (with-temp-buffer
@@ -1806,7 +1806,7 @@ See `osm-search-server' and `osm-search-language' for customization."
       (setq dom (dom-child-by-tag dom 'gpx)))
     (unless (and dom (eq 'gpx (dom-tag dom)))
       (error "Not a GPX file"))
-    (osm--add-gpx
+    (osm--add-file
      (abbreviate-file-name file)
      (cl-loop
       for trk in (dom-children dom)
@@ -1827,22 +1827,22 @@ See `osm-search-server' and `osm-search-language' for customization."
             (with-no-warnings
               (dom-text (dom-child-by-tag pt 'name))))))))
 
-(defun osm--add-gpx (name track waypoints)
-  "Add GPX track with NAME consisting of TRACK and WAYPOINTS."
+(defun osm--add-file (name track waypoints)
+  "Add file with NAME consisting of TRACK and WAYPOINTS."
   (let* ((bb (osm--bb-from-track track waypoints))
          (center (osm--bb-center bb)))
-    (setf (alist-get name osm--gpx-files nil nil #'equal)
+    (setf (alist-get name osm--files nil nil #'equal)
           (cons track waypoints))
     (osm--revert)
     (osm--goto (car center) (cdr center) (osm--bb-to-zoom bb) nil nil nil)))
 
-(defun osm-gpx-hide (file)
-  "Show the tracks of gpx FILE in an `osm-mode' buffer."
-  (interactive (list (completing-read "GPX file: "
-                                      (or osm--gpx-files
-                                          (error "No GPX files shown"))
+(defun osm-hide (name)
+  "Hide file with NAME in Osm buffers."
+  (interactive (list (completing-read "Hide: "
+                                      (or osm--files
+                                          (error "No files shown"))
                                       nil t nil 'file-name-history)))
-  (cl-callf2 assoc-delete-all file osm--gpx-files)
+  (cl-callf2 assoc-delete-all name osm--files)
   (osm--revert))
 
 (defun osm--server-annotation (cand)

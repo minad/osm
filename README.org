@@ -140,7 +140,7 @@ initiate a search.
 - ~u~: =osm-url= - Go to Geo URL, OpenStreetMap.org or Google Maps URL.
 - ~v~: =osm-server= - Select server
 - ~j~: =osm-jump= - Jump to pin (bookmark or POI)
-- ~x~: =osm-gpx-show= - Show GPX file in map viewer
+- ~f~: =osm-open= - Open GPX file in map viewer
 
 Some additional key bindings are available in Osm buffers:
 
@@ -156,7 +156,7 @@ Some additional key bindings are available in Osm buffers:
 - ~d~, ~DEL~: =osm-delete= - Delete selected pin (bookmark or way point)
 - ~n~: =osm-rename= - Rename selected pin
 - ~c~: =osm-center= - Center to currently selected pin
-- ~X~: =osm-gpx-hide= - Hide overlays from GPX file
+- ~F~, ~R~: =osm-hide= - Hide GPX file or route
 - ~l~: =org-store-link= - Store Org link
 - ~u~: =osm-save-url= - Save geo url in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
