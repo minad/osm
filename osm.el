@@ -180,8 +180,7 @@ the domain name and the :user to the string \"apikey\"."
     (osm-bookmark . "#f80")
     (osm-home . "#80f")
     (osm-track . "#00e")
-    (osm-file-poi . "#88f")
-    (osm-file-track . "#88f"))
+    (osm-file . "#88f"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
@@ -897,7 +896,7 @@ Local per buffer since the overlays depend on the zoom level.")
     (unless (json-available-p)
       (push "libjansson" req))
     (when req
-      (warn "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+      (warn "osm: Please compile Emacs with the required libraries, %s needed to proceed"
             (string-join req ", ")))))
 
 (define-derived-mode osm-mode special-mode "Osm"
@@ -977,9 +976,12 @@ Local per buffer since the overlays depend on the zoom level.")
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
   (dolist (file osm--files)
     (when-let ((start (caaadr file)))
-      (funcall fun 'osm-file-track (car start) (cdr start) 10 (car file)))
+      (funcall fun 'osm-file (car start) (cdr start) 10
+               (propertize (car file) 'osm-file (car file))))
     (cl-loop for (lat lon name) in (cddr file) do
-             (funcall fun 'osm-file-poi lat lon 15 name)))
+             (funcall fun 'osm-file lat lon 15
+                      (propertize (format "%s [%s]" name (car file))
+                                  'osm-file (car file)))))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon 15 name)))
 
@@ -1627,19 +1629,23 @@ When called interactively, call the function `osm-home'."
   "Delete selected pin (bookmark or way point)."
   (interactive nil osm-mode)
   (osm--barf-unless-osm)
-  (pcase (caddr osm--pin)
-    ('nil nil)
-    ('osm-bookmark (osm-bookmark-delete (cadddr osm--pin)))
-    ('osm-track (osm--track-delete))
-    (_ (setq osm--pin nil) (osm--update))))
+  (pcase-let ((`(,_lat ,_lon ,id ,name) osm--pin))
+    (pcase id
+      ('nil nil)
+      ('osm-bookmark (osm-bookmark-delete name))
+      ('osm-track (osm--track-delete))
+      ('osm-file (setq osm--pin nil)
+                 (osm-hide (get-text-property 0 'osm-file name)))
+      (_ (setq osm--pin nil) (osm--update)))))
 
 (defun osm-rename ()
   "Rename selected pin (bookmark or way point)."
   (interactive nil osm-mode)
   (osm--barf-unless-osm)
-  (pcase (caddr osm--pin)
-    ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
-    ('osm-track (osm--track-rename))))
+  (pcase-let ((`(,_lat ,_lon ,id ,name) osm--pin))
+    (pcase id
+      ('osm-bookmark (osm-bookmark-rename name))
+      ('osm-track (osm--track-rename)))))
 
 ;;;###autoload
 (defun osm-jump ()
@@ -1772,9 +1778,11 @@ See `osm-search-server' and `osm-search-language' for customization."
 (defun osm-route ()
   "Fetch a route between two locations."
   (interactive)
-  (let* ((from (osm--search-select (osm--search-read "Route from: ") nil))
-         (to (osm--search-select (osm--search-read "Route to: ") nil))
-         (by (completing-read "By: " '("car" "bike" "foot") nil t nil t))
+  (let* ((from-name (osm--search-read "Route from: "))
+         (from (osm--search-select from-name nil))
+         (to-name (osm--search-read "Route to: "))
+         (to (osm--search-select to-name nil))
+         (by (completing-read "Go by: " '("car" "bike" "foot") nil t nil t))
          (data
           (progn
             ;; TODO make this configurable, use `format-spec' for url params
@@ -1787,7 +1795,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                      (error "No route available")))
          (waypoints (alist-get 'waypoints data)))
     (osm--add-file
-     (format "By %s: %s ⟶ %s" by (car from) (car to))
+     (format "%s ⟶ %s (%s)" from-name to-name by)
      (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
      (mapcar (lambda (x)
                (let ((l (alist-get 'location x)))
