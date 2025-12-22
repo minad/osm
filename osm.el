@@ -1698,8 +1698,9 @@ When called interactively, call the function `osm-home'."
                           (current-local-map)))))
     (completing-read prompt
                      (osm--table-with-metadata
-                      osm--search-history '((display-sort-function . identity)
-                                            (cycle-sort-function . identity)))
+                      (delete-dups (copy-sequence osm--search-history))
+                      '((display-sort-function . identity)
+                        (cycle-sort-function . identity)))
                      nil nil nil 'osm--search-history)))
 
 (defun osm--search-select (needle lucky)
