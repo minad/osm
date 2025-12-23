@@ -1788,10 +1788,10 @@ See `osm-search-server' and `osm-search-language' for customization."
          (from (osm--search-select from-name nil))
          (to-name (osm--search-read "Route to: "))
          (to (osm--search-select to-name nil))
-         (by (completing-read "Go by: " '("car" "bike" "foot") nil t nil t))
+         (by (completing-read "Go by: " '("Car" "Bike" "Foot") nil t nil t))
          (data (osm--fetch-json
                 (format-spec osm-route-server
-                             `((?b . ,by)
+                             `((?b . ,(downcase by))
                                (?x . ,(caddr from)) (?y . ,(cadr from))
                                (?X . ,(caddr to)) (?Y . ,(cadr to))))))
          (route (car (alist-get 'routes data)))
