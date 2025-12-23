@@ -184,15 +184,15 @@ the domain name and the :user to the string \"apikey\"."
 (defcustom osm-pin-colors
   '((osm-selected . "#e20")
     (osm-bookmark . "#f80")
-    (osm-home . "#80f")
-    (osm-track . "#00e")
-    (osm-file . "#88f")
-    (osm-route . "#f8f"))
+    (osm-home . "#a0f")
+    (osm-track . "#f0f")
+    (osm-file . "#03f")
+    (osm-route . "#00e"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
 (defcustom osm-track-style
-  "stroke:#f0f;stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.5;"
+  "stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.6;"
   "SVG style used to draw tracks."
   :type 'string)
 
@@ -1019,8 +1019,8 @@ Local per buffer since the overlays depend on the zoom level.")
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
 ;; has the issue that lines which go along a tile border may be drawn only
 ;; partially. Use a more precise algorithm instead.
-(defun osm--add-track (tracks seg)
-  "Add track segment SEG to TRACKS hash table."
+(defun osm--add-track (tracks id seg)
+  "Add track segment SEG with ID to TRACKS hash table."
   (when seg
     (let ((p0 (cons (osm--lon-to-x (or (car-safe (cdar seg)) (cdar seg)) osm--zoom)
                     (osm--lat-to-y (caar seg) osm--zoom))))
@@ -1047,11 +1047,11 @@ Local per buffer since the overlays depend on the zoom level.")
               (while
                   (let ((ey (> (* err 2) dy))
                         (ex (< (* err 2) dx)))
-                    (push line (gethash (cons x0 y0) tracks))
+                    (push line (alist-get id (gethash (cons x0 y0) tracks)))
                     (unless (and (= x0 x1) (= y0 y1))
                       (when (and ey ex)
-                        (push line (gethash (cons x0 (+ y0 sy)) tracks))
-                        (push line (gethash (cons (+ x0 sx) y0) tracks)))
+                        (push line (alist-get id (gethash (cons x0 (+ y0 sy)) tracks)))
+                        (push line (alist-get id (gethash (cons (+ x0 sx) y0) tracks))))
                       (when ey
                         (cl-incf err dy)
                         (cl-incf x0 sx))
@@ -1071,9 +1071,9 @@ Local per buffer since the overlays depend on the zoom level.")
     (let ((pins (make-hash-table :test #'equal))
           (tracks (make-hash-table :test #'equal)))
       (osm--each-pin (apply-partially #'osm--add-pin pins))
-      (cl-loop for (_dname _id segs _waypoints) in osm--datasets do
-               (dolist (seg segs) (osm--add-track tracks seg)))
-      (osm--add-track tracks osm--track)
+      (cl-loop for (_dname id segs _waypoints) in osm--datasets do
+               (dolist (seg segs) (osm--add-track tracks id seg)))
+      (osm--add-track tracks 'osm-track osm--track)
       (setq osm--overlays (list osm--zoom pins tracks))))
   (let ((pins (gethash (cons x y) (cadr osm--overlays)))
         (tracks (gethash (cons x y) (caddr osm--overlays))))
@@ -1090,6 +1090,23 @@ TPIN is an optional pin."
           (let* ((areas nil)
                  (x0 (* 256 x))
                  (y0 (* 256 y))
+                 (svg-track
+                  (lambda (track)
+                    (format
+                     "<path style='%s' stroke='%s' d='%s'/>"
+                     osm-track-style
+                     (cdr (assq (car track) osm-pin-colors))
+                     (let (last)
+                       (mapconcat
+                        (pcase-lambda (`(,beg . ,end))
+                          (prog1
+                              (if (equal beg last)
+                                  (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
+                                (format "M%s %sL%s %s"
+                                        (- (car beg) x0) (- (cdr beg) y0)
+                                        (- (car end) x0) (- (cdr end) y0)))
+                            (setq last end)))
+                        (cdr track) "")))))
                  (svg-pin
                   (lambda (pin)
                     (pcase-let* ((`(,p ,q ,_lat ,_lon ,id ,name) pin)
@@ -1113,21 +1130,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
                           (file-name-nondirectory file)
                           "' height='256' width='256'/>"
-                          (when-let (track (cdr overlays))
-                            (format
-                             "<path style='%s' d='%s'/>"
-                             osm-track-style
-                             (let (last)
-                               (mapconcat
-                                (pcase-lambda (`(,beg . ,end))
-                                  (prog1
-                                      (if (equal beg last)
-                                          (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
-                                        (format "M%s %sL%s %s"
-                                                (- (car beg) x0) (- (cdr beg) y0)
-                                                (- (car end) x0) (- (cdr end) y0)))
-                                    (setq last end)))
-                                track ""))))
+                          (mapconcat svg-track (cdr overlays) "")
                           (pcase-exhaustive osm-tile-border
                             ('nil nil)
                             ('debug "<path d='M 1 1 L 1 255 255 255 255 1 Z' stroke='#000' stroke-width='2' fill='none'/>")
@@ -1140,7 +1143,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
               (let ((ext (intern (file-name-extension file))))
                 (if (eq ext 'jpg) 'jpeg ext)))))))
 
-(defun osm--get-ti-le (x y)
+(defun osm--get-tile (x y)
   "Get tile at X/Y."
   (pcase osm--pin
     ((and `(,lat ,lon ,_id ,name)
