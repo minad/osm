@@ -77,6 +77,12 @@ A comma-separated specifies descending order of preference.  See also
 The server must offer the nominatim.org API."
   :type 'string)
 
+(defcustom osm-route-server
+  "https://routing.openstreetmap.de/routed-%b/route/v1/driving/%x,%y;%X,%Y?steps=false&overview=full&alternatives=false&geometries=geojson"
+  "Server used for route planning.
+The server must offer the OSRM API."
+  :type 'string)
+
 (defcustom osm-server-defaults
   '( :min-zoom 2
      :max-zoom 19
@@ -1783,13 +1789,12 @@ See `osm-search-server' and `osm-search-language' for customization."
          (to-name (osm--search-read "Route to: "))
          (to (osm--search-select to-name nil))
          (by (completing-read "Go by: " '("car" "bike" "foot") nil t nil t))
-         (data
-          (progn
-            ;; TODO Make routing server configurable, use `format-spec' for url params
-            (message "Contacting routing.openstreetmap.de")
-            (osm--fetch-json
-             (format "https://routing.openstreetmap.de/routed-%s/route/v1/driving/%.6f,%.6f;%.6f,%.6f?steps=false&overview=full&alternatives=false&geometries=geojson"
-                     by (caddr from) (cadr from) (caddr to) (cadr to)))))
+         (_ (message "Contacting routing server"))
+         (data (osm--fetch-json
+                (format-spec osm-route-server
+                             `((?b . ,by)
+                               (?x . ,(caddr from)) (?y . ,(cadr from))
+                               (?X . ,(caddr to)) (?Y . ,(cadr to))))))
          (route (car (alist-get 'routes data)))
          (coords (or (alist-get 'coordinates (alist-get 'geometry route))
                      (error "No route available")))
