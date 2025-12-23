@@ -1785,7 +1785,7 @@ See `osm-search-server' and `osm-search-language' for customization."
          (by (completing-read "Go by: " '("car" "bike" "foot") nil t nil t))
          (data
           (progn
-            ;; TODO make this configurable, use `format-spec' for url params
+            ;; TODO Make routing server configurable, use `format-spec' for url params
             (message "Contacting routing.openstreetmap.de")
             (osm--fetch-json
              (format "https://routing.openstreetmap.de/routed-%s/route/v1/driving/%.6f,%.6f;%.6f,%.6f?steps=false&overview=full&alternatives=false&geometries=geojson"
@@ -1795,7 +1795,9 @@ See `osm-search-server' and `osm-search-language' for customization."
                      (error "No route available")))
          (waypoints (alist-get 'waypoints data)))
     (osm--add-file
-     (format "%s ⟶ %s (%s)" from-name to-name by)
+     (format "%s ⟶ %s (%s, %skm, %s)" from-name to-name by
+             (round (alist-get 'distance route) 1000)
+             (seconds-to-string (alist-get 'duration route)))
      (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
      (mapcar (lambda (x)
                (let ((l (alist-get 'location x)))
