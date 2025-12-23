@@ -186,7 +186,8 @@ the domain name and the :user to the string \"apikey\"."
     (osm-bookmark . "#f80")
     (osm-home . "#80f")
     (osm-track . "#00e")
-    (osm-file . "#88f"))
+    (osm-file . "#88f")
+    (osm-route . "#f8f"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
@@ -395,8 +396,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--tile-age 0
   "Tile age, incremented on every update.")
 
-(defvar osm--files nil
-  "Global list of loaded tracks.")
+(defvar osm--datasets nil
+  "Global list of loaded data sets.")
 
 (defvar osm--track nil
   "List of track coordinates.")
@@ -980,14 +981,14 @@ Local per buffer since the overlays depend on the zoom level.")
            if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump) do
            (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
-  (dolist (file osm--files)
-    (when-let ((start (caaadr file)))
-      (funcall fun 'osm-file (car start) (cdr start) 10
-               (propertize (car file) 'osm-file (car file))))
-    (cl-loop for (lat lon name) in (cddr file) do
-             (funcall fun 'osm-file lat lon 15
-                      (propertize (format "%s [%s]" name (car file))
-                                  'osm-file (car file)))))
+  (cl-loop for (dname id segs waypoints) in osm--datasets do
+    (when-let ((start (caar segs)))
+      (funcall fun id (car start) (cdr start) 10
+               (propertize dname 'osm-dataset dname)))
+    (cl-loop for (lat lon name) in waypoints do
+             (funcall fun id lat lon 15
+                      (propertize (format "%s [%s]" name dname)
+                                  'osm-dataset dname))))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon 15 name)))
 
@@ -1070,9 +1071,8 @@ Local per buffer since the overlays depend on the zoom level.")
     (let ((pins (make-hash-table :test #'equal))
           (tracks (make-hash-table :test #'equal)))
       (osm--each-pin (apply-partially #'osm--add-pin pins))
-      (dolist (file osm--files)
-        (dolist (seg (cadr file))
-          (osm--add-track tracks seg)))
+      (cl-loop for (_dname _id segs _waypoints) in osm--datasets do
+               (dolist (seg segs) (osm--add-track tracks seg)))
       (osm--add-track tracks osm--track)
       (setq osm--overlays (list osm--zoom pins tracks))))
   (let ((pins (gethash (cons x y) (cadr osm--overlays)))
@@ -1140,7 +1140,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
               (let ((ext (intern (file-name-extension file))))
                 (if (eq ext 'jpg) 'jpeg ext)))))))
 
-(defun osm--get-tile (x y)
+(defun osm--get-ti-le (x y)
   "Get tile at X/Y."
   (pcase osm--pin
     ((and `(,lat ,lon ,_id ,name)
@@ -1639,8 +1639,9 @@ When called interactively, call the function `osm-home'."
       ('nil nil)
       ('osm-bookmark (osm-bookmark-delete name))
       ('osm-track (osm--track-delete))
-      ('osm-file (setq osm--pin nil)
-                 (osm-hide (get-text-property 0 'osm-file name)))
+      ((or 'osm-file 'osm-route)
+       (setq osm--pin nil)
+       (osm-hide (get-text-property 0 'osm-dataset name)))
       (_ (setq osm--pin nil) (osm--update)))))
 
 (defun osm-rename ()
@@ -1798,10 +1799,11 @@ See `osm-search-server' and `osm-search-language' for customization."
          (coords (or (alist-get 'coordinates (alist-get 'geometry route))
                      (error "No route available")))
          (waypoints (alist-get 'waypoints data)))
-    (osm--add-file
+    (osm--add-dataset
      (format "%s ⟶ %s (%s, %skm, %s)" from-name to-name by
              (round (alist-get 'distance route) 1000)
              (seconds-to-string (alist-get 'duration route)))
+     'osm-route
      (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
      (mapcar (lambda (x)
                (let ((l (alist-get 'location x)))
@@ -1820,8 +1822,9 @@ See `osm-search-server' and `osm-search-language' for customization."
       (setq dom (dom-child-by-tag dom 'gpx)))
     (unless (and dom (eq 'gpx (dom-tag dom)))
       (error "Not a GPX file"))
-    (osm--add-file
+    (osm--add-dataset
      (abbreviate-file-name file)
+     'osm-file
      (cl-loop
       for trk in (dom-children dom)
       if (eq (dom-tag trk) 'trk) nconc
@@ -1841,22 +1844,22 @@ See `osm-search-server' and `osm-search-language' for customization."
             (with-no-warnings
               (dom-text (dom-child-by-tag pt 'name))))))))
 
-(defun osm--add-file (name track waypoints)
-  "Add file with NAME consisting of TRACK and WAYPOINTS."
+(defun osm--add-dataset (name id track waypoints)
+  "Add dataset with NAME and ID consisting of TRACK and WAYPOINTS."
   (let* ((bb (osm--bb-from-track track waypoints))
          (center (osm--bb-center bb)))
-    (setf (alist-get name osm--files nil nil #'equal)
-          (cons track waypoints))
+    (setf (alist-get name osm--datasets nil nil #'equal)
+          (list id track waypoints))
     (osm--revert)
     (osm--goto (car center) (cdr center) (osm--bb-to-zoom bb) nil nil nil)))
 
 (defun osm-hide (name)
-  "Hide file with NAME in Osm buffers."
+  "Hide dataset with NAME."
   (interactive (list (completing-read "Hide: "
-                                      (or osm--files
-                                          (error "No files shown"))
+                                      (or osm--datasets
+                                          (error "No datasets shown"))
                                       nil t nil 'file-name-history)))
-  (cl-callf2 assoc-delete-all name osm--files)
+  (cl-callf2 assoc-delete-all name osm--datasets)
   (osm--revert))
 
 (defun osm--server-annotation (cand)
