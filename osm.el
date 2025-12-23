@@ -1495,7 +1495,7 @@ See also `osm-save-url'."
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
    ;; Short URLs
    ((string-match-p "\\`https?://.*\\(openstreetmap\\|osm\\|goo.*maps\\|maps.*goo\\)" url)
-    (osm-url (string-remove-prefix "http" (osm--get-redirect url))))
+    (osm-url (string-remove-prefix "http" (osm--fetch-redirect url))))
    (t
     (user-error "Invalid URL"))))
 
@@ -1584,7 +1584,6 @@ When called interactively, call the function `osm-home'."
   (let ((lat (or (car osm--pin) osm--lat))
         (lon (or (cadr osm--pin) osm--lon)))
     (osm--set-pin 'osm-selected lat lon name 'quiet)
-    (message "%s: Fetching name of %.2f° %.2f° from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
@@ -1691,6 +1690,7 @@ When called interactively, call the function `osm-home'."
 (defun osm--fetch-json (url)
   "Get JSON from URL."
   (osm--check-libraries)
+  (message "Contacting %s..." (replace-regexp-in-string "https://\\|/.*" "" url))
   (with-temp-buffer
     (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
            (status (apply #'call-process "curl" nil (current-buffer) nil
@@ -1700,9 +1700,10 @@ When called interactively, call the function `osm-home'."
     (goto-char (point-min))
     (json-parse-buffer :array-type 'list :object-type 'alist)))
 
-(defun osm--get-redirect (url)
+(defun osm--fetch-redirect (url)
   "Get redirect location from URL."
   (osm--check-libraries)
+  (message "Contacting %s..." (replace-regexp-in-string "https://\\|/.*" "" url))
   (with-temp-buffer
     (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
            (status (apply #'call-process "curl" nil (current-buffer) nil
@@ -1717,7 +1718,6 @@ When called interactively, call the function `osm-home'."
 
 (defun osm--search-request (needle)
   "Globally search for NEEDLE and return the list of results."
-  (message "Contacting %s" osm-search-server)
   (mapcar
    (lambda (x)
      (let ((lat (string-to-number (alist-get 'lat x)))
@@ -1789,7 +1789,6 @@ See `osm-search-server' and `osm-search-language' for customization."
          (to-name (osm--search-read "Route to: "))
          (to (osm--search-select to-name nil))
          (by (completing-read "Go by: " '("car" "bike" "foot") nil t nil t))
-         (_ (message "Contacting routing server"))
          (data (osm--fetch-json
                 (format-spec osm-route-server
                              `((?b . ,by)
