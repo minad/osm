@@ -1749,6 +1749,9 @@ When called interactively, call the function `osm-home'."
                           (current-local-map)))))
     (completing-read prompt
                      (osm--table-with-metadata
+                      ;; Vertico only deletes consecutive duplicates for
+                      ;; performance, and we preserve order by using the
+                      ;; identity sort function.
                       (delete-dups (copy-sequence osm--search-history))
                       '((display-sort-function . identity)
                         (cycle-sort-function . identity)))
