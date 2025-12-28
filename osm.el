@@ -35,7 +35,7 @@
 ;; locations using regular Emacs bookmarks or create links from Org files
 ;; to locations.  Furthermore the package provides commands to measure
 ;; distances, search for locations and routes by name and to open and
-;; display GPX tracks.
+;; display GPX/TCX tracks.
 
 ;; osm.el requires Emacs 29 and depends on the external `curl' program.
 ;; Emacs must be built with libxml, libjansson, librsvg, libjpeg, libpng
@@ -1804,37 +1804,91 @@ See `osm-search-server' and `osm-search-language' for customization."
 
 ;;;###autoload
 (defun osm-open (file)
-  "Show the tracks of GPX FILE in an `osm-mode' buffer."
-  (interactive "fGPX file: ")
+  "Show the tracks of GPX/TCX FILE in an `osm-mode' buffer."
+  (interactive "fGPX or TCX file: ")
   (osm--check-libraries)
   (let ((dom (with-temp-buffer
                (insert-file-contents file)
                (libxml-parse-xml-region (point-min) (point-max)))))
-    (unless (eq 'gpx (dom-tag dom))
-      (setq dom (dom-child-by-tag dom 'gpx)))
-    (unless (and dom (eq 'gpx (dom-tag dom)))
-      (error "Not a GPX file"))
-    (osm--add-dataset
-     (abbreviate-file-name file)
-     'osm-file
+
+    (cond
+     ((not dom)
+      (error "Not an XML file"))
+
+     ((eq 'TrainingCenterDatabase (dom-tag dom))
+      (osm--add-dataset
+       (abbreviate-file-name file)
+       'osm-file
+       (osm--tcx-track dom)
+       (osm--tcx-waypoints dom)))
+
+     (t
+      (unless (eq 'gpx (dom-tag dom))
+        (setq dom (dom-child-by-tag dom 'gpx)))
+      (unless (and dom (eq 'gpx (dom-tag dom)))
+        (error "Not a GPX file"))
+
+      (osm--add-dataset
+       (abbreviate-file-name file)
+       'osm-file
+       (osm--gpx-track dom)
+       (osm--gpx-waypoints dom))))))
+
+(defsubst osm--tcx-position (position)
+  "Convert POSITION to a cons of (lat . lon)."
+  (let* ((lat (dom-child-by-tag position 'LatitudeDegrees))
+         (lon (dom-child-by-tag position 'LongitudeDegrees)))
+    (cons (string-to-number (dom-text lat))
+          (string-to-number (dom-text lon)))))
+
+(defun osm--tcx-waypoints (dom)
+  "Return waypoints contained in tcx DOM."
+  (cl-loop
+   with courses = (dom-child-by-tag dom 'Courses)
+   for course in (dom-by-tag courses 'Course) nconc
+   (cl-loop
+    for pt in (dom-by-tag course 'CoursePoint)
+    for pos = (osm--tcx-position (dom-child-by-tag pt 'Position))
+    for name = (dom-by-tag pt 'Name)
+    collect (list (car pos) (cdr pos) (dom-text name)))))
+
+(defun osm--tcx-track (dom)
+  "Return track points contained in tcx DOM."
+  (cl-loop
+   with activities = (dom-child-by-tag dom 'Activities)
+   for activity in (dom-by-tag activities 'Activity) nconc
+   (cl-loop
+    for lap in (dom-by-tag activity 'Lap) nconc
+    (cl-loop
+     for track in (dom-by-tag lap 'Track) collect
      (cl-loop
-      for trk in (dom-children dom)
-      if (eq (dom-tag trk) 'trk) nconc
-      (cl-loop
-       for seg in (dom-children trk)
-       if (eq (dom-tag seg) 'trkseg) collect
-       (cl-loop
-        for pt in (dom-children seg)
-        if (eq (dom-tag pt) 'trkpt) collect
-        (cons (string-to-number (dom-attr pt 'lat))
-              (string-to-number (dom-attr pt 'lon))))))
-     (cl-loop
-      for pt in (dom-children dom)
-      if (eq (dom-tag pt) 'wpt) collect
-      (list (string-to-number (dom-attr pt 'lat))
-            (string-to-number (dom-attr pt 'lon))
-            (with-no-warnings
-              (dom-text (dom-child-by-tag pt 'name))))))))
+      for pt in (dom-by-tag track 'Trackpoint)
+      for pos = (dom-child-by-tag pt 'Position)
+      if pos collect (osm--tcx-position pos))))))
+
+(defun osm--gpx-track (dom)
+  "Return track points contained in gpx DOM."
+  (cl-loop
+   for trk in (dom-children dom)
+   if (eq (dom-tag trk) 'trk) nconc
+   (cl-loop
+    for seg in (dom-children trk)
+    if (eq (dom-tag seg) 'trkseg) collect
+    (cl-loop
+     for pt in (dom-children seg)
+     if (eq (dom-tag pt) 'trkpt) collect
+     (cons (string-to-number (dom-attr pt 'lat))
+           (string-to-number (dom-attr pt 'lon)))))))
+
+(defun osm--gpx-waypoints (dom)
+  "Return waypoints contained in gpx DOM."
+  (cl-loop
+   for pt in (dom-children dom)
+   if (eq (dom-tag pt) 'wpt) collect
+   (list (string-to-number (dom-attr pt 'lat))
+         (string-to-number (dom-attr pt 'lon))
+         (with-no-warnings
+           (dom-text (dom-child-by-tag pt 'name))))))
 
 (defun osm--add-dataset (name id track waypoints)
   "Add dataset with NAME and ID consisting of TRACK and WAYPOINTS."
