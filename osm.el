@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 1.12
+;; Version: 2.0
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
