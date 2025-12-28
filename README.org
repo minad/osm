@@ -19,14 +19,14 @@ viewer fetches the map tiles in parallel from tile servers via the =curl= progra
 The package comes with a list of multiple preconfigured tile servers. You can
 bookmark your favorite locations using regular Emacs bookmarks or create links
 from Org files to locations. Furthermore the package provides commands to search
-for locations, or plan routes by name and to open and display GPX tracks.
+for locations, or plan routes by name and to open and display GPX/TCX tracks.
 
 #+toc: headlines 8
 
 * Features
 
 - Responsive, zoomable and movable map display
-- Display of tracks and POIs from GPX file
+- Display of tracks and POIs from GPX/TCX file
 - Parallel fetching of tiles with curl
 - Moving in large and small steps
 - Mouse support (dragging, clicking, menu)
@@ -140,7 +140,7 @@ initiate a search.
 - ~u~: =osm-url= - Go to Geo URL, OpenStreetMap.org or Google Maps URL.
 - ~v~: =osm-server= - Select server
 - ~j~: =osm-jump= - Jump to pin (bookmark or POI)
-- ~f~: =osm-open= - Open GPX file in map viewer
+- ~f~: =osm-open= - Open GPX/TCX file in map viewer
 
 Some additional key bindings are available in Osm buffers:
 
@@ -156,7 +156,7 @@ Some additional key bindings are available in Osm buffers:
 - ~d~, ~DEL~: =osm-delete= - Delete selected pin (bookmark or way point)
 - ~n~: =osm-rename= - Rename selected pin
 - ~c~: =osm-center= - Center to currently selected pin
-- ~F~, ~R~: =osm-hide= - Hide GPX file or route
+- ~F~, ~R~: =osm-hide= - Hide GPX/TCX file or route
 - ~l~: =org-store-link= - Store Org link
 - ~u~: =osm-save-url= - Save geo url in the kill ring
 - ~b~: =osm-bookmark-set= - Set bookmark
