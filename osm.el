@@ -86,7 +86,7 @@ The server must offer the OSRM API."
 (defcustom osm-server-defaults
   '( :min-zoom 2
      :max-zoom 19
-     :download-batch 10
+     :download-batch 5
      :max-connections 2)
   "Default server properties.
 See also `osm-server-list'."
