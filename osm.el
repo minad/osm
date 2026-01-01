@@ -87,8 +87,7 @@ The server must offer the OSRM API."
   '( :min-zoom 2
      :max-zoom 19
      :download-batch 8
-     :max-connections 3
-     :subdomains ("a" "b" "c"))
+     :max-connections 3)
   "Default server properties.
 See also `osm-server-list'."
   :type 'plist)
@@ -115,7 +114,7 @@ See also `osm-server-list'."
       (fr
        :name "Carto(fr)"
        :description "Localized Carto map by OpenStreetMap France"
-       :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
+       :url "https://a.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
        :group "Standard"
        :copyright (,copyright-data
                    "Map style © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"
@@ -123,7 +122,7 @@ See also `osm-server-list'."
       (humanitarian
        :name "Humanitarian"
        :description "Humanitarian map provided by OpenStreetMap France"
-       :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
+       :url "https://a.tile.openstreetmap.fr/hot/%z/%x/%y.png"
        :group "Special Purpose"
        :copyright (,copyright-data
                    "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"
@@ -131,7 +130,7 @@ See also `osm-server-list'."
       (cyclosm
        :name "CyclOSM"
        :description "Bicycle-oriented map provided by OpenStreetMap France"
-       :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
+       :url "https://a.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
        :group "Transportation"
        :copyright (,copyright-data
                    "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"
@@ -139,7 +138,7 @@ See also `osm-server-list'."
       (openriverboatmap
        :name "OpenRiverBoatMap"
        :description "Waterways map provided by OpenStreetMap France"
-       :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
+       :url "https://a.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
        :group "Transportation"
        :copyright (,copyright-data
                    "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"
@@ -165,16 +164,14 @@ Allowed keys:
   :max-zoom        Maximum zoom level
   :download-batch  Number of tiles downloaded via a single connection
   :max-connections Maximum number of parallel connections
-  :subdomains      Subdomains used for the %s placeholder
 
-See also `osm-server-defaults' for default values used for a
-server if the property is missing.
+See also `osm-server-defaults' for default values used for a server if
+the property is missing.
 
-The :url of each server should specify %x, %y, %z and %s placeholders
-for the map coordinates.  It can optionally use an %s placeholder
-for the subdomain and a %k placeholder for an apikey.  The apikey
-will be retrieved via `auth-source-search' with the :host set to
-the domain name and the :user to the string \"apikey\"."
+The :url of each server should specify %x, %y and %z placeholders for
+the map coordinates.  It can optionally use a %k placeholder for an
+apikey.  The apikey will be retrieved via `auth-source-search' with the
+:host set to the domain name and the :user to the string \"apikey\"."
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-copyright t
@@ -408,9 +405,6 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--download-active nil
   "Globally active download jobs.")
 
-(defvar osm--download-subdomain nil
-  "Subdomain indices to query the servers in a round-robin fashion.")
-
 (defvar-local osm--download-queue nil
   "Buffer-local tile download queue.")
 
@@ -551,7 +545,6 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
   (let ((url (osm--server-property :url))
-        (sub (osm--server-property :subdomains))
         (key (osm--server-property :key)))
     (when (and (string-search "%k" url) (not key))
       (require 'auth-source)
@@ -570,10 +563,7 @@ Local per buffer since the overlays depend on the zoom level.")
         (setf (plist-get (alist-get osm-server osm-server-list) :key) key)))
     (format-spec
      url `((?z . ,zoom) (?x . ,x) (?y . ,y)
-           (?k . ,(if (functionp key) (funcall key) key))
-           (?s . ,(nth (mod (alist-get osm-server osm--download-subdomain 0)
-                            (length sub))
-                       sub))))))
+           (?k . ,(if (functionp key) (funcall key) key))))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
@@ -619,8 +609,7 @@ Local per buffer since the overlays depend on the zoom level.")
   "Build download command."
   (let* ((count 0)
          (batch (osm--server-property :download-batch))
-         (subs (length (osm--server-property :subdomains)))
-         (parallel (* subs (osm--server-property :max-connections)))
+         (parallel (osm--server-property :max-connections))
          args jobs job)
     (while (and (< count batch)
                 (setq job (nth (* count parallel) osm--download-queue)))
@@ -635,8 +624,6 @@ Local per buffer since the overlays depend on the zoom level.")
     (osm--each
       (dolist (job jobs)
         (cl-callf2 delq job osm--download-queue)))
-    (cl-callf (lambda (s) (mod (1+ s) subs))
-        (alist-get osm-server osm--download-subdomain 0))
     (cons `("curl" "--disable" "--write-out" "%{http_code} %{filename_effective}\n"
             ,@(split-string-and-unquote osm-curl-options) ,@(nreverse args))
           jobs)))
@@ -644,8 +631,7 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm--download ()
   "Download next tiles from the queue."
   (when (and (< (length (alist-get osm-server osm--download-processes))
-                (* (length (osm--server-property :subdomains))
-                   (osm--server-property :max-connections)))
+                (osm--server-property :max-connections))
              osm--download-queue)
     (pcase-let ((`(,command . ,jobs) (osm--download-command))
                 (dir (file-name-concat (expand-file-name osm-tile-directory)
@@ -1944,13 +1930,13 @@ If prefix ARG is given, store URL as Elisp expression."
 (cl-defun osm-add-server (server
                           &rest properties
                           &key name description group url ext max-connections
-                          max-zoom min-zoom download-batch subdomains copyright)
+                          max-zoom min-zoom download-batch copyright)
   "Add SERVER with PROPERTIES to `osm-server-list'.
 The properties are checked as keyword arguments.  See
 `osm-server-list' for documentation of the keywords."
   (declare (indent 1))
   (ignore name description group url ext max-connections max-zoom
-          min-zoom download-batch subdomains copyright)
+          min-zoom download-batch copyright)
   (dolist (sym '(:name :description :group :url))
     (unless (stringp (plist-get properties sym))
       (error "Server property %s is required" sym)))
