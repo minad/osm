@@ -5,7 +5,8 @@
 * Development
 
 - Remove =:subdomains= support from server configuration. Most servers use the
-  same ip for subdomains or even provide only a single subdomain.
+  same IP for subdomains or even provide only a single subdomain.
+- Update connection settings.
 
 * Version 2.0 (2025-12-28)
 
