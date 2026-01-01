@@ -2,6 +2,11 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- Remove =:subdomains= support from server configuration. Most servers use the
+  same ip for subdomains or even provide only a single subdomain.
+
 * Version 2.0 (2025-12-28)
 
 - Add =osm-route= command to plan routes via the OSRM routing service.
