@@ -968,7 +968,7 @@ Local per buffer since the overlays depend on the zoom level.")
            (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
   (cl-loop for (dname id segs waypoints) in osm--datasets do
-    (when-let ((start (caar segs)))
+    (when-let* ((start (caar segs)))
       (funcall fun id (car start) (cdr start) 10
                (propertize dname 'osm-dataset dname)))
     (cl-loop for (lat lon name) in waypoints do
@@ -1593,7 +1593,7 @@ When called interactively, call the function `osm-home'."
 
 (defun osm--track-delete ()
   "Delete track way point."
-  (when-let ((idx (osm--track-index)))
+  (when-let* ((idx (osm--track-index)))
     ;; Delete pin
     (cl-callf2 delq (nth idx osm--track) osm--track)
     (setq osm--pin nil
@@ -1612,9 +1612,9 @@ When called interactively, call the function `osm-home'."
 
 (defun osm--track-rename ()
   "Rename track way point."
-  (when-let ((pt (nth (osm--track-index) osm--track))
-             (old-name (caddr pt))
-             (new-name (read-from-minibuffer "New name: " old-name nil nil nil old-name)))
+  (when-let* ((pt (nth (osm--track-index) osm--track))
+              (old-name (caddr pt))
+              (new-name (read-from-minibuffer "New name: " old-name nil nil nil old-name)))
     (setf (caddr pt) new-name
           (cadddr osm--pin) new-name)
     (osm--revert)))
@@ -1856,12 +1856,12 @@ See `osm-search-server' and `osm-search-language' for customization."
 
 (defun osm--server-annotation (cand)
   "Annotation for server CAND."
-  (when-let ((copyright (osm--server-property :copyright (get-text-property 0 'osm--server cand)))
-             (str
-              (replace-regexp-in-string
-               "{\\(.*?\\)|.*?}"
-               (lambda (str) (match-string 1 str))
-               (string-join (ensure-list copyright) " | ") copyright)))
+  (when-let* ((copyright (osm--server-property :copyright (get-text-property 0 'osm--server cand)))
+              (str
+               (replace-regexp-in-string
+                "{\\(.*?\\)|.*?}"
+                (lambda (str) (match-string 1 str))
+                (string-join (ensure-list copyright) " | ") copyright)))
     (concat (propertize " " 'display `(space :align-to (- right ,(length str) 2)))
             " "
             str)))
