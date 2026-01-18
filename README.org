@@ -46,8 +46,8 @@ Note that Osm.el requires Emacs 29 and depends on the external =curl= program.
 Emacs must be built with =libxml=, =librsvg=, =libjpeg=, =libpng= and =libwebp= support.
 Emacs 30 comes with a native JSON parser, while on Emacs 29, =libjansson= is
 needed. The following is an example configuration which relies on =use-package=.
-Please take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional tile server configurations, e.g.,
-Google Maps for satellite and aerial maps.
+Please take a look at the [[https://wiki.openstreetmap.org/wiki/Raster_tile_providers][OpenStreetMap Wiki]] and the [[https://github.com/minad/osm/wiki][Osm.el Wiki]] for additional
+tile server configurations, e.g., Google Maps for satellite and aerial maps.
 
 #+begin_src emacs-lisp
 (use-package osm
