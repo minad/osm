@@ -171,6 +171,7 @@ There have been other attempts at map viewers in Emacs before.
 - https://github.com/svenssonjoel/Emacs-OSM
 - https://github.com/jd/google-maps.el
 - https://github.com/emacsattic/org-osm-link
+- https://github.com/mkcms/gpx-mode
 
 * Contributions
 
