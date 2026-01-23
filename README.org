@@ -69,10 +69,12 @@ tile server configurations, e.g., Google Maps for satellite and aerial maps.
 )
 #+end_src
 
-* Bookmarks, Org links, Geo URLs and Elisp links
+* Bookmarks, Org links, Geo URLs, Google Maps and Elisp links
 
-There exist multiple methods to store a location, such that you can return there
-afterwards.
+Osm.el registers itself as handler for map URLs (Geo URLs and Google Maps) via
+the ~browse-url-default-handlers~ list. This way you can open these links directly
+in Emacs. Furthermore there exist multiple methods to store a location as a
+link.
 
 - ~b~: Create a bookmark of the current location. The bookmark is stored as an
   Emacs bookmark in =bookmark-alist=. You can jump to the bookmark via the
