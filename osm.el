@@ -1476,7 +1476,7 @@ See also `osm-save-url'."
         (string-match "goo.*/search/\\([0-9.+-]+\\),\\([0-9.+-]+\\)" url))
     (let ((lat (string-to-number (match-string 1 url)))
           (lon (string-to-number (match-string 2 url)))
-          (zoom (string-to-number (or (match-string 3 url) "14"))))
+          (zoom (string-to-number (or (match-string 3 url) "16"))))
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
    ;; OpenStreetMap.org
    ((string-match "map=\\([0-9]+\\)/\\([0-9.-]+\\)/\\([0-9.-]+\\)" url)
