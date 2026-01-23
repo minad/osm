@@ -193,11 +193,15 @@ apikey.  The apikey will be retrieved via `auth-source-search' with the
   "SVG style used to draw tracks."
   :type 'string)
 
+(defcustom osm-default-zoom 15
+  "Default zoom level."
+  :type 'natnum)
+
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
         (lon (bound-and-true-p calendar-longitude)))
     (if (and lat lon)
-        (list lat lon 12)
+        (list lat lon osm-default-zoom)
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
   :type '(list :tag "Coordinates"
@@ -969,14 +973,14 @@ Local per buffer since the overlays depend on the zoom level.")
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
   (cl-loop for (dname id segs waypoints) in osm--datasets do
            (when-let* ((start (caar segs)))
-             (funcall fun id (car start) (cdr start) 10
+             (funcall fun id (car start) (cdr start) osm-default-zoom
                       (propertize dname 'osm-dataset dname)))
            (cl-loop for (lat lon name) in waypoints do
-                    (funcall fun id lat lon 15
+                    (funcall fun id lat lon osm-default-zoom
                              (propertize (format "%s [%s]" name dname)
                                          'osm-dataset dname))))
   (cl-loop for (lat lon name) in osm--track do
-           (funcall fun 'osm-track lat lon 15 name)))
+           (funcall fun 'osm-track lat lon osm-default-zoom name)))
 
 (defun osm--pin-inside-p (x y lat lon)
   "Return non-nil if pin at LAT/LON is inside tile X/Y."
@@ -1391,13 +1395,13 @@ The coordinates are formatted with precision PREC."
 Optionally place pin with ID and NAME."
   ;; Server not found
   (when (and server (not (assq server osm-server-list))) (setq server nil))
-  (with-current-buffer
-      (or
-       (and (eq major-mode #'osm-mode) (current-buffer))
-       (let ((def-server (or server osm-server))
-             (def-lat (or lat (nth 0 osm-home)))
-             (def-lon (or lon (nth 1 osm-home)))
-             (def-zoom (or zoom (nth 2 osm-home))))
+  (let ((def-server (or server osm-server))
+        (def-lat (or lat (car osm-home)))
+        (def-lon (or lon (cadr osm-home)))
+        (def-zoom (or zoom (if (and lat lon) osm-default-zoom (caddr osm-home)))))
+    (with-current-buffer
+        (or
+         (and (eq major-mode #'osm-mode) (current-buffer))
          ;; Search for existing buffer
          (cl-loop
           for buf in (buffer-list) thereis
@@ -1406,21 +1410,21 @@ Optionally place pin with ID and NAME."
                (equal (buffer-local-value 'osm--zoom buf) def-zoom)
                (equal (buffer-local-value 'osm--lat buf) def-lat)
                (equal (buffer-local-value 'osm--lon buf) def-lon)
-               buf)))
-       (generate-new-buffer "*osm*"))
-    (unless (eq major-mode #'osm-mode)
-      (osm-mode))
-    (when (and server (not (eq osm-server server)))
-      (setq-local osm-server server
-                  osm--download-queue nil))
-    (when (or (not (and osm--lon osm--lat)) lat)
-      (setq osm--lat (or lat (nth 0 osm-home))
-            osm--lon (or lon (nth 1 osm-home))
-            osm--zoom (or zoom (nth 2 osm-home)))
-      (when id
-        (osm--set-pin id osm--lat osm--lon name)))
-    (prog1 (pop-to-buffer (current-buffer))
-      (osm--update))))
+               buf))
+         (generate-new-buffer "*osm*"))
+      (unless (eq major-mode #'osm-mode)
+        (osm-mode))
+      (when (and server (not (eq osm-server server)))
+        (setq-local osm-server server
+                    osm--download-queue nil))
+      (when (or (not (and osm--lon osm--lat)) lat)
+        (setq osm--lat def-lat
+              osm--lon def-lon
+              osm--zoom def-zoom)
+        (when id
+          (osm--set-pin id osm--lat osm--lon name)))
+      (prog1 (pop-to-buffer (current-buffer))
+        (osm--update)))))
 
 (defun osm--set-pin (id lat lon name &optional quiet)
   "Set pin at LAT/LON with ID and NAME.
@@ -1476,7 +1480,7 @@ See also `osm-save-url'."
         (string-match "goo.*/search/\\([0-9.+-]+\\),\\([0-9.+-]+\\)" url))
     (let ((lat (string-to-number (match-string 1 url)))
           (lon (string-to-number (match-string 2 url)))
-          (zoom (string-to-number (or (match-string 3 url) "16"))))
+          (zoom (and (match-end 3) (string-to-number (match-string 3 url)))))
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
    ;; OpenStreetMap.org
    ((string-match "map=\\([0-9]+\\)/\\([0-9.-]+\\)/\\([0-9.-]+\\)" url)
