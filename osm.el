@@ -1471,7 +1471,8 @@ See also `osm-save-url'."
                  (and server (intern-soft server))
                  'osm-selected "Geo Link")))
    ;; Google Maps
-   ((string-match "goo.*@\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)" url)
+   ((or (string-match "goo.*!3d\\([0-9.-]+\\)!4d\\([0-9.-]+\\)!\\([0-9]+\\)z" url)
+        (string-match "goo.*@\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)" url))
     (let ((lat (string-to-number (match-string 1 url)))
           (lon (string-to-number (match-string 2 url)))
           (zoom (string-to-number (match-string 3 url))))
