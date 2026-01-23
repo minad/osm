@@ -1472,10 +1472,11 @@ See also `osm-save-url'."
                  'osm-selected "Geo Link")))
    ;; Google Maps
    ((or (string-match "goo.*!3d\\([0-9.-]+\\)!4d\\([0-9.-]+\\)!\\([0-9]+\\)z" url)
-        (string-match "goo.*@\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)" url))
+        (string-match "goo.*@\\([0-9.-]+\\),\\([0-9.-]+\\),\\([0-9]+\\)" url)
+        (string-match "goo.*/search/\\([0-9.+-]+\\),\\([0-9.+-]+\\)" url))
     (let ((lat (string-to-number (match-string 1 url)))
           (lon (string-to-number (match-string 2 url)))
-          (zoom (string-to-number (match-string 3 url))))
+          (zoom (string-to-number (or (match-string 3 url) "14"))))
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
    ;; OpenStreetMap.org
    ((string-match "map=\\([0-9]+\\)/\\([0-9.-]+\\)/\\([0-9.-]+\\)" url)
@@ -1485,7 +1486,7 @@ See also `osm-save-url'."
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
    ;; Short URLs
    ((string-match-p "\\`https?://.*\\(openstreetmap\\|osm\\|goo.*maps\\|maps.*goo\\)" url)
-    (osm-url (string-remove-prefix "http" (osm--fetch-redirect url))))
+    (osm-url (replace-regexp-in-string "\\`https?://" "" (osm--fetch-redirect url))))
    (t
     (user-error "Invalid URL"))))
 
@@ -1703,7 +1704,7 @@ When called interactively, call the function `osm-home'."
       (unless (eq status 0)
         (error "Fetching %s exited with status %s" url status)))
     (goto-char (point-max))
-    (if (re-search-backward "^location: \\([^\n]+\\)" nil t)
+    (if (re-search-backward "^location: \\([^\n\r]+\\)" nil t)
         (match-string 1)
       (error "Invalid redirect %s" url))))
 
