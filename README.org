@@ -55,8 +55,10 @@ tile server configurations, e.g., Google Maps for satellite and aerial maps.
 
   :custom
   ;; Take a look at the customization group `osm' for more options.
-  (osm-server 'default) ;; Configure the tile server
-  (osm-copyright t)     ;; Display the copyright information
+  (osm-default-server 'default) ;; Configure the tile server
+  (osm-default-zoom 15)         ;; Default zoom level
+  (osm-copyright t)             ;; Display the copyright information
+  (osm-home (list 0 0 3))       ;; Home, configure `calendar-latitude/longitude' instead
 
   :config
 
