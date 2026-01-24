@@ -1069,7 +1069,6 @@ Local per buffer since the overlays depend on the zoom level.")
         (tracks (gethash (cons x y) (caddr osm--overlays))))
     (and (or pins tracks) (cons pins tracks))))
 
-(autoload 'svg--image-data "svg")
 (defun osm--draw-tile (x y tpin)
   "Make tile at X/Y from FILE.
 TPIN is an optional pin."
