@@ -368,8 +368,8 @@ Should be at least 7 days according to the server usage policies."
     ["Customize" (customize-group 'osm)]))
 
 (defconst osm--placeholder
-  '(:type svg :width 256 :height 256
-          :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
+  '( :type svg :width 256 :height 256
+     :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
   <defs>
     <pattern id='grid' width='16' height='16'  patternUnits='userSpaceOnUse'>
       <path d='m 0 0 l 0 16 16 0' fill='none' stroke='#888888'/>
@@ -896,7 +896,7 @@ Local per buffer since the overlays depend on the zoom level.")
     (unless (json-available-p)
       (push "libjansson" req))
     (when req
-      (warn "osm: Please compile Emacs with the required libraries, %s needed to proceed"
+      (warn "osm: Please compile Emacs with the required libraries, %s needed"
             (string-join req ", ")))))
 
 (define-derived-mode osm-mode special-mode "Osm"
@@ -1211,12 +1211,14 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--update-header ()
   "Update header line."
-  (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ osm--lat (/ 180.0 float-pi)))) (expt 2 osm--zoom)))
+  (let* ((meter-per-pixel (/ (* 156543.03 (cos (/ osm--lat (/ 180.0 float-pi))))
+                             (expt 2 osm--zoom)))
          (server (osm--server-get :name))
          (meter 1) (idx 0)
          (factor '(2 2.5 2))
          (sep #(" " 0 1 (display (space :width (1))))))
-    (while (and (< idx 20) (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 150))
+    (while (and (< idx 20)
+                (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 150))
       (setq meter (round (* meter (nth (mod idx 3) factor))))
       (cl-incf idx))
     (setq-local
@@ -1551,9 +1553,10 @@ When called interactively, call the function `osm-home'."
          (`(,_lat ,_lon osm-bookmark ,name) name)
          (_ (completing-read
              "Bookmark: "
-             (or (cl-loop for bm in bookmark-alist
-                          if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-                          collect (car bm))
+             (or (cl-loop
+                  for bm in bookmark-alist
+                  if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+                  collect (car bm))
                  (error "No bookmarks found"))
              nil t nil 'bookmark-history)))
        bookmark-alist)
@@ -1566,7 +1569,8 @@ When called interactively, call the function `osm-home'."
   (unwind-protect
       (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data "New Bookmark"))
                    (def (osm--bookmark-name lat lon loc))
-                   (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
+                   (name (read-from-minibuffer "Bookmark name: "
+                                               def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
                     (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
@@ -1622,7 +1626,8 @@ When called interactively, call the function `osm-home'."
   "Rename track way point."
   (when-let* ((pt (nth (osm--track-index) osm--track))
               (old-name (caddr pt))
-              (new-name (read-from-minibuffer "New name: " old-name nil nil nil old-name)))
+              (new-name (read-from-minibuffer "New name: "
+                                              old-name nil nil nil old-name)))
     (setf (caddr pt) new-name
           (cadddr osm--pin) new-name)
     (osm--revert)))
