@@ -6,6 +6,7 @@
 
 - Improve Google Map link handling.
 - New customizable =osm-default-zoom=.
+- Rename customizable =osm-server= to =osm-default-server=.
 
 * Version 2.1 (2026-01-09)
 
