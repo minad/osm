@@ -213,12 +213,6 @@ apikey.  The apikey will be retrieved via `auth-source-search' with the
   "Scroll step in pixel."
   :type 'natnum)
 
-(defcustom osm-tile-border nil
-  "Set to t to display thin tile borders.
-For debugging set the value to `debug', such that a border is
-shown around SVG tiles."
-  :type '(choice boolean (const debug)))
-
 (defcustom osm-small-step 16
   "Scroll step in pixel."
   :type 'natnum)
@@ -226,6 +220,12 @@ shown around SVG tiles."
 (defcustom osm-server 'default
   "Tile server name."
   :type 'symbol)
+
+(defcustom osm-tile-border nil
+  "Set to t to display thin tile borders.
+For debugging set the value to `debug', such that a border is
+shown around SVG tiles."
+  :type '(choice boolean (const debug)))
 
 (defcustom osm-tile-directory
   (expand-file-name (file-name-concat
