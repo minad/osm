@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 2.2
-;; Package-Requires: ((emacs "29.1") (compat "30"))
+;; Package-Requires: ((emacs "29.1") (compat "31"))
 ;; URL: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
 
@@ -38,7 +38,7 @@
 ;; display GPX or TCX tracks.
 
 ;; osm.el requires Emacs 29 and depends on the external `curl' program.
-;; Emacs must be built with libxml, libjansson, librsvg, libjpeg, libpng
+;; Emacs must be built with libxml, librsvg, libjpeg, libpng
 ;; and libwebp support.
 
 ;;; Code:
@@ -627,7 +627,7 @@ Local per buffer since the overlays depend on the zoom level.")
                      ,@args))
         (push job jobs)
         (push job osm--download-active)
-        (cl-incf count)))
+        (incf count)))
     (osm--each
      (dolist (job jobs)
        (cl-callf2 delq job osm--download-queue)))
@@ -745,11 +745,11 @@ Local per buffer since the overlays depend on the zoom level.")
                  (`(,sel-lat ,sel-lon ,_ ,sel-name) osm--pin))
       (while (and (cdr p) (not (and (equal (caar p) sel-lat)
                                     (equal (cadar p) sel-lon))))
-        (cl-incf len2 (osm--haversine (caar p) (cadar p)
+        (incf len2 (osm--haversine (caar p) (cadar p)
                                       (caadr p) (cadadr p)))
         (pop p))
       (while (cdr p)
-        (cl-incf len1 (osm--haversine (caar p) (cadar p)
+        (incf len1 (osm--haversine (caar p) (cadar p)
                                       (caadr p) (cadadr p)))
         (pop p))
       (message "%s way points, length %.2fkm, %s"
@@ -874,14 +874,6 @@ Local per buffer since the overlays depend on the zoom level.")
              (delete-file file)))
          (when (directory-empty-p dir)
            (ignore-errors (delete-directory dir))))))))
-
-;; TODO: Use `completion-table-with-metadata'
-(defun osm--table-with-metadata (table metadata)
-  "Return new completion TABLE with METADATA."
-  (lambda (string pred action)
-    (if (eq action 'metadata)
-        `(metadata . ,metadata)
-      (complete-with-action action table string pred))))
 
 (defun osm--check-libraries ()
   "Check that Emacs is compiled with the necessary libraries."
@@ -1046,11 +1038,11 @@ Local per buffer since the overlays depend on the zoom level.")
                         (push line (alist-get id (gethash (cons x0 (+ y0 sy)) tracks)))
                         (push line (alist-get id (gethash (cons (+ x0 sx) y0) tracks))))
                       (when ey
-                        (cl-incf err dy)
-                        (cl-incf x0 sx))
+                        (incf err dy)
+                        (incf x0 sx))
                       (when ex
-                        (cl-incf err dx)
-                        (cl-incf y0 sy))
+                        (incf err dx)
+                        (incf y0 sy))
                       t)))
               (setq p0 p1))))))))
 
@@ -1220,7 +1212,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (while (and (< idx 20)
                 (< (/ (* meter (nth (mod idx 3) factor)) meter-per-pixel) 150))
       (setq meter (round (* meter (nth (mod idx 3) factor))))
-      (cl-incf idx))
+      (incf idx))
     (setq-local
      header-line-format
      (list
@@ -1336,7 +1328,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--purge-tile-cache ()
   "Purge old tiles from the tile cache."
-  (cl-incf osm--tile-age)
+  (incf osm--tile-age)
   (when (and osm--tile-cache (> (hash-table-count osm--tile-cache) osm-max-tiles))
     (let (items)
       (maphash (lambda (k v) (push (list (car v) (cdr v) k) items)) osm--tile-cache)
@@ -1666,7 +1658,7 @@ When called interactively, call the function `osm-home'."
                            pins)))
     (pcase (assoc (completing-read
                    "Jump: "
-                   (osm--table-with-metadata
+                   (completion-table-with-metadata
                     pins `((group-function
                             . ,(lambda (pin transform)
                                  (if transform pin
@@ -1747,7 +1739,7 @@ When called interactively, call the function `osm-home'."
                           (define-keymap "SPC" nil)
                           (current-local-map)))))
     (completing-read prompt
-                     (osm--table-with-metadata
+                     (completion-table-with-metadata
                       ;; Vertico only deletes consecutive duplicates for
                       ;; performance, and we preserve order by using the
                       ;; identity sort function.
@@ -1766,7 +1758,7 @@ Take first result if LUCKY is non-nil."
      (assoc
       (completing-read
        (format "Matches for '%s': " needle)
-       (osm--table-with-metadata
+       (completion-table-with-metadata
         results '((display-sort-function . identity)
                   (cycle-sort-function . identity)
                   (eager-display . t)))
@@ -1951,7 +1943,7 @@ See `osm-search-server' and `osm-search-language' for customization."
             osm-server-list))
           (selected (completing-read
                      "Server: "
-                     (osm--table-with-metadata
+                     (completion-table-with-metadata
                       servers
                       `((annotation-function
                          . ,(and osm-copyright #'osm--server-annotation))
