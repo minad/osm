@@ -1399,13 +1399,14 @@ Optionally place pin with ID and NAME."
         (or
          (and (eq major-mode #'osm-mode) (current-buffer))
          ;; Search for existing buffer
-         (car (any (lambda (buf)
-                     (and (equal (buffer-local-value 'major-mode buf) #'osm-mode)
-                          (equal (buffer-local-value 'osm--server buf) def-server)
-                          (equal (buffer-local-value 'osm--zoom buf) def-zoom)
-                          (equal (buffer-local-value 'osm--lat buf) def-lat)
-                          (equal (buffer-local-value 'osm--lon buf) def-lon)))
-                   (buffer-list)))
+         (cl-loop
+          for buf in (buffer-list) thereis
+          (and (equal (buffer-local-value 'major-mode buf) #'osm-mode)
+               (equal (buffer-local-value 'osm--server buf) def-server)
+               (equal (buffer-local-value 'osm--zoom buf) def-zoom)
+               (equal (buffer-local-value 'osm--lat buf) def-lat)
+               (equal (buffer-local-value 'osm--lon buf) def-lon)
+               buf))
          (generate-new-buffer "*osm*"))
       (unless (eq major-mode #'osm-mode)
         (osm-mode))
