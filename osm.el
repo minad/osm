@@ -204,7 +204,7 @@ apikey.  The apikey will be retrieved via `auth-source-search' with the
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
         (lon (bound-and-true-p calendar-longitude)))
-    (if (and lat lon)
+    (if (and (numberp lat) (numberp lon))
         (list lat lon osm-default-zoom)
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
