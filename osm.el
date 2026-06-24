@@ -203,11 +203,10 @@ apikey.  The apikey will be retrieved via `auth-source-search' with the
   :type 'symbol)
 
 (defcustom osm-home
-  (let ((lat (if (bound-and-true-p calendar-latitude) (calendar-latitude)))
-        (lon (if (bound-and-true-p calendar-longitude) (calendar-longitude))))
-    (if (and lat lon)
-        (list lat lon osm-default-zoom)
-      (list 0 0 3)))
+  (if (and (bound-and-true-p calendar-latitude)
+           (bound-and-true-p calendar-longitude))
+      (list (calendar-latitude) (calendar-longitude) osm-default-zoom)
+    (list 0 0 3))
   "Home coordinates, latitude, longitude and zoom level."
   :type '(list :tag "Coordinates"
                (number :tag "Latitude  ")
