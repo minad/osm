@@ -48,7 +48,8 @@
 (require 'dom)
 (eval-when-compile
   (require 'cl-lib)
-  (require 'subr-x))
+  (require 'subr-x)
+  (require 'solar))
 
 (defgroup osm nil
   "OpenStreetMap viewer."
@@ -202,9 +203,9 @@ apikey.  The apikey will be retrieved via `auth-source-search' with the
   :type 'symbol)
 
 (defcustom osm-home
-  (let ((lat (bound-and-true-p calendar-latitude))
-        (lon (bound-and-true-p calendar-longitude)))
-    (if (and (numberp lat) (numberp lon))
+  (let ((lat (if (bound-and-true-p calendar-latitude) (calendar-latitude)))
+        (lon (if (bound-and-true-p calendar-longitude) (calendar-longitude))))
+    (if (and lat lon)
         (list lat lon osm-default-zoom)
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
