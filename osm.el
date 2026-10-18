@@ -1782,7 +1782,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                nil 'osm-selected (car selected))))
 
 ;;;###autoload
-(defun osm-route (&optional from-name from to-name to by)
+(defun osm-route (from-name from to-name to by)
   "Fetch a route between two locations."
   (interactive
    (let (from-name to-name)
