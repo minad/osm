@@ -1782,15 +1782,17 @@ See `osm-search-server' and `osm-search-language' for customization."
                nil 'osm-selected (car selected))))
 
 ;;;###autoload
-(defun osm-route ()
+(defun osm-route (&optional from-name from to-name to by)
   "Fetch a route between two locations."
-  (interactive)
-  (let* ((from-name (osm--search-read "Route from: "))
-         (from (osm--search-select from-name nil))
-         (to-name (osm--search-read "Route to: "))
-         (to (osm--search-select to-name nil))
-         (by (completing-read "Go by: " '("Car" "Bike" "Foot") nil t nil t))
-         (data (osm--fetch-json
+  (interactive
+   (let (from-name to-name)
+     (list
+      (setq from-name (osm--search-read "Route from: "))
+      (osm--search-select from-name nil)
+      (setq to-name (osm--search-read "Route to: "))
+      (osm--search-select to-name nil)
+      (completing-read "Go by: " '("Car" "Bike" "Foot") nil t nil t))))
+  (let* ((data (osm--fetch-json
                 (format-spec osm-route-server
                              `((?b . ,(downcase by))
                                (?x . ,(caddr from)) (?y . ,(cadr from))
