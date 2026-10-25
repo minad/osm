@@ -1802,7 +1802,7 @@ See `osm-search-server' and `osm-search-language' for customization."
     (osm--add-dataset
      (format "%s ⟶ %s (%s, %skm, %s)" from-name to-name by
              (round (alist-get 'distance route) 1000)
-             (seconds-to-string (alist-get 'duration route)))
+             (compat-call seconds-to-string (alist-get 'duration route) 'expanded 'abbrev))
      'osm-route
      (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
      (mapcar (lambda (x)
