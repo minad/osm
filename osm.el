@@ -975,7 +975,9 @@ Local per buffer since the overlays depend on the zoom level.")
                       (propertize dname 'osm-dataset dname)))
            (cl-loop for (lat lon name) in waypoints do
                     (funcall fun id lat lon osm-default-zoom
-                             (propertize (format "%s [%s]" name dname)
+                             (propertize (if (string-empty-p name)
+                                             dname
+                                           (format "%s [%s]" name dname))
                                          'osm-dataset dname))))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon osm-default-zoom name)))
